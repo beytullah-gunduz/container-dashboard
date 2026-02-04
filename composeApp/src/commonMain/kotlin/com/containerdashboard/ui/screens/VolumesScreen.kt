@@ -17,74 +17,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
-import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
-import com.containerdashboard.ui.state.VolumesState
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 @Composable
 fun VolumesScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: VolumesScreenViewModel = viewModel { VolumesScreenViewModel() }
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedVolume by remember { mutableStateOf<String?>(null) }
-    var state by remember { mutableStateOf(VolumesState()) }
-    var showCreateDialog by remember { mutableStateOf(false) }
-    
-    val scope = rememberCoroutineScope()
-    
-    fun loadVolumes() {
-        scope.launch {
-            state = state.copy(isLoading = true, error = null)
-            try {
-                AppModule.dockerRepository.getVolumes()
-                    .catch { e -> state = state.copy(error = e.message, isLoading = false) }
-                    .collect { volumes ->
-                        state = state.copy(volumes = volumes, isLoading = false)
-                    }
-            } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-    
-    fun createVolume(name: String) {
-        scope.launch {
-            try {
-                AppModule.dockerRepository.createVolume(name, "local")
-                loadVolumes()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-        }
-    }
-    
-    fun removeVolume(name: String) {
-        scope.launch {
-            try {
-                AppModule.dockerRepository.removeVolume(name)
-                loadVolumes()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        loadVolumes()
-    }
-    
+    val state by viewModel.state.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedVolume by viewModel.selectedVolumeName.collectAsState()
+    val showCreateDialog by viewModel.showCreateDialog.collectAsState()
+
     val filteredVolumes = state.volumes.filter { volume ->
         searchQuery.isEmpty() || volume.name.contains(searchQuery, ignoreCase = true)
     }
-    
+
     // Create Volume Dialog
     if (showCreateDialog) {
         var volumeName by remember { mutableStateOf("") }
         AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
+            onDismissRequest = { viewModel.setShowCreateDialog(false) },
             title = { Text("Create Volume") },
             text = {
                 OutlinedTextField(
@@ -99,8 +55,8 @@ fun VolumesScreen(
                 Button(
                     onClick = {
                         if (volumeName.isNotBlank()) {
-                            createVolume(volumeName)
-                            showCreateDialog = false
+                            viewModel.createVolume(volumeName)
+                            viewModel.setShowCreateDialog(false)
                         }
                     },
                     enabled = volumeName.isNotBlank()
@@ -109,13 +65,13 @@ fun VolumesScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
+                TextButton(onClick = { viewModel.setShowCreateDialog(false) }) {
                     Text("Cancel")
                 }
             }
         )
     }
-    
+
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp)
     ) {
@@ -137,10 +93,10 @@ fun VolumesScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { loadVolumes() },
+                    onClick = { viewModel.loadVolumes() },
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
@@ -154,16 +110,16 @@ fun VolumesScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Refresh")
                 }
-                Button(onClick = { showCreateDialog = true }) {
+                Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Create volume")
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(20.dp))
-        
+
         // Error message
         state.error?.let { error ->
             Card(
@@ -180,26 +136,26 @@ fun VolumesScreen(
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                     Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { state = state.copy(error = null) }) {
+                    IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
                     }
                 }
             }
         }
-        
+
         // Search
         SearchBar(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
+            onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search volumes...",
             modifier = Modifier.fillMaxWidth(0.4f)
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Table Header
         VolumeTableHeader()
-        
+
         // Loading indicator
         if (state.isLoading && state.volumes.isEmpty()) {
             Box(
@@ -228,8 +184,8 @@ fun VolumesScreen(
                     VolumeRow(
                         volume = volume,
                         isSelected = selectedVolume == volume.name,
-                        onClick = { selectedVolume = volume.name },
-                        onRemove = { removeVolume(volume.name) }
+                        onClick = { viewModel.setSelectedVolume(volume.name) },
+                        onRemove = { viewModel.removeVolume(volume.name) }
                     )
                 }
             }
@@ -308,7 +264,7 @@ private fun VolumeRow(
                 fontWeight = FontWeight.Medium
             )
         }
-        
+
         // Driver
         Text(
             text = volume.driver,
@@ -316,7 +272,7 @@ private fun VolumeRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.7f)
         )
-        
+
         // Mountpoint
         Text(
             text = volume.mountpoint,
@@ -326,7 +282,7 @@ private fun VolumeRow(
             modifier = Modifier.weight(2f),
             maxLines = 1
         )
-        
+
         // Actions
         Row(
             modifier = Modifier.width(48.dp),

@@ -18,19 +18,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
+import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
-import com.containerdashboard.ui.state.ContainersState
 import com.containerdashboard.ui.theme.DockerColors
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
-
-private enum class ContainerFilter {
-    ALL, RUNNING, STOPPED
-}
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
@@ -39,139 +34,18 @@ private val COMPACT_THRESHOLD = 700.dp
 fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
     currentLogsContainerId: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ContainersScreenViewModel = viewModel { ContainersScreenViewModel() }
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var containerFilter by remember { mutableStateOf(ContainerFilter.ALL) }
-    var selectedContainerIds by remember { mutableStateOf(setOf<String>()) }
-    var state by remember { mutableStateOf(ContainersState()) }
-    var isDeletingSelected by remember { mutableStateOf(false) }
     
-    val scope = rememberCoroutineScope()
+    val state by viewModel.state.collectAsState()
+    val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
+    val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
     
-    fun loadContainers() {
-        scope.launch {
-            state = state.copy(isLoading = true, error = null)
-            try {
-                AppModule.dockerRepository.getContainers(all = true)
-                    .catch { e -> state = state.copy(error = e.message, isLoading = false) }
-                    .collect { containers ->
-                        state = state.copy(containers = containers, isLoading = false)
-                        // Clear selection for containers that no longer exist
-                        selectedContainerIds = selectedContainerIds.filter { id ->
-                            containers.any { it.id == id }
-                        }.toSet()
-                    }
-            } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-    
-    fun startContainer(id: String) {
-        scope.launch {
-            state = state.copy(actionInProgress = id)
-            try {
-                AppModule.dockerRepository.startContainer(id)
-                loadContainers()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-            state = state.copy(actionInProgress = null)
-        }
-    }
-    
-    fun stopContainer(id: String) {
-        scope.launch {
-            state = state.copy(actionInProgress = id)
-            try {
-                AppModule.dockerRepository.stopContainer(id)
-                loadContainers()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-            state = state.copy(actionInProgress = null)
-        }
-    }
-    
-    fun pauseContainer(id: String) {
-        scope.launch {
-            state = state.copy(actionInProgress = id)
-            try {
-                AppModule.dockerRepository.pauseContainer(id)
-                loadContainers()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-            state = state.copy(actionInProgress = null)
-        }
-    }
-    
-    fun unpauseContainer(id: String) {
-        scope.launch {
-            state = state.copy(actionInProgress = id)
-            try {
-                AppModule.dockerRepository.unpauseContainer(id)
-                loadContainers()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-            state = state.copy(actionInProgress = null)
-        }
-    }
-    
-    fun removeContainer(id: String) {
-        scope.launch {
-            state = state.copy(actionInProgress = id)
-            try {
-                AppModule.dockerRepository.removeContainer(id, force = false)
-                loadContainers()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-            state = state.copy(actionInProgress = null)
-        }
-    }
-    
-    fun deleteSelectedContainers() {
-        scope.launch {
-            isDeletingSelected = true
-            val idsToDelete = selectedContainerIds.toList()
-            var errors = mutableListOf<String>()
-            
-            for (id in idsToDelete) {
-                try {
-                    AppModule.dockerRepository.removeContainer(id, force = false)
-                } catch (e: Exception) {
-                    errors.add(e.message ?: "Failed to delete container")
-                }
-            }
-            
-            selectedContainerIds = emptySet()
-            isDeletingSelected = false
-            
-            if (errors.isNotEmpty()) {
-                state = state.copy(error = "Failed to delete ${errors.size} container(s)")
-            }
-            
-            loadContainers()
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        loadContainers()
-    }
-    
-    val filteredContainers = state.containers.filter { container ->
-        val matchesSearch = searchQuery.isEmpty() || 
-            container.displayName.contains(searchQuery, ignoreCase = true) ||
-            container.image.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = when (containerFilter) {
-            ContainerFilter.ALL -> true
-            ContainerFilter.RUNNING -> container.isRunning
-            ContainerFilter.STOPPED -> !container.isRunning
-        }
-        matchesSearch && matchesFilter
+    val filteredContainers = remember(state.containers, searchQuery, containerFilter) {
+        viewModel.getFilteredContainers(searchQuery, containerFilter)
     }
     
     // Check if all filtered containers are selected
@@ -179,8 +53,8 @@ fun ContainersScreen(
         filteredContainers.all { it.id in selectedContainerIds }
     
     // Check how many selected containers can be deleted (not running)
-    val deletableSelectedCount = selectedContainerIds.count { id ->
-        state.containers.find { it.id == id }?.isRunning == false
+    val deletableSelectedCount = remember(selectedContainerIds, state.containers) {
+        viewModel.getDeletableSelectedCount()
     }
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -212,7 +86,7 @@ fun ContainersScreen(
                     // Delete Selected Button
                     if (selectedContainerIds.isNotEmpty()) {
                         Button(
-                            onClick = { deleteSelectedContainers() },
+                            onClick = { viewModel.deleteSelectedContainers() },
                             enabled = deletableSelectedCount > 0 && !isDeletingSelected,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
@@ -238,7 +112,7 @@ fun ContainersScreen(
                         
                         // Clear selection button
                         OutlinedButton(
-                            onClick = { selectedContainerIds = emptySet() }
+                            onClick = { viewModel.clearSelection() }
                         ) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -247,7 +121,7 @@ fun ContainersScreen(
                     }
                     
                     OutlinedButton(
-                        onClick = { loadContainers() },
+                        onClick = { viewModel.loadContainers() },
                         enabled = !state.isLoading
                     ) {
                         if (state.isLoading) {
@@ -282,7 +156,7 @@ fun ContainersScreen(
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(onClick = { state = state.copy(error = null) }) {
+                        IconButton(onClick = { viewModel.clearError() }) {
                             Icon(Icons.Default.Close, null)
                         }
                     }
@@ -337,10 +211,10 @@ fun ContainersScreen(
                 CompactTableHeader(
                     allSelected = allFilteredSelected,
                     onSelectAllChange = { selectAll ->
-                        selectedContainerIds = if (selectAll) {
-                            filteredContainers.map { it.id }.toSet()
+                        if (selectAll) {
+                            viewModel.selectAllContainers(filteredContainers.map { it.id })
                         } else {
-                            emptySet()
+                            viewModel.clearSelection()
                         }
                     },
                     hasItems = filteredContainers.isNotEmpty()
@@ -349,10 +223,10 @@ fun ContainersScreen(
                 ExpandedTableHeader(
                     allSelected = allFilteredSelected,
                     onSelectAllChange = { selectAll ->
-                        selectedContainerIds = if (selectAll) {
-                            filteredContainers.map { it.id }.toSet()
+                        if (selectAll) {
+                            viewModel.selectAllContainers(filteredContainers.map { it.id })
                         } else {
-                            emptySet()
+                            viewModel.clearSelection()
                         }
                     },
                     hasItems = filteredContainers.isNotEmpty()
@@ -390,18 +264,14 @@ fun ContainersScreen(
                                 isChecked = container.id in selectedContainerIds,
                                 isViewingLogs = currentLogsContainerId == container.id,
                                 onCheckedChange = { checked ->
-                                    selectedContainerIds = if (checked) {
-                                        selectedContainerIds + container.id
-                                    } else {
-                                        selectedContainerIds - container.id
-                                    }
+                                    viewModel.toggleContainerSelection(container.id, checked)
                                 },
                                 isActionInProgress = state.actionInProgress == container.id,
-                                onStart = { startContainer(container.id) },
-                                onStop = { stopContainer(container.id) },
-                                onPause = { pauseContainer(container.id) },
-                                onUnpause = { unpauseContainer(container.id) },
-                                onRemove = { removeContainer(container.id) },
+                                onStart = { viewModel.startContainer(container.id) },
+                                onStop = { viewModel.stopContainer(container.id) },
+                                onPause = { viewModel.pauseContainer(container.id) },
+                                onUnpause = { viewModel.unpauseContainer(container.id) },
+                                onRemove = { viewModel.removeContainer(container.id) },
                                 onViewLogs = { onShowLogs(container) }
                             )
                         } else {
@@ -410,18 +280,14 @@ fun ContainersScreen(
                                 isChecked = container.id in selectedContainerIds,
                                 isViewingLogs = currentLogsContainerId == container.id,
                                 onCheckedChange = { checked ->
-                                    selectedContainerIds = if (checked) {
-                                        selectedContainerIds + container.id
-                                    } else {
-                                        selectedContainerIds - container.id
-                                    }
+                                    viewModel.toggleContainerSelection(container.id, checked)
                                 },
                                 isActionInProgress = state.actionInProgress == container.id,
-                                onStart = { startContainer(container.id) },
-                                onStop = { stopContainer(container.id) },
-                                onPause = { pauseContainer(container.id) },
-                                onUnpause = { unpauseContainer(container.id) },
-                                onRemove = { removeContainer(container.id) },
+                                onStart = { viewModel.startContainer(container.id) },
+                                onStop = { viewModel.stopContainer(container.id) },
+                                onPause = { viewModel.pauseContainer(container.id) },
+                                onUnpause = { viewModel.unpauseContainer(container.id) },
+                                onRemove = { viewModel.removeContainer(container.id) },
                                 onViewLogs = { onShowLogs(container) }
                             )
                         }

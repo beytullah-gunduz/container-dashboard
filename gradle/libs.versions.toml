@@ -1,13 +1,29 @@
 [versions]
-kotlin = "1.9.22"
-compose = "1.6.0"
-coroutines = "1.8.0"
-serialization = "1.6.2"
-datetime = "0.5.0"
-ktor = "2.3.7"
+kotlin = "2.1.20"
+compose = "1.10.0"
+compose-material3 = "1.10.0-alpha05"
+compose-material-icons-extended = "1.7.3"
+lifecycle = "2.10.0-alpha08"
+coroutines = "1.10.2"
+serialization = "1.9.0"
+datetime = "0.6.1"
+ktor = "3.1.0"
 docker-java = "3.3.4"
 
 [libraries]
+# Compose
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
+compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-material-icons-extended" }
+
+# Lifecycle
+lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+
 # Kotlinx
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
@@ -25,6 +41,8 @@ docker-java-core = { module = "com.github.docker-java:docker-java-core", version
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
 
 [bundles]
+compose-common = ["compose-runtime", "compose-foundation", "compose-material3", "compose-ui", "compose-components-resources", "compose-material-icons-extended"]
+lifecycle = ["lifecycle-runtime-compose","lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
 docker-java = ["docker-java-core", "docker-java-transport-httpclient5"]
 
@@ -32,4 +50,5 @@ docker-java = ["docker-java-core", "docker-java-transport-httpclient5"]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }

@@ -17,77 +17,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
-import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
-import com.containerdashboard.ui.state.NetworksState
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 @Composable
 fun NetworksScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() }
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedNetwork by remember { mutableStateOf<String?>(null) }
-    var state by remember { mutableStateOf(NetworksState()) }
-    var showCreateDialog by remember { mutableStateOf(false) }
-    
-    val scope = rememberCoroutineScope()
-    
-    fun loadNetworks() {
-        scope.launch {
-            state = state.copy(isLoading = true, error = null)
-            try {
-                AppModule.dockerRepository.getNetworks()
-                    .catch { e -> state = state.copy(error = e.message, isLoading = false) }
-                    .collect { networks ->
-                        state = state.copy(networks = networks, isLoading = false)
-                    }
-            } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-    
-    fun createNetwork(name: String, driver: String) {
-        scope.launch {
-            try {
-                AppModule.dockerRepository.createNetwork(name, driver)
-                loadNetworks()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-        }
-    }
-    
-    fun removeNetwork(id: String) {
-        scope.launch {
-            try {
-                AppModule.dockerRepository.removeNetwork(id)
-                loadNetworks()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        loadNetworks()
-    }
-    
+    val state by viewModel.state.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
+    val showCreateDialog by viewModel.showCreateDialog.collectAsState()
+
     val filteredNetworks = state.networks.filter { network ->
         searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
     }
-    
+
     val systemNetworks = listOf("bridge", "host", "none")
-    
+
     // Create Network Dialog
     if (showCreateDialog) {
         var networkName by remember { mutableStateOf("") }
         var selectedDriver by remember { mutableStateOf("bridge") }
         AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
+            onDismissRequest = { viewModel.setShowCreateDialog(false) },
             title = { Text("Create Network") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -98,7 +54,7 @@ fun NetworksScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
+
                     Text("Driver", style = MaterialTheme.typography.labelMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("bridge", "overlay", "macvlan").forEach { driver ->
@@ -115,8 +71,8 @@ fun NetworksScreen(
                 Button(
                     onClick = {
                         if (networkName.isNotBlank()) {
-                            createNetwork(networkName, selectedDriver)
-                            showCreateDialog = false
+                            viewModel.createNetwork(networkName, selectedDriver)
+                            viewModel.setShowCreateDialog(false)
                         }
                     },
                     enabled = networkName.isNotBlank()
@@ -125,13 +81,13 @@ fun NetworksScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
+                TextButton(onClick = { viewModel.setShowCreateDialog(false) }) {
                     Text("Cancel")
                 }
             }
         )
     }
-    
+
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp)
     ) {
@@ -153,10 +109,10 @@ fun NetworksScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { loadNetworks() },
+                    onClick = { viewModel.loadNetworks() },
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
@@ -170,16 +126,16 @@ fun NetworksScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Refresh")
                 }
-                Button(onClick = { showCreateDialog = true }) {
+                Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Create network")
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(20.dp))
-        
+
         // Error message
         state.error?.let { error ->
             Card(
@@ -196,26 +152,26 @@ fun NetworksScreen(
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                     Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { state = state.copy(error = null) }) {
+                    IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
                     }
                 }
             }
         }
-        
+
         // Search
         SearchBar(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
+            onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search networks...",
             modifier = Modifier.fillMaxWidth(0.4f)
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Table Header
         NetworkTableHeader()
-        
+
         // Loading indicator
         if (state.isLoading && state.networks.isEmpty()) {
             Box(
@@ -245,8 +201,8 @@ fun NetworksScreen(
                         network = network,
                         isSelected = selectedNetwork == network.id,
                         isSystem = network.name in systemNetworks,
-                        onClick = { selectedNetwork = network.id },
-                        onRemove = { removeNetwork(network.id) }
+                        onClick = { viewModel.setSelectedNetwork(network.id) },
+                        onRemove = { viewModel.removeNetwork(network.id) }
                     )
                 }
             }
@@ -339,9 +295,9 @@ private fun NetworkRow(
                 Icons.Outlined.Hub,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = if (isSystem) 
-                    MaterialTheme.colorScheme.onSurfaceVariant 
-                else 
+                tint = if (isSystem)
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else
                     MaterialTheme.colorScheme.primary
             )
             Column {
@@ -370,7 +326,7 @@ private fun NetworkRow(
                 }
             }
         }
-        
+
         // Network ID
         Text(
             text = network.shortId,
@@ -379,14 +335,14 @@ private fun NetworkRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.8f)
         )
-        
+
         // Driver
         Text(
             text = network.driver,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(0.7f)
         )
-        
+
         // Scope
         Text(
             text = network.scope,
@@ -394,7 +350,7 @@ private fun NetworkRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.5f)
         )
-        
+
         // Subnet
         Text(
             text = network.subnet,
@@ -403,7 +359,7 @@ private fun NetworkRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        
+
         // Containers
         Box(modifier = Modifier.weight(0.6f)) {
             if (network.containerCount > 0) {
@@ -425,7 +381,7 @@ private fun NetworkRow(
                 )
             }
         }
-        
+
         // Actions
         Row(
             modifier = Modifier.width(48.dp),
@@ -440,9 +396,9 @@ private fun NetworkRow(
                     Icons.Outlined.Delete,
                     contentDescription = "Delete",
                     modifier = Modifier.size(18.dp),
-                    tint = if (!isSystem) 
-                        MaterialTheme.colorScheme.onSurfaceVariant 
-                    else 
+                    tint = if (!isSystem)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
             }

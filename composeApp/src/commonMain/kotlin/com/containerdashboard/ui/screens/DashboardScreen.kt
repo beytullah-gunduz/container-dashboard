@@ -13,85 +13,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+
+
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.data.models.SystemInfo
-import com.containerdashboard.data.models.DockerVersion
-import com.containerdashboard.data.repository.DockerRepository
-import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.StatsCard
-import com.containerdashboard.ui.state.DashboardState
 import com.containerdashboard.ui.theme.DockerColors
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 @Composable
 fun DashboardScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DashboardScreenViewModel = viewModel { DashboardScreenViewModel() }
 ) {
     val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-    
-    var state by remember { mutableStateOf(DashboardState()) }
-    
-    fun loadData() {
-        scope.launch {
-            state = state.copy(isLoading = true, error = null)
-            try {
-                val repo = AppModule.dockerRepository
-                
-                // Load system info
-                val sysInfoResult = repo.getSystemInfo()
-                val versionResult = repo.getVersion()
-                
-                // Load containers
-                repo.getContainers(all = true)
-                    .catch { e -> state = state.copy(error = e.message) }
-                    .collect { containers ->
-                        state = state.copy(containers = containers)
-                    }
-                
-                // Load images
-                repo.getImages()
-                    .catch { e -> state = state.copy(error = e.message) }
-                    .collect { images ->
-                        state = state.copy(images = images)
-                    }
-                
-                // Load volumes
-                repo.getVolumes()
-                    .catch { e -> state = state.copy(error = e.message) }
-                    .collect { volumes ->
-                        state = state.copy(volumes = volumes)
-                    }
-                
-                // Load networks
-                repo.getNetworks()
-                    .catch { e -> state = state.copy(error = e.message) }
-                    .collect { networks ->
-                        state = state.copy(networks = networks)
-                    }
-                
-                state = state.copy(
-                    systemInfo = sysInfoResult.getOrNull(),
-                    version = versionResult.getOrNull(),
-                    isLoading = false,
-                    isConnected = sysInfoResult.isSuccess
-                )
-            } catch (e: Exception) {
-                state = state.copy(
-                    isLoading = false,
-                    error = e.message ?: "Failed to connect to container engine",
-                    isConnected = false
-                )
-            }
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-    
+    val state by viewModel.state.collectAsState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -117,9 +55,9 @@ fun DashboardScreen(
                     color = if (state.isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Button(
-                onClick = { loadData() },
+                onClick = { viewModel.loadData() },
                 enabled = !state.isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
@@ -142,7 +80,7 @@ fun DashboardScreen(
                 Text("Refresh")
             }
         }
-        
+
         // Error message
         state.error?.let { error ->
             Card(
@@ -163,16 +101,20 @@ fun DashboardScreen(
                     )
                     Text(
                         text = error,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = { viewModel.clearError() }) {
+                        Icon(Icons.Default.Close, null)
+                    }
                 }
             }
         }
-        
+
         // Stats Cards Row
         val runningContainers = state.containers.count { it.isRunning }
         val totalImageSize = state.images.sumOf { it.size }
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -210,7 +152,7 @@ fun DashboardScreen(
                 modifier = Modifier.weight(1f)
             )
         }
-        
+
         // Container Status Section
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -233,11 +175,11 @@ fun DashboardScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     val running = state.containers.count { it.isRunning }
                     val paused = state.containers.count { it.isPaused }
                     val stopped = state.containers.count { it.isStopped }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -260,7 +202,7 @@ fun DashboardScreen(
                     }
                 }
             }
-            
+
             // System Info Card
             Card(
                 modifier = Modifier.weight(1f),
@@ -278,10 +220,10 @@ fun DashboardScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     val sysInfo = state.systemInfo
                     val version = state.version
-                    
+
                     SystemInfoRow("Engine Version", version?.version ?: "-")
                     SystemInfoRow("API Version", version?.apiVersion ?: "-")
                     SystemInfoRow("OS/Arch", "${sysInfo?.osType ?: "-"}/${sysInfo?.architecture ?: "-"}")
@@ -290,7 +232,7 @@ fun DashboardScreen(
                 }
             }
         }
-        
+
         // Recent Activity
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -314,7 +256,7 @@ fun DashboardScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 if (state.containers.isEmpty() && !state.isLoading) {
                     Text(
                         text = "No containers found",
@@ -379,7 +321,7 @@ private fun RecentContainerItem(
                     else -> DockerColors.Stopped
                 }
             ) {}
-            
+
             Column {
                 Text(
                     text = container.displayName,
@@ -393,7 +335,7 @@ private fun RecentContainerItem(
                 )
             }
         }
-        
+
         Text(
             text = container.image,
             style = MaterialTheme.typography.bodySmall,

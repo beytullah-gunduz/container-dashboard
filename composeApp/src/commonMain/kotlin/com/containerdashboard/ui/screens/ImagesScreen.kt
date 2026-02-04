@@ -17,61 +17,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
-import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
-import com.containerdashboard.ui.state.ImagesState
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.launch
 
 @Composable
 fun ImagesScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ImagesScreenViewModel = viewModel { ImagesScreenViewModel() }
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedImage by remember { mutableStateOf<String?>(null) }
-    var state by remember { mutableStateOf(ImagesState()) }
-    
-    val scope = rememberCoroutineScope()
-    
-    fun loadImages() {
-        scope.launch {
-            state = state.copy(isLoading = true, error = null)
-            try {
-                AppModule.dockerRepository.getImages()
-                    .catch { e -> state = state.copy(error = e.message, isLoading = false) }
-                    .collect { images ->
-                        state = state.copy(images = images, isLoading = false)
-                    }
-            } catch (e: Exception) {
-                state = state.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-    
-    fun removeImage(id: String) {
-        scope.launch {
-            try {
-                AppModule.dockerRepository.removeImage(id, force = false)
-                loadImages()
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
-            }
-        }
-    }
-    
-    LaunchedEffect(Unit) {
-        loadImages()
-    }
-    
+    val state by viewModel.state.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val selectedImage by viewModel.selectedImageId.collectAsState()
+
     val filteredImages = state.images.filter { image ->
-        searchQuery.isEmpty() || 
-        image.repository.contains(searchQuery, ignoreCase = true) ||
-        image.tag.contains(searchQuery, ignoreCase = true)
+        searchQuery.isEmpty() ||
+            image.repository.contains(searchQuery, ignoreCase = true) ||
+            image.tag.contains(searchQuery, ignoreCase = true)
     }
-    
+
     val totalSize = state.images.sumOf { it.size }
-    
+
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp)
     ) {
@@ -93,10 +60,10 @@ fun ImagesScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { loadImages() },
+                    onClick = { viewModel.loadImages() },
                     enabled = !state.isLoading
                 ) {
                     if (state.isLoading) {
@@ -112,9 +79,9 @@ fun ImagesScreen(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(20.dp))
-        
+
         // Error message
         state.error?.let { error ->
             Card(
@@ -131,26 +98,26 @@ fun ImagesScreen(
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                     Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { state = state.copy(error = null) }) {
+                    IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
                     }
                 }
             }
         }
-        
+
         // Search
         SearchBar(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
+            onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search images...",
             modifier = Modifier.fillMaxWidth(0.4f)
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Table Header
         ImageTableHeader()
-        
+
         // Loading indicator
         if (state.isLoading && state.images.isEmpty()) {
             Box(
@@ -179,8 +146,8 @@ fun ImagesScreen(
                     ImageRow(
                         image = image,
                         isSelected = selectedImage == image.id,
-                        onClick = { selectedImage = image.id },
-                        onRemove = { removeImage(image.id) }
+                        onClick = { viewModel.setSelectedImage(image.id) },
+                        onRemove = { viewModel.removeImage(image.id) }
                     )
                 }
             }
@@ -253,24 +220,24 @@ private fun ImageRow(
             text = image.repository,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            color = if (image.repository == "<none>") 
-                MaterialTheme.colorScheme.onSurfaceVariant 
-            else 
+            color = if (image.repository == "<none>")
+                MaterialTheme.colorScheme.onSurfaceVariant
+            else
                 MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1.5f)
         )
-        
+
         // Tag
         Text(
             text = image.tag,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (image.tag == "<none>") 
-                MaterialTheme.colorScheme.onSurfaceVariant 
-            else 
+            color = if (image.tag == "<none>")
+                MaterialTheme.colorScheme.onSurfaceVariant
+            else
                 MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f)
         )
-        
+
         // Image ID
         Text(
             text = image.shortId,
@@ -279,14 +246,14 @@ private fun ImageRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        
+
         // Size
         Text(
             text = image.formattedSize,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(0.7f)
         )
-        
+
         // Actions
         Row(
             modifier = Modifier.width(48.dp),

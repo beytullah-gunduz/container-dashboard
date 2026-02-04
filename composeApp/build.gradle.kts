@@ -2,6 +2,7 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -12,12 +13,11 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
-                implementation(compose.components.resources)
-                implementation(compose.materialIconsExtended)
+                // Compose (using explicit coordinates as compose.* aliases are deprecated in 1.10)
+                implementation(libs.bundles.compose.common)
+                
+                // Lifecycle ViewModel
+                implementation(libs.bundles.lifecycle)
                 
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
