@@ -73,7 +73,7 @@ fun rememberThreePaneScaffoldNavigator(): ThreePaneScaffoldNavigator {
  * 
  * @param navigator The navigator controlling pane visibility.
  * @param listPaneWidth The width of the list (sidebar) pane.
- * @param initialExtraPaneWidth The initial width of the extra pane when visible.
+ * @param extraPaneWidthFraction The fraction of available width for the extra pane (0.0 to 1.0).
  * @param minExtraPaneWidth The minimum width the extra pane can be resized to.
  * @param listPane The content for the list pane (typically a sidebar).
  * @param detailPane The content for the detail pane (main content area).
@@ -84,50 +84,56 @@ fun rememberThreePaneScaffoldNavigator(): ThreePaneScaffoldNavigator {
 fun ThreePaneScaffold(
     navigator: ThreePaneScaffoldNavigator,
     listPaneWidth: Dp = 220.dp,
-    initialExtraPaneWidth: Dp = 500.dp,
+    extraPaneWidthFraction: Float = 0.5f,
     minExtraPaneWidth: Dp = 300.dp,
     listPane: @Composable () -> Unit,
     detailPane: @Composable () -> Unit,
     extraPane: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var extraPaneWidth by remember { mutableStateOf(initialExtraPaneWidth) }
-    
-    Row(modifier = modifier.fillMaxSize()) {
-        // List Pane (Sidebar) - Fixed width
-        Box(modifier = Modifier.width(listPaneWidth).fillMaxHeight()) {
-            listPane()
-        }
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        // Calculate initial extra pane width as a fraction of the available content area
+        val availableContentWidth = maxWidth - listPaneWidth
+        val calculatedExtraPaneWidth = (availableContentWidth * extraPaneWidthFraction).coerceAtLeast(minExtraPaneWidth)
         
-        // Detail Pane (Main Content) - Takes remaining space
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            detailPane()
-        }
+        var extraPaneWidth by remember(calculatedExtraPaneWidth) { mutableStateOf(calculatedExtraPaneWidth) }
         
-        // Extra Pane (Logs) with resizable divider - Animated sliding in/out
-        AnimatedVisibility(
-            visible = navigator.isExtraPaneVisible,
-            enter = slideInHorizontally(
-                initialOffsetX = { it },
-                animationSpec = tween(durationMillis = 300)
-            ),
-            exit = slideOutHorizontally(
-                targetOffsetX = { it },
-                animationSpec = tween(durationMillis = 300)
-            )
-        ) {
-            Row(modifier = Modifier.fillMaxHeight()) {
-                // Resizable Divider
-                ResizableDivider(
-                    onDrag = { delta ->
-                        val newWidth = extraPaneWidth - delta
-                        extraPaneWidth = newWidth.coerceAtLeast(minExtraPaneWidth)
-                    }
+        Row(modifier = Modifier.fillMaxSize()) {
+            // List Pane (Sidebar) - Fixed width
+            Box(modifier = Modifier.width(listPaneWidth).fillMaxHeight()) {
+                listPane()
+            }
+            
+            // Detail Pane (Main Content) - Takes remaining space
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                detailPane()
+            }
+            
+            // Extra Pane (Logs) with resizable divider - Animated sliding in/out
+            AnimatedVisibility(
+                visible = navigator.isExtraPaneVisible,
+                enter = slideInHorizontally(
+                    initialOffsetX = { it },
+                    animationSpec = tween(durationMillis = 300)
+                ),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { it },
+                    animationSpec = tween(durationMillis = 300)
                 )
-                
-                // Extra Pane Content
-                Box(modifier = Modifier.width(extraPaneWidth).fillMaxHeight()) {
-                    extraPane()
+            ) {
+                Row(modifier = Modifier.fillMaxHeight()) {
+                    // Resizable Divider
+                    ResizableDivider(
+                        onDrag = { delta ->
+                            val newWidth = extraPaneWidth - delta
+                            extraPaneWidth = newWidth.coerceAtLeast(minExtraPaneWidth)
+                        }
+                    )
+                    
+                    // Extra Pane Content
+                    Box(modifier = Modifier.width(extraPaneWidth).fillMaxHeight()) {
+                        extraPane()
+                    }
                 }
             }
         }

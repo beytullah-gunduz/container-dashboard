@@ -43,6 +43,11 @@ fun ContainersScreen(
     val state by viewModel.state.collectAsState()
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
+val isDeletingAll by viewModel.isDeletingAll.collectAsState()
+
+// State for delete all confirmation dialog
+var showDeleteAllDialog by remember { mutableStateOf(false) }
+
     
     val filteredContainers = remember(state.containers, searchQuery, containerFilter) {
         viewModel.getFilteredContainers(searchQuery, containerFilter)
@@ -57,6 +62,85 @@ fun ContainersScreen(
         viewModel.getDeletableSelectedCount()
     }
     
+// Delete All Confirmation Dialog
+if (showDeleteAllDialog) {
+    AlertDialog(
+            onDismissRequest = { showDeleteAllDialog = false },
+            icon = {
+                Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Delete All Containers") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete all containers?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                            text = "${state.containers.size} container(s) will be deleted.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                            text = "Running containers will be force stopped and removed.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                        onClick = {
+                            showDeleteAllDialog = false
+                            viewModel.deleteAllContainers()
+                        },
+                        colors =
+                                ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error
+                                )
+                ) { Text("Delete All") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") }
+            }
+    )
+}
+
+// Deleting All Progress Modal
+if (isDeletingAll) {
+    AlertDialog(
+            onDismissRequest = { /* Cannot dismiss while deleting */},
+            title = {
+                Text(
+                        text = "Deleting Containers",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                )
+            },
+            text = {
+                Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                            text = "Please wait while all containers are being deleted...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = { /* No buttons while in progress */}
+    )
+}
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
         
@@ -135,6 +219,27 @@ fun ContainersScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Refresh")
                     }
+// Delete All Button
+if (state.containers.isNotEmpty()) {
+    Button(
+            onClick = { showDeleteAllDialog = true },
+            enabled = !isDeletingAll && !isDeletingSelected,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+    ) {
+        if (isDeletingAll) {
+            CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onError
+            )
+        } else {
+            Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Delete All")
+    }
+}
+
                 }
             }
             

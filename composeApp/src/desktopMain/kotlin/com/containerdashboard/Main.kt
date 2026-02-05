@@ -29,10 +29,14 @@ fun main() = application {
         position = WindowPosition(Alignment.Center)
     )
     
+    // Create the app icon
+    val appIcon = remember { AppIconPainter() }
+    
     Window(
         onCloseRequest = ::exitApplication,
         title = "Container Dashboard",
-        state = windowState
+        state = windowState,
+        icon = appIcon
     ) {
         App()
     }

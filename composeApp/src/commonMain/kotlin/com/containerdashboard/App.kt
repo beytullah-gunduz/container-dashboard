@@ -103,7 +103,7 @@ fun App() {
             ThreePaneScaffold(
                 navigator = navigator,
                 listPaneWidth = 220.dp,
-                initialExtraPaneWidth = 500.dp,
+                extraPaneWidthFraction = 0.5f,
                 listPane = {
                     Sidebar(
                         currentRoute = currentRoute,

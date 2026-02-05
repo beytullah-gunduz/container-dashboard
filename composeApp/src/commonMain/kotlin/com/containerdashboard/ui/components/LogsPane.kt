@@ -198,6 +198,11 @@ fun LogsPane(
                         val verticalScrollState = rememberScrollState()
                         val horizontalScrollState = rememberScrollState()
                         
+                        // Auto-scroll to bottom when logs change
+                        LaunchedEffect(state.logs) {
+                            verticalScrollState.animateScrollTo(verticalScrollState.maxValue)
+                        }
+                        
                         SelectionContainer {
                             Box(
                                 modifier = Modifier
