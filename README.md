@@ -2,8 +2,9 @@
 
 A modern container management dashboard built with **Jetpack Compose Multiplatform**. This application provides a beautiful and intuitive interface to manage your containers, images, volumes, and networks.
 
-![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-blue)
-![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.6.0-green)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-blue)
+![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-green)
+![Gradle](https://img.shields.io/badge/Gradle-8.14.4-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## Features
@@ -58,7 +59,7 @@ composeApp/
 ### Prerequisites
 
 - JDK 17 or higher
-- Gradle 8.5 or higher
+- Gradle 8.14 or higher (included via wrapper)
 - Container engine installed and running (for full functionality)
 
 ### Build & Run
