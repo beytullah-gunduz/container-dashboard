@@ -53,6 +53,8 @@ compose.desktop {
         mainClass = "com.containerdashboard.MainKt"
         
         nativeDistributions {
+
+            modules("java.sql")
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.containerdashboard"
             packageVersion = "1.0.0"
