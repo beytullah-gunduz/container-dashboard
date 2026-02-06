@@ -12,14 +12,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 
 @Composable
 fun SettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SettingsScreenViewModel = viewModel { SettingsScreenViewModel() }
 ) {
     val scrollState = rememberScrollState()
     
-    var dockerHost by remember { mutableStateOf("unix:///var/run/docker.sock") }
+    val dockerHost by viewModel.engineHost.collectAsState()
     var darkTheme by remember { mutableStateOf(true) }
     var autoRefresh by remember { mutableStateOf(true) }
     var refreshInterval by remember { mutableStateOf(5f) }
@@ -45,7 +48,7 @@ fun SettingsScreen(
             SettingsTextField(
                 label = "Engine Host",
                 value = dockerHost,
-                onValueChange = { dockerHost = it },
+                onValueChange = { viewModel.engineHost.value = it },
                 placeholder = "unix:///var/run/docker.sock"
             )
             

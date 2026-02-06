@@ -11,6 +11,9 @@ ktor = "3.1.0"
 docker-java = "3.3.4"
 
 [libraries]
+androidx-datastore-core = { module = "androidx.datastore:datastore-core", version = "1.2.0" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences-core", version = "1.1.7" }
+
 # Compose
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
@@ -41,6 +44,7 @@ docker-java-core = { module = "com.github.docker-java:docker-java-core", version
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
 
 [bundles]
+android-datastore = ["androidx-datastore-core", "androidx-datastore-preferences"]
 compose-common = ["compose-runtime", "compose-foundation", "compose-material3", "compose-ui", "compose-components-resources", "compose-material-icons-extended"]
 lifecycle = ["lifecycle-runtime-compose","lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
