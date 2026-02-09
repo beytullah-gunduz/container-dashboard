@@ -2,8 +2,10 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.state.ImagesState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,10 @@ class ImagesScreenViewModel : ViewModel() {
     init {
         loadImages()
     }
+
+    fun autoRefresh(): Flow<Boolean> = PreferenceRepository.autoRefresh()
+
+    fun refreshInterval(): Flow<Float> = PreferenceRepository.refreshInterval()
 
     fun loadImages() {
         viewModelScope.launch {
