@@ -2,13 +2,19 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.state.DashboardState
+import kotlinx.coroutines.flow.Flow
+
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
+
+
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel : ViewModel() {
@@ -18,6 +24,10 @@ class DashboardScreenViewModel : ViewModel() {
     init {
         loadData()
     }
+
+    fun autoRefresh(): Flow<Boolean> = PreferenceRepository.autoRefresh()
+
+    fun refreshInterval(): Flow<Float> = PreferenceRepository.refreshInterval()
 
     fun loadData() {
         viewModelScope.launch {

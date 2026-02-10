@@ -13,6 +13,10 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+
+                // Android DataStore
+                implementation(libs.bundles.android.datastore)
+
                 // Compose (using explicit coordinates as compose.* aliases are deprecated in 1.10)
                 implementation(libs.bundles.compose.common)
                 

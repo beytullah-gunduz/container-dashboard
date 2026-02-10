@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
+import kotlinx.coroutines.delay
 
 @Composable
 fun ImagesScreen(
@@ -30,6 +31,15 @@ fun ImagesScreen(
     val state by viewModel.state.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedImage by viewModel.selectedImageId.collectAsState()
+    val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
+    val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+
+    LaunchedEffect(autoRefresh, refreshInterval) {
+        while (autoRefresh) {
+            delay((refreshInterval * 1000).toLong())
+            viewModel.loadImages()
+        }
+    }
 
     val filteredImages = state.images.filter { image ->
         searchQuery.isEmpty() ||
@@ -61,21 +71,23 @@ fun ImagesScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { viewModel.loadImages() },
-                    enabled = !state.isLoading
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+            if (!autoRefresh) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.loadImages() },
+                        enabled = !state.isLoading
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Refresh")
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Refresh")
                 }
             }
         }

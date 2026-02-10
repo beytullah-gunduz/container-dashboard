@@ -28,6 +28,7 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.theme.DockerColors
+import kotlinx.coroutines.delay
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
@@ -46,6 +47,15 @@ fun ContainersScreen(
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
 val isDeletingAll by viewModel.isDeletingAll.collectAsState()
+val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
+val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+
+LaunchedEffect(autoRefresh, refreshInterval) {
+    while (autoRefresh) {
+        delay((refreshInterval * 1000).toLong())
+        viewModel.loadContainers()
+    }
+}
 
 // State for delete all confirmation dialog
 var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -144,20 +154,22 @@ if (isDeletingAll) {
                         }
                     }
                     
-                    OutlinedButton(
-                        onClick = { viewModel.loadContainers() },
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                    if (!autoRefresh) {
+                        OutlinedButton(
+                            onClick = { viewModel.loadContainers() },
+                            enabled = !state.isLoading
+                        ) {
+                            if (state.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Refresh")
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Refresh")
                     }
 // Delete All Button
 if (state.containers.isNotEmpty()) {

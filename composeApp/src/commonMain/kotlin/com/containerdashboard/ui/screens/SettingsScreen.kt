@@ -12,19 +12,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 
 @Composable
 fun SettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SettingsScreenViewModel = viewModel { SettingsScreenViewModel() }
 ) {
     val scrollState = rememberScrollState()
     
-    var dockerHost by remember { mutableStateOf("unix:///var/run/docker.sock") }
-    var darkTheme by remember { mutableStateOf(true) }
-    var autoRefresh by remember { mutableStateOf(true) }
-    var refreshInterval by remember { mutableStateOf(5f) }
-    var showSystemContainers by remember { mutableStateOf(false) }
-    var confirmBeforeDelete by remember { mutableStateOf(true) }
+    val dockerHost by viewModel.engineHost().collectAsState(initial = "unix:///var/run/docker.sock")
+    val darkTheme by viewModel.darkTheme().collectAsState(initial = true)
+    val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
+
+    val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+    val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
+    val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
     
     Column(
         modifier = modifier
@@ -45,7 +49,7 @@ fun SettingsScreen(
             SettingsTextField(
                 label = "Engine Host",
                 value = dockerHost,
-                onValueChange = { dockerHost = it },
+                onValueChange = { viewModel.engineHost = it },
                 placeholder = "unix:///var/run/docker.sock"
             )
             
@@ -80,7 +84,7 @@ fun SettingsScreen(
                 title = "Dark Theme",
                 subtitle = "Use dark color scheme",
                 checked = darkTheme,
-                onCheckedChange = { darkTheme = it }
+                onCheckedChange = { viewModel.darkTheme = it }
             )
         }
         
@@ -90,7 +94,10 @@ fun SettingsScreen(
                 title = "Auto Refresh",
                 subtitle = "Automatically refresh container status",
                 checked = autoRefresh,
-                onCheckedChange = { autoRefresh = it }
+                onCheckedChange = {
+                    viewModel.autoRefresh = it
+                }
+
             )
             
             if (autoRefresh) {
@@ -114,7 +121,7 @@ fun SettingsScreen(
                     }
                     Slider(
                         value = refreshInterval,
-                        onValueChange = { refreshInterval = it },
+                        onValueChange = { viewModel.refreshInterval = it },
                         valueRange = 1f..30f,
                         steps = 28
                     )
@@ -127,7 +134,7 @@ fun SettingsScreen(
                 title = "Show System Containers",
                 subtitle = "Display system containers in the list",
                 checked = showSystemContainers,
-                onCheckedChange = { showSystemContainers = it }
+                onCheckedChange = { viewModel.showSystemContainers = it }
             )
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -136,7 +143,7 @@ fun SettingsScreen(
                 title = "Confirm Before Delete",
                 subtitle = "Show confirmation dialog before deleting resources",
                 checked = confirmBeforeDelete,
-                onCheckedChange = { confirmBeforeDelete = it }
+                onCheckedChange = { viewModel.confirmBeforeDelete = it }
             )
         }
         

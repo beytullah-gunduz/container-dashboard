@@ -16,11 +16,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 
+
+
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.theme.DockerColors
+import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardScreen(
@@ -29,6 +32,16 @@ fun DashboardScreen(
 ) {
     val scrollState = rememberScrollState()
     val state by viewModel.state.collectAsState()
+val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
+val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+
+LaunchedEffect(autoRefresh, refreshInterval) {
+    while (autoRefresh) {
+        delay((refreshInterval * 1000).toLong())
+        viewModel.loadData()
+    }
+}
+
 
     Column(
         modifier = modifier
@@ -56,28 +69,30 @@ fun DashboardScreen(
                 )
             }
 
-            Button(
-                onClick = { viewModel.loadData() },
-                enabled = !state.isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+            if (!autoRefresh) {
+                Button(
+                    onClick = { viewModel.loadData() },
+                    enabled = !state.isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
-                } else {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        modifier = Modifier.size(18.dp)
-                    )
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Refresh")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Refresh")
             }
         }
 
