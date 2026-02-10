@@ -22,6 +22,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
+import com.containerdashboard.ui.components.DeleteAllContainersDialog
+import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
@@ -64,81 +66,19 @@ var showDeleteAllDialog by remember { mutableStateOf(false) }
     
 // Delete All Confirmation Dialog
 if (showDeleteAllDialog) {
-    AlertDialog(
-            onDismissRequest = { showDeleteAllDialog = false },
-            icon = {
-                Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                )
-            },
-            title = { Text("Delete All Containers") },
-            text = {
-                Column {
-                    Text("Are you sure you want to delete all containers?")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                            text = "${state.containers.size} container(s) will be deleted.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                            text = "Running containers will be force stopped and removed.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                        onClick = {
-                            showDeleteAllDialog = false
-                            viewModel.deleteAllContainers()
-                        },
-                        colors =
-                                ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                )
-                ) { Text("Delete All") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") }
-            }
+    DeleteAllContainersDialog(
+        containerCount = state.containers.size,
+        onConfirm = {
+            showDeleteAllDialog = false
+            viewModel.deleteAllContainers()
+        },
+        onDismiss = { showDeleteAllDialog = false }
     )
 }
 
 // Deleting All Progress Modal
 if (isDeletingAll) {
-    AlertDialog(
-            onDismissRequest = { /* Cannot dismiss while deleting */},
-            title = {
-                Text(
-                        text = "Deleting Containers",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                )
-            },
-            text = {
-                Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                            text = "Please wait while all containers are being deleted...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = { /* No buttons while in progress */}
-    )
+    DeletingAllContainersDialog()
 }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
