@@ -147,7 +147,7 @@ class MockDockerRepository : DockerRepository {
     
     override suspend fun removeNetwork(id: String): Result<Unit> = Result.success(Unit)
     
-    override fun getContainerStats(): Flow<List<ContainerStats>> = flow {
+    override fun getContainerStats(refreshRateMillis: Long): Flow<List<ContainerStats>> = flow {
         emit(
             listOf(
                 ContainerStats(

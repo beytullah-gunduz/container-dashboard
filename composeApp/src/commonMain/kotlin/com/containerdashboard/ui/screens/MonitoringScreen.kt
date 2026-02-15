@@ -23,6 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.ui.components.CircularSlider
+
+
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.DockerColors
@@ -35,6 +38,8 @@ fun MonitoringScreen(
     val stats by viewModel.containerStats.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
     val history by viewModel.usageHistory.collectAsState(UsageHistory())
+val refreshRate by viewModel.refreshRate.collectAsState()
+
     val scrollState = rememberScrollState()
 
     Column(
@@ -77,6 +82,13 @@ fun MonitoringScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+CircularSlider(
+        value = refreshRate,
+        onValueChange = { viewModel.setRefreshRate(it) },
+        valueRange = 1f..5f,
+        activeColor = DockerColors.DockerBlue
+)
+
             }
         }
 

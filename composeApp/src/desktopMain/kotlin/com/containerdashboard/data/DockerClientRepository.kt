@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
 import java.time.Duration
@@ -420,21 +422,24 @@ class DockerClientRepository(
     
     // Stats — reacts to container changes, streams each container's stats via callbackFlow and combines them
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    override fun getContainerStats(): Flow<List<ContainerStats>> =
-        getContainers(true).flatMapLatest { containers ->
+    override fun getContainerStats(refreshRateMillis: Long): Flow<List<ContainerStats>> =
+        getContainers(true)
+            .distinctUntilChanged()
+            .flatMapLatest { containers ->
             val running = containers.filter { it.isRunning }
             if (running.isEmpty()) {
                 flowOf(emptyList())
             } else {
                 combine(
                     running.map { container ->
-                        singleContainerStats(container.id, container.displayName)
+                        singleContainerStats(container.id, container.displayName, refreshRateMillis)
                     }
                 ) { stats -> stats.toList() }
             }
         }
 
-    private fun singleContainerStats(containerId: String, containerName: String): Flow<ContainerStats> = callbackFlow {
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private fun singleContainerStats(containerId: String, containerName: String, refreshRateMillis: Long): Flow<ContainerStats> = callbackFlow<ContainerStats> {
         val callback = object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
             override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
                 s?.let {
@@ -463,7 +468,7 @@ class DockerClientRepository(
         }
         dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
         awaitClose { callback.close() }
-    }
+    }.sample(refreshRateMillis)
 
     private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
         val cpuStats = stats.cpuStats ?: return 0.0

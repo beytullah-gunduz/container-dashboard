@@ -41,8 +41,10 @@ interface DockerRepository {
     suspend fun createNetwork(name: String, driver: String = "bridge"): Result<DockerNetwork>
     suspend fun removeNetwork(id: String): Result<Unit>
     
-// Stats
-fun getContainerStats(): Flow<List<ContainerStats>>
+    // Stats
+
+fun getContainerStats(refreshRateMillis: Long = 3000L): Flow<List<ContainerStats>>
+
 
 
     // Prune operations
