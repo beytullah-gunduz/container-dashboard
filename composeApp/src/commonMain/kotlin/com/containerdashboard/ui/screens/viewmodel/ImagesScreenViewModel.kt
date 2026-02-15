@@ -13,6 +13,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class ImageSortColumn {
+    REPOSITORY,
+    TAG,
+    IMAGE_ID,
+    SIZE
+}
+
+enum class SortDirection {
+    ASC,
+    DESC
+}
+
 class ImagesScreenViewModel : ViewModel() {
     private val _state = MutableStateFlow(ImagesState())
     val state: StateFlow<ImagesState> = _state.asStateFlow()
@@ -22,6 +34,12 @@ class ImagesScreenViewModel : ViewModel() {
 
     private val _selectedImageId = MutableStateFlow<String?>(null)
     val selectedImageId: StateFlow<String?> = _selectedImageId.asStateFlow()
+
+private val _sortColumn = MutableStateFlow(ImageSortColumn.REPOSITORY)
+val sortColumn: StateFlow<ImageSortColumn> = _sortColumn.asStateFlow()
+
+private val _sortDirection = MutableStateFlow(SortDirection.ASC)
+val sortDirection: StateFlow<SortDirection> = _sortDirection.asStateFlow()
 
     init {
         loadImages()
@@ -68,4 +86,15 @@ class ImagesScreenViewModel : ViewModel() {
     fun clearError() {
         _state.update { it.copy(error = null) }
     }
+fun toggleSort(column: ImageSortColumn) {
+    if (_sortColumn.value == column) {
+        _sortDirection.value =
+                if (_sortDirection.value == SortDirection.ASC) SortDirection.DESC
+                else SortDirection.ASC
+    } else {
+        _sortColumn.value = column
+        _sortDirection.value = SortDirection.ASC
+    }
+}
+
 }

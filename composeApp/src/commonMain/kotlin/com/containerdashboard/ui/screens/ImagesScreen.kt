@@ -19,7 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.components.SearchBar
 import kotlinx.coroutines.delay
 
@@ -33,6 +35,8 @@ fun ImagesScreen(
     val selectedImage by viewModel.selectedImageId.collectAsState()
     val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
     val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+    val sortColumn by viewModel.sortColumn.collectAsState()
+    val sortDirection by viewModel.sortDirection.collectAsState()
 
     LaunchedEffect(autoRefresh, refreshInterval) {
         while (autoRefresh) {
@@ -41,11 +45,21 @@ fun ImagesScreen(
         }
     }
 
-    val filteredImages = state.images.filter { image ->
-        searchQuery.isEmpty() ||
-            image.repository.contains(searchQuery, ignoreCase = true) ||
-            image.tag.contains(searchQuery, ignoreCase = true)
-    }
+    val filteredImages = state.images
+        .filter { image ->
+            searchQuery.isEmpty() ||
+                image.repository.contains(searchQuery, ignoreCase = true) ||
+                image.tag.contains(searchQuery, ignoreCase = true)
+        }
+        .let { list: List<DockerImage> ->
+            val ascending = sortDirection == SortDirection.ASC
+            when (sortColumn) {
+                ImageSortColumn.REPOSITORY -> if (ascending) list.sortedBy { it.repository.lowercase() } else list.sortedByDescending { it.repository.lowercase() }
+                ImageSortColumn.TAG -> if (ascending) list.sortedBy { it.tag.lowercase() } else list.sortedByDescending { it.tag.lowercase() }
+                ImageSortColumn.IMAGE_ID -> if (ascending) list.sortedBy { it.shortId.lowercase() } else list.sortedByDescending { it.shortId.lowercase() }
+                ImageSortColumn.SIZE -> if (ascending) list.sortedBy { it.size } else list.sortedByDescending { it.size }
+            }
+        }
 
     val totalSize = state.images.sumOf { it.size }
 
@@ -128,7 +142,11 @@ fun ImagesScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Table Header
-        ImageTableHeader()
+        ImageTableHeader(
+            sortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSort = { viewModel.toggleSort(it) }
+        )
 
         // Loading indicator
         if (state.isLoading && state.images.isEmpty()) {
@@ -168,7 +186,11 @@ fun ImagesScreen(
 }
 
 @Composable
-private fun ImageTableHeader() {
+private fun ImageTableHeader(
+    sortColumn: ImageSortColumn,
+    sortDirection: SortDirection,
+    onSort: (ImageSortColumn) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -176,35 +198,46 @@ private fun ImageTableHeader() {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "REPOSITORY",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.5f)
-        )
-        Text(
-            text = "TAG",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = "IMAGE ID",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = "SIZE",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.7f)
-        )
+        SortableHeaderCell("REPOSITORY", ImageSortColumn.REPOSITORY, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
+        SortableHeaderCell("TAG", ImageSortColumn.TAG, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+        SortableHeaderCell("IMAGE ID", ImageSortColumn.IMAGE_ID, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+        SortableHeaderCell("SIZE", ImageSortColumn.SIZE, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
         Spacer(modifier = Modifier.width(48.dp))
+    }
+}
+
+@Composable
+private fun SortableHeaderCell(
+    label: String,
+    column: ImageSortColumn,
+    currentSort: ImageSortColumn,
+    sortDirection: SortDirection,
+    onSort: (ImageSortColumn) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isActive = currentSort == column
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .clickable { onSort(column) }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (isActive) {
+            Icon(
+                imageVector = if (sortDirection == SortDirection.ASC) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = if (sortDirection == SortDirection.ASC) "Ascending" else "Descending",
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
