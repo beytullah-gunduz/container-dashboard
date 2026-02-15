@@ -2,20 +2,26 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.data.models.Volume
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
-import com.containerdashboard.ui.state.VolumesState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class VolumeSortColumn {
+    NAME,
+    DRIVER,
+    MOUNTPOINT
+}
+
 class VolumesScreenViewModel : ViewModel() {
-    private val _state = MutableStateFlow(VolumesState())
-    val state: StateFlow<VolumesState> = _state.asStateFlow()
+
+    val repo: DockerRepository = AppModule.dockerRepository
+
+    val volumes: Flow<List<Volume>> = repo.getVolumes()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -26,36 +32,32 @@ class VolumesScreenViewModel : ViewModel() {
     private val _showCreateDialog = MutableStateFlow(false)
     val showCreateDialog: StateFlow<Boolean> = _showCreateDialog.asStateFlow()
 
-    init {
-        loadVolumes()
-    }
+    private val _sortColumn = MutableStateFlow(VolumeSortColumn.NAME)
+    val sortColumn: StateFlow<VolumeSortColumn> = _sortColumn.asStateFlow()
 
-    fun autoRefresh(): Flow<Boolean> = PreferenceRepository.autoRefresh()
+    private val _sortDirection = MutableStateFlow(SortDirection.ASC)
+    val sortDirection: StateFlow<SortDirection> = _sortDirection.asStateFlow()
 
-    fun refreshInterval(): Flow<Float> = PreferenceRepository.refreshInterval()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun loadVolumes() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            try {
-                AppModule.dockerRepository.getVolumes()
-                    .catch { e -> _state.update { it.copy(error = e.message, isLoading = false) } }
-                    .collect { volumes ->
-                        _state.update { it.copy(volumes = volumes, isLoading = false) }
-                    }
-            } catch (e: Exception) {
-                _state.update { it.copy(error = e.message, isLoading = false) }
-            }
+    fun toggleSort(column: VolumeSortColumn) {
+        if (_sortColumn.value == column) {
+            _sortDirection.value =
+                if (_sortDirection.value == SortDirection.ASC) SortDirection.DESC
+                else SortDirection.ASC
+        } else {
+            _sortColumn.value = column
+            _sortDirection.value = SortDirection.ASC
         }
     }
 
     fun createVolume(name: String) {
         viewModelScope.launch {
             try {
-                AppModule.dockerRepository.createVolume(name, "local")
-                loadVolumes()
+                repo.createVolume(name, "local")
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
@@ -63,10 +65,9 @@ class VolumesScreenViewModel : ViewModel() {
     fun removeVolume(name: String) {
         viewModelScope.launch {
             try {
-                AppModule.dockerRepository.removeVolume(name)
-                loadVolumes()
+                repo.removeVolume(name)
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
@@ -84,6 +85,6 @@ class VolumesScreenViewModel : ViewModel() {
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _error.value = null
     }
 }

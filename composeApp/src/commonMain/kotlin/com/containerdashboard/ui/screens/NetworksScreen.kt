@@ -27,12 +27,13 @@ fun NetworksScreen(
     modifier: Modifier = Modifier,
     viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() }
 ) {
-    val state by viewModel.state.collectAsState()
+    val networks by viewModel.networks.collectAsState(listOf())
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    val filteredNetworks = state.networks.filter { network ->
+    val filteredNetworks = networks.filter { network ->
         searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
     }
 
@@ -104,28 +105,13 @@ fun NetworksScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${state.networks.size} networks, ${state.networks.count { it.name !in systemNetworks }} custom",
+                    text = "${networks.size} networks, ${networks.count { it.name !in systemNetworks }} custom",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { viewModel.loadNetworks() },
-                    enabled = !state.isLoading
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Refresh")
-                }
                 Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -137,7 +123,7 @@ fun NetworksScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Error message
-        state.error?.let { error ->
+        error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(
@@ -150,7 +136,7 @@ fun NetworksScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
@@ -172,15 +158,7 @@ fun NetworksScreen(
         // Table Header
         NetworkTableHeader()
 
-        // Loading indicator
-        if (state.isLoading && state.networks.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (filteredNetworks.isEmpty()) {
+        if (filteredNetworks.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                 contentAlignment = Alignment.Center

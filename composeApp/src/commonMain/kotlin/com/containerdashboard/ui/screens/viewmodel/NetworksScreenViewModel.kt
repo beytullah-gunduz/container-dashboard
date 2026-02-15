@@ -2,18 +2,20 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
-import com.containerdashboard.ui.state.NetworksState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NetworksScreenViewModel : ViewModel() {
-    private val _state = MutableStateFlow(NetworksState())
-    val state: StateFlow<NetworksState> = _state.asStateFlow()
+
+    val repo: DockerRepository = AppModule.dockerRepository
+
+    val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -24,32 +26,15 @@ class NetworksScreenViewModel : ViewModel() {
     private val _showCreateDialog = MutableStateFlow(false)
     val showCreateDialog: StateFlow<Boolean> = _showCreateDialog.asStateFlow()
 
-    init {
-        loadNetworks()
-    }
-
-    fun loadNetworks() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            try {
-                AppModule.dockerRepository.getNetworks()
-                    .catch { e -> _state.update { it.copy(error = e.message, isLoading = false) } }
-                    .collect { networks ->
-                        _state.update { it.copy(networks = networks, isLoading = false) }
-                    }
-            } catch (e: Exception) {
-                _state.update { it.copy(error = e.message, isLoading = false) }
-            }
-        }
-    }
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     fun createNetwork(name: String, driver: String) {
         viewModelScope.launch {
             try {
-                AppModule.dockerRepository.createNetwork(name, driver)
-                loadNetworks()
+                repo.createNetwork(name, driver)
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
@@ -57,10 +42,9 @@ class NetworksScreenViewModel : ViewModel() {
     fun removeNetwork(id: String) {
         viewModelScope.launch {
             try {
-                AppModule.dockerRepository.removeNetwork(id)
-                loadNetworks()
+                repo.removeNetwork(id)
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message) }
+                _error.value = e.message
             }
         }
     }
@@ -78,6 +62,6 @@ class NetworksScreenViewModel : ViewModel() {
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _error.value = null
     }
 }

@@ -19,32 +19,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
+import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.components.SearchBar
-import kotlinx.coroutines.delay
 
 @Composable
 fun VolumesScreen(
     modifier: Modifier = Modifier,
     viewModel: VolumesScreenViewModel = viewModel { VolumesScreenViewModel() }
 ) {
-    val state by viewModel.state.collectAsState()
+    val volumes by viewModel.volumes.collectAsState(listOf())
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedVolume by viewModel.selectedVolumeName.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
-    val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
-    val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+    val sortColumn by viewModel.sortColumn.collectAsState()
+    val sortDirection by viewModel.sortDirection.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    LaunchedEffect(autoRefresh, refreshInterval) {
-        while (autoRefresh) {
-            delay((refreshInterval * 1000).toLong())
-            viewModel.loadVolumes()
+    val filteredVolumes = volumes
+        .filter { volume ->
+            searchQuery.isEmpty() || volume.name.contains(searchQuery, ignoreCase = true)
         }
-    }
-
-    val filteredVolumes = state.volumes.filter { volume ->
-        searchQuery.isEmpty() || volume.name.contains(searchQuery, ignoreCase = true)
-    }
+        .let { list ->
+            val ascending = sortDirection == SortDirection.ASC
+            when (sortColumn) {
+                VolumeSortColumn.NAME -> if (ascending) list.sortedBy { it.name.lowercase() } else list.sortedByDescending { it.name.lowercase() }
+                VolumeSortColumn.DRIVER -> if (ascending) list.sortedBy { it.driver.lowercase() } else list.sortedByDescending { it.driver.lowercase() }
+                VolumeSortColumn.MOUNTPOINT -> if (ascending) list.sortedBy { it.mountpoint.lowercase() } else list.sortedByDescending { it.mountpoint.lowercase() }
+            }
+        }
 
     // Create Volume Dialog
     if (showCreateDialog) {
@@ -98,30 +102,13 @@ fun VolumesScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${state.volumes.size} volumes",
+                    text = "${volumes.size} volumes",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (!autoRefresh) {
-                    OutlinedButton(
-                        onClick = { viewModel.loadVolumes() },
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Refresh")
-                    }
-                }
                 Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -133,7 +120,7 @@ fun VolumesScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         // Error message
-        state.error?.let { error ->
+        error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(
@@ -146,7 +133,7 @@ fun VolumesScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
@@ -166,17 +153,13 @@ fun VolumesScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Table Header
-        VolumeTableHeader()
+        VolumeTableHeader(
+            sortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSort = { viewModel.toggleSort(it) }
+        )
 
-        // Loading indicator
-        if (state.isLoading && state.volumes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (filteredVolumes.isEmpty()) {
+        if (filteredVolumes.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                 contentAlignment = Alignment.Center
@@ -206,7 +189,11 @@ fun VolumesScreen(
 }
 
 @Composable
-private fun VolumeTableHeader() {
+private fun VolumeTableHeader(
+    sortColumn: VolumeSortColumn,
+    sortDirection: SortDirection,
+    onSort: (VolumeSortColumn) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,28 +201,45 @@ private fun VolumeTableHeader() {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "NAME",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.5f)
-        )
-        Text(
-            text = "DRIVER",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.7f)
-        )
-        Text(
-            text = "MOUNTPOINT",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(2f)
-        )
+        VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
+        VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
+        VolumeSortableHeaderCell("MOUNTPOINT", VolumeSortColumn.MOUNTPOINT, sortColumn, sortDirection, onSort, Modifier.weight(2f))
         Spacer(modifier = Modifier.width(48.dp))
+    }
+}
+
+@Composable
+private fun VolumeSortableHeaderCell(
+    label: String,
+    column: VolumeSortColumn,
+    currentSort: VolumeSortColumn,
+    sortDirection: SortDirection,
+    onSort: (VolumeSortColumn) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isActive = currentSort == column
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .clickable { onSort(column) }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (isActive) {
+            Icon(
+                imageVector = if (sortDirection == SortDirection.ASC) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = if (sortDirection == SortDirection.ASC) "Ascending" else "Descending",
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 

@@ -28,7 +28,6 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.theme.DockerColors
-import kotlinx.coroutines.delay
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
@@ -42,58 +41,62 @@ fun ContainersScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var containerFilter by remember { mutableStateOf(ContainerFilter.ALL) }
-    
-    val state by viewModel.state.collectAsState()
+
+    val containers by viewModel.containers.collectAsState(listOf())
+    val error by viewModel.error.collectAsState()
+    val actionInProgress by viewModel.actionInProgress.collectAsState()
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
-val isDeletingAll by viewModel.isDeletingAll.collectAsState()
-val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
-val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
+    val isDeletingAll by viewModel.isDeletingAll.collectAsState()
 
-LaunchedEffect(autoRefresh, refreshInterval) {
-    while (autoRefresh) {
-        delay((refreshInterval * 1000).toLong())
-        viewModel.loadContainers()
+    // State for delete all confirmation dialog
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
+
+    val filteredContainers = remember(containers, searchQuery, containerFilter) {
+        containers.filter { container ->
+            val matchesSearch = searchQuery.isEmpty() ||
+                    container.displayName.contains(searchQuery, ignoreCase = true) ||
+                    container.image.contains(searchQuery, ignoreCase = true)
+            val matchesFilter = when (containerFilter) {
+                ContainerFilter.ALL -> true
+                ContainerFilter.RUNNING -> container.isRunning
+                ContainerFilter.STOPPED -> !container.isRunning
+            }
+            matchesSearch && matchesFilter
+        }
     }
-}
 
-// State for delete all confirmation dialog
-var showDeleteAllDialog by remember { mutableStateOf(false) }
-
-    
-    val filteredContainers = remember(state.containers, searchQuery, containerFilter) {
-        viewModel.getFilteredContainers(searchQuery, containerFilter)
-    }
-    
     // Check if all filtered containers are selected
-    val allFilteredSelected = filteredContainers.isNotEmpty() && 
+    val allFilteredSelected = filteredContainers.isNotEmpty() &&
         filteredContainers.all { it.id in selectedContainerIds }
-    
-    // Check how many selected containers can be deleted (not running)
-    val deletableSelectedCount = remember(selectedContainerIds, state.containers) {
-        viewModel.getDeletableSelectedCount()
-    }
-    
-// Delete All Confirmation Dialog
-if (showDeleteAllDialog) {
-    DeleteAllContainersDialog(
-        containerCount = state.containers.size,
-        onConfirm = {
-            showDeleteAllDialog = false
-            viewModel.deleteAllContainers()
-        },
-        onDismiss = { showDeleteAllDialog = false }
-    )
-}
 
-// Deleting All Progress Modal
-if (isDeletingAll) {
-    DeletingAllContainersDialog()
-}
+    // Check how many selected containers can be deleted (not running)
+    val deletableSelectedCount = remember(selectedContainerIds, containers) {
+        selectedContainerIds.count { id ->
+            containers.find { it.id == id }?.isRunning == false
+        }
+    }
+
+    // Delete All Confirmation Dialog
+    if (showDeleteAllDialog) {
+        DeleteAllContainersDialog(
+            containerCount = containers.size,
+            onConfirm = {
+                showDeleteAllDialog = false
+                viewModel.deleteAllContainers(containers)
+            },
+            onDismiss = { showDeleteAllDialog = false }
+        )
+    }
+
+    // Deleting All Progress Modal
+    if (isDeletingAll) {
+        DeletingAllContainersDialog()
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
-        
+
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp)
         ) {
@@ -110,12 +113,12 @@ if (isDeletingAll) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${state.containers.count { it.isRunning }} running of ${state.containers.size} total",
+                        text = "${containers.count { it.isRunning }} running of ${containers.size} total",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Delete Selected Button
                     if (selectedContainerIds.isNotEmpty()) {
@@ -143,7 +146,7 @@ if (isDeletingAll) {
                                     "Delete ${selectedContainerIds.size} selected"
                             )
                         }
-                        
+
                         // Clear selection button
                         OutlinedButton(
                             onClick = { viewModel.clearSelection() }
@@ -153,52 +156,34 @@ if (isDeletingAll) {
                             Text("Clear")
                         }
                     }
-                    
-                    if (!autoRefresh) {
-                        OutlinedButton(
-                            onClick = { viewModel.loadContainers() },
-                            enabled = !state.isLoading
+
+                    // Delete All Button
+                    if (containers.isNotEmpty()) {
+                        Button(
+                            onClick = { showDeleteAllDialog = true },
+                            enabled = !isDeletingAll && !isDeletingSelected,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
-                            if (state.isLoading) {
+                            if (isDeletingAll) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError
                                 )
                             } else {
-                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Refresh")
+                            Text("Delete All")
                         }
                     }
-// Delete All Button
-if (state.containers.isNotEmpty()) {
-    Button(
-            onClick = { showDeleteAllDialog = true },
-            enabled = !isDeletingAll && !isDeletingSelected,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-    ) {
-        if (isDeletingAll) {
-            CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onError
-            )
-        } else {
-            Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Delete All")
-    }
-}
-
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Error message
-            state.error?.let { error ->
+            error?.let { errorMessage ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     colors = CardDefaults.cardColors(
@@ -211,7 +196,7 @@ if (state.containers.isNotEmpty()) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                        Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
                             Icon(Icons.Default.Close, null)
@@ -219,7 +204,7 @@ if (state.containers.isNotEmpty()) {
                     }
                 }
             }
-            
+
             // Filters Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -232,7 +217,7 @@ if (state.containers.isNotEmpty()) {
                     placeholder = "Search containers...",
                     modifier = Modifier.weight(1f)
                 )
-                
+
                 FilterChip(
                     selected = containerFilter == ContainerFilter.ALL,
                     onClick = { containerFilter = ContainerFilter.ALL },
@@ -241,7 +226,7 @@ if (state.containers.isNotEmpty()) {
                         { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
                     } else null
                 )
-                
+
                 FilterChip(
                     selected = containerFilter == ContainerFilter.RUNNING,
                     onClick = { containerFilter = ContainerFilter.RUNNING },
@@ -250,7 +235,7 @@ if (state.containers.isNotEmpty()) {
                         { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
                     } else null
                 )
-                
+
                 FilterChip(
                     selected = containerFilter == ContainerFilter.STOPPED,
                     onClick = { containerFilter = ContainerFilter.STOPPED },
@@ -260,9 +245,9 @@ if (state.containers.isNotEmpty()) {
                     } else null
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Table Header - changes based on mode
             if (isCompactMode) {
                 CompactTableHeader(
@@ -289,16 +274,8 @@ if (state.containers.isNotEmpty()) {
                     hasItems = filteredContainers.isNotEmpty()
                 )
             }
-            
-            // Loading indicator
-            if (state.isLoading && state.containers.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (filteredContainers.isEmpty()) {
+
+            if (filteredContainers.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
                     contentAlignment = Alignment.Center
@@ -323,7 +300,7 @@ if (state.containers.isNotEmpty()) {
                                 onCheckedChange = { checked ->
                                     viewModel.toggleContainerSelection(container.id, checked)
                                 },
-                                isActionInProgress = state.actionInProgress == container.id,
+                                isActionInProgress = actionInProgress == container.id,
                                 onStart = { viewModel.startContainer(container.id) },
                                 onStop = { viewModel.stopContainer(container.id) },
                                 onPause = { viewModel.pauseContainer(container.id) },
@@ -339,7 +316,7 @@ if (state.containers.isNotEmpty()) {
                                 onCheckedChange = { checked ->
                                     viewModel.toggleContainerSelection(container.id, checked)
                                 },
-                                isActionInProgress = state.actionInProgress == container.id,
+                                isActionInProgress = actionInProgress == container.id,
                                 onStart = { viewModel.startContainer(container.id) },
                                 onStop = { viewModel.stopContainer(container.id) },
                                 onPause = { viewModel.pauseContainer(container.id) },
@@ -376,7 +353,7 @@ private fun CompactTableHeader(
             enabled = hasItems,
             modifier = Modifier.padding(end = 8.dp)
         )
-        
+
         Text(
             text = "CONTAINER",
             style = MaterialTheme.typography.labelSmall,
@@ -384,7 +361,7 @@ private fun CompactTableHeader(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f)
         )
-        
+
         Text(
             text = "STATUS",
             style = MaterialTheme.typography.labelSmall,
@@ -392,7 +369,7 @@ private fun CompactTableHeader(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.width(100.dp)
         )
-        
+
         Spacer(modifier = Modifier.width(48.dp))
     }
 }
@@ -412,7 +389,7 @@ private fun CompactContainerRow(
     onViewLogs: () -> Unit
 ) {
     var showActionsMenu by remember { mutableStateOf(false) }
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -433,7 +410,7 @@ private fun CompactContainerRow(
             onCheckedChange = onCheckedChange,
             modifier = Modifier.padding(end = 8.dp)
         )
-        
+
         // Container info (Name + Image below)
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -471,11 +448,11 @@ private fun CompactContainerRow(
                 )
             }
         }
-        
+
         Box(modifier = Modifier.width(100.dp)) {
             StatusBadge(status = container.state.toContainerStatus())
         }
-        
+
         // Actions Menu
         Box {
             if (isActionInProgress) {
@@ -494,7 +471,7 @@ private fun CompactContainerRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 DropdownMenu(
                     expanded = showActionsMenu,
                     onDismissRequest = { showActionsMenu = false }
@@ -509,14 +486,14 @@ private fun CompactContainerRow(
                             Icon(
                                 if (isViewingLogs) Icons.Filled.Article else Icons.Outlined.Article,
                                 contentDescription = null,
-                                tint = if (isViewingLogs) DockerColors.DockerBlue 
+                                tint = if (isViewingLogs) DockerColors.DockerBlue
                                     else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     )
-                    
+
                     HorizontalDivider()
-                    
+
                     when {
                         container.isRunning -> {
                             DropdownMenuItem(
@@ -545,23 +522,23 @@ private fun CompactContainerRow(
                             )
                         }
                     }
-                    
+
                     HorizontalDivider()
-                    
+
                     DropdownMenuItem(
-                        text = { 
+                        text = {
                             Text(
                                 "Delete",
-                                color = if (!container.isRunning) MaterialTheme.colorScheme.error 
+                                color = if (!container.isRunning) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            ) 
+                            )
                         },
                         onClick = { showActionsMenu = false; onRemove() },
                         enabled = !container.isRunning,
                         leadingIcon = {
                             Icon(
                                 Icons.Outlined.Delete, null,
-                                tint = if (!container.isRunning) MaterialTheme.colorScheme.error 
+                                tint = if (!container.isRunning) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         }
@@ -593,7 +570,7 @@ private fun ExpandedTableHeader(
             enabled = hasItems,
             modifier = Modifier.padding(end = 8.dp)
         )
-        
+
         Text(
             text = "NAME",
             style = MaterialTheme.typography.labelSmall,
@@ -660,7 +637,7 @@ private fun ExpandedContainerRow(
             onCheckedChange = onCheckedChange,
             modifier = Modifier.padding(end = 8.dp)
         )
-        
+
         // Name
         Column(modifier = Modifier.weight(1.5f)) {
             Text(
@@ -675,7 +652,7 @@ private fun ExpandedContainerRow(
                 fontFamily = FontFamily.Monospace
             )
         }
-        
+
         // Image
         Text(
             text = container.image,
@@ -684,12 +661,12 @@ private fun ExpandedContainerRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        
+
         // Status
         Box(modifier = Modifier.weight(1f)) {
             StatusBadge(status = container.state.toContainerStatus())
         }
-        
+
         // Ports
         Text(
             text = container.ports.firstOrNull()?.displayString ?: "-",
@@ -698,7 +675,7 @@ private fun ExpandedContainerRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1.5f)
         )
-        
+
         // Actions
         Row(
             modifier = Modifier.width(160.dp),
@@ -719,11 +696,11 @@ private fun ExpandedContainerRow(
                         if (isViewingLogs) Icons.Filled.Article else Icons.Outlined.Article,
                         contentDescription = "View Logs",
                         modifier = Modifier.size(18.dp),
-                        tint = if (isViewingLogs) DockerColors.DockerBlue 
+                        tint = if (isViewingLogs) DockerColors.DockerBlue
                             else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 when {
                     container.isRunning -> {
                         IconButton(onClick = onPause, modifier = Modifier.size(32.dp)) {
@@ -773,9 +750,9 @@ private fun ExpandedContainerRow(
                         Icons.Outlined.Delete,
                         contentDescription = "Delete",
                         modifier = Modifier.size(18.dp),
-                        tint = if (!container.isRunning) 
-                            MaterialTheme.colorScheme.onSurfaceVariant 
-                        else 
+                        tint = if (!container.isRunning)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )
                 }
