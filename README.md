@@ -16,6 +16,7 @@ The app have been done using Claude Opus 4.5 and 4.6.
 - 🖼️ **Images** - View, pull, and manage container images
 - 💾 **Volumes** - Create and manage persistent data volumes
 - 🌐 **Networks** - Configure and manage networks
+- 📈 **Monitoring** - Real-time CPU and memory usage monitoring with live graphs and detailed stats per container
 - ⚙️ **Settings** - Configure application preferences and engine connection
 
 ## Screenshots
