@@ -2,6 +2,8 @@
 
 A container management dashboard built with **Jetpack Compose Multiplatform**. This application provides interface to manage your containers, images, volumes, and networks.
 
+The app have been done using Claude Opus 4.5 and 4.6.
+
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-blue)
 ![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-green)
 ![Gradle](https://img.shields.io/badge/Gradle-8.14.4-orange)
@@ -17,6 +19,8 @@ A container management dashboard built with **Jetpack Compose Multiplatform**. T
 - ⚙️ **Settings** - Configure application preferences and engine connection
 
 ## Screenshots
+
+![Dashboard Screen](docs/dashboard_screen.png)
 
 The application features :
 
