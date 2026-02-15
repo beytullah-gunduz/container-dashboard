@@ -15,15 +15,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-
-
-
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.theme.DockerColors
-import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardScreen(
@@ -31,17 +27,15 @@ fun DashboardScreen(
     viewModel: DashboardScreenViewModel = viewModel { DashboardScreenViewModel() }
 ) {
     val scrollState = rememberScrollState()
-    val state by viewModel.state.collectAsState()
-val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
-val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
 
-LaunchedEffect(autoRefresh, refreshInterval) {
-    while (autoRefresh) {
-        delay((refreshInterval * 1000).toLong())
-        viewModel.loadData()
-    }
-}
-
+    val systemInfo by viewModel.systemInfo.collectAsState()
+    val version by viewModel.version.collectAsState()
+    val containers by viewModel.containers.collectAsState(listOf())
+    val images by viewModel.images.collectAsState(listOf())
+    val volumes by viewModel.volumes.collectAsState(listOf())
+    val networks by viewModel.networks.collectAsState(listOf())
+    val error by viewModel.error.collectAsState()
+    val isConnected by viewModel.isConnected.collectAsState()
 
     Column(
         modifier = modifier
@@ -63,41 +57,15 @@ LaunchedEffect(autoRefresh, refreshInterval) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (state.isConnected) "Connected to container engine" else "Overview of your container environment",
+                    text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (state.isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            if (!autoRefresh) {
-                Button(
-                    onClick = { viewModel.loadData() },
-                    enabled = !state.isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Refresh")
-                }
             }
         }
 
         // Error message
-        state.error?.let { error ->
+        error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -115,7 +83,7 @@ LaunchedEffect(autoRefresh, refreshInterval) {
                         tint = MaterialTheme.colorScheme.error
                     )
                     Text(
-                        text = error,
+                        text = errorMessage,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f)
                     )
@@ -127,8 +95,8 @@ LaunchedEffect(autoRefresh, refreshInterval) {
         }
 
         // Stats Cards Row
-        val runningContainers = state.containers.count { it.isRunning }
-        val totalImageSize = state.images.sumOf { it.size }
+        val runningContainers = containers.count { it.isRunning }
+        val totalImageSize = images.sumOf { it.size }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -136,7 +104,7 @@ LaunchedEffect(autoRefresh, refreshInterval) {
         ) {
             StatsCard(
                 title = "Containers",
-                value = state.containers.size.toString(),
+                value = containers.size.toString(),
                 subtitle = "$runningContainers running",
                 icon = Icons.Outlined.ViewInAr,
                 iconTint = DockerColors.DockerBlue,
@@ -144,7 +112,7 @@ LaunchedEffect(autoRefresh, refreshInterval) {
             )
             StatsCard(
                 title = "Images",
-                value = state.images.size.toString(),
+                value = images.size.toString(),
                 subtitle = formatBytes(totalImageSize),
                 icon = Icons.Outlined.Layers,
                 iconTint = DockerColors.Running,
@@ -152,16 +120,16 @@ LaunchedEffect(autoRefresh, refreshInterval) {
             )
             StatsCard(
                 title = "Volumes",
-                value = state.volumes.size.toString(),
-                subtitle = "${state.volumes.size} total",
+                value = volumes.size.toString(),
+                subtitle = "${volumes.size} total",
                 icon = Icons.Outlined.Storage,
                 iconTint = DockerColors.Warning,
                 modifier = Modifier.weight(1f)
             )
             StatsCard(
                 title = "Networks",
-                value = state.networks.size.toString(),
-                subtitle = "${state.networks.count { it.driver == "bridge" }} bridge",
+                value = networks.size.toString(),
+                subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                 icon = Icons.Outlined.Hub,
                 iconTint = DockerColors.DockerBlueDark,
                 modifier = Modifier.weight(1f)
@@ -191,9 +159,9 @@ LaunchedEffect(autoRefresh, refreshInterval) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val running = state.containers.count { it.isRunning }
-                    val paused = state.containers.count { it.isPaused }
-                    val stopped = state.containers.count { it.isStopped }
+                    val running = containers.count { it.isRunning }
+                    val paused = containers.count { it.isPaused }
+                    val stopped = containers.count { it.isStopped }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -236,14 +204,11 @@ LaunchedEffect(autoRefresh, refreshInterval) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    val sysInfo = state.systemInfo
-                    val version = state.version
-
                     SystemInfoRow("Engine Version", version?.version ?: "-")
                     SystemInfoRow("API Version", version?.apiVersion ?: "-")
-                    SystemInfoRow("OS/Arch", "${sysInfo?.osType ?: "-"}/${sysInfo?.architecture ?: "-"}")
-                    SystemInfoRow("CPUs", sysInfo?.ncpu?.toString() ?: "-")
-                    SystemInfoRow("Memory", sysInfo?.formattedMemory ?: "-")
+                    SystemInfoRow("OS/Arch", "${systemInfo?.osType ?: "-"}/${systemInfo?.architecture ?: "-"}")
+                    SystemInfoRow("CPUs", systemInfo?.ncpu?.toString() ?: "-")
+                    SystemInfoRow("Memory", systemInfo?.formattedMemory ?: "-")
                 }
             }
         }
@@ -272,14 +237,14 @@ LaunchedEffect(autoRefresh, refreshInterval) {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (state.containers.isEmpty() && !state.isLoading) {
+                if (containers.isEmpty()) {
                     Text(
                         text = "No containers found",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    state.containers.take(5).forEach { container ->
+                    containers.take(5).forEach { container ->
                         RecentContainerItem(container = container)
                     }
                 }

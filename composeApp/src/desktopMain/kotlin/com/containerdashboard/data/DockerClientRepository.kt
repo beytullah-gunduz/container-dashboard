@@ -5,15 +5,27 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PruneResult
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Container as DockerContainer
+import com.github.dockerjava.api.model.Event
+import com.github.dockerjava.api.model.EventType
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
 import java.time.Duration
 
@@ -33,6 +45,18 @@ class DockerClientRepository(
         .build()
     
     private val dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val dockerEvents: SharedFlow<Event> = callbackFlow {
+        val callback = object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
+            override fun onNext(event: Event?) {
+                event?.let { trySend(it) }
+            }
+        }
+        dockerClient.eventsCmd().exec(callback)
+        awaitClose { callback.close() }
+    }.shareIn(scope, SharingStarted.Lazily)
     
     // System
     override suspend fun getSystemInfo(): Result<SystemInfo> = withContext(Dispatchers.IO) {
@@ -84,13 +108,19 @@ class DockerClientRepository(
     }
     
     // Containers
-    override fun getContainers(all: Boolean): Flow<List<Container>> = flow {
-        val containers = dockerClient.listContainersCmd()
+    override fun getContainers(all: Boolean): Flow<List<Container>> = channelFlow {
+        send(fetchContainers(all))
+        dockerEvents
+            .filter { it.type == EventType.CONTAINER }
+            .collect { send(fetchContainers(all)) }
+    }.flowOn(Dispatchers.IO)
+
+    private fun fetchContainers(all: Boolean): List<Container> {
+        return dockerClient.listContainersCmd()
             .withShowAll(all)
             .exec()
             .map { it.toContainer() }
-        emit(containers)
-    }.flowOn(Dispatchers.IO)
+    }
     
     override suspend fun getContainer(id: String): Result<Container> = withContext(Dispatchers.IO) {
         try {
@@ -188,13 +218,19 @@ class DockerClientRepository(
     }
     
     // Images
-    override fun getImages(): Flow<List<DockerImage>> = flow {
-        val images = dockerClient.listImagesCmd()
+    override fun getImages(): Flow<List<DockerImage>> = channelFlow {
+        send(fetchImages())
+        dockerEvents
+            .filter { it.type == EventType.IMAGE }
+            .collect { send(fetchImages()) }
+    }.flowOn(Dispatchers.IO)
+
+    private fun fetchImages(): List<DockerImage> {
+        return dockerClient.listImagesCmd()
             .withShowAll(true)
             .exec()
             .map { it.toDockerImage() }
-        emit(images)
-    }.flowOn(Dispatchers.IO)
+    }
     
     override suspend fun getImage(id: String): Result<DockerImage> = withContext(Dispatchers.IO) {
         try {
@@ -233,8 +269,15 @@ class DockerClientRepository(
     }
     
     // Volumes
-    override fun getVolumes(): Flow<List<Volume>> = flow {
-        val volumes = dockerClient.listVolumesCmd()
+    override fun getVolumes(): Flow<List<Volume>> = channelFlow {
+        send(fetchVolumes())
+        dockerEvents
+            .filter { it.type == EventType.VOLUME }
+            .collect { send(fetchVolumes()) }
+    }.flowOn(Dispatchers.IO)
+
+    private fun fetchVolumes(): List<Volume> {
+        return dockerClient.listVolumesCmd()
             .exec()
             .volumes
             ?.map { volume ->
@@ -247,8 +290,7 @@ class DockerClientRepository(
                 )
             }
             ?: emptyList()
-        emit(volumes)
-    }.flowOn(Dispatchers.IO)
+    }
     
     override suspend fun getVolume(name: String): Result<Volume> = withContext(Dispatchers.IO) {
         try {
@@ -294,12 +336,18 @@ class DockerClientRepository(
     }
     
     // Networks
-    override fun getNetworks(): Flow<List<DockerNetwork>> = flow {
-        val networks = dockerClient.listNetworksCmd()
+    override fun getNetworks(): Flow<List<DockerNetwork>> = channelFlow {
+        send(fetchNetworks())
+        dockerEvents
+            .filter { it.type == EventType.NETWORK }
+            .collect { send(fetchNetworks()) }
+    }.flowOn(Dispatchers.IO)
+
+    private fun fetchNetworks(): List<DockerNetwork> {
+        return dockerClient.listNetworksCmd()
             .exec()
             .map { it.toDockerNetwork() }
-        emit(networks)
-    }.flowOn(Dispatchers.IO)
+    }
     
     override suspend fun getNetwork(id: String): Result<DockerNetwork> = withContext(Dispatchers.IO) {
         try {
@@ -395,6 +443,7 @@ class DockerClientRepository(
     
     fun close() {
         try {
+            scope.cancel()
             dockerClient.close()
             httpClient.close()
         } catch (e: Exception) {

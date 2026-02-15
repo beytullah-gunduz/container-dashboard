@@ -2,92 +2,60 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.data.models.*
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
-import com.containerdashboard.ui.state.DashboardState
 import kotlinx.coroutines.flow.Flow
-
-
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
-
-
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel : ViewModel() {
-    private val _state = MutableStateFlow(DashboardState())
-    val state: StateFlow<DashboardState> = _state.asStateFlow()
+
+    val repo: DockerRepository = AppModule.dockerRepository
+
+    private val _systemInfo = MutableStateFlow<SystemInfo?>(null)
+    val systemInfo: StateFlow<SystemInfo?> = _systemInfo.asStateFlow()
+
+    private val _version = MutableStateFlow<DockerVersion?>(null)
+    val version: StateFlow<DockerVersion?> = _version.asStateFlow()
+
+    val containers: Flow<List<Container>> = repo.getContainers(all = true)
+
+    val images: Flow<List<DockerImage>> = repo.getImages()
+
+    val volumes: Flow<List<Volume>> = repo.getVolumes()
+
+    val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     init {
-        loadData()
+        loadSystemInfo()
     }
 
-    fun autoRefresh(): Flow<Boolean> = PreferenceRepository.autoRefresh()
-
-    fun refreshInterval(): Flow<Float> = PreferenceRepository.refreshInterval()
-
-    fun loadData() {
+    private fun loadSystemInfo() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
             try {
-                val repo = AppModule.dockerRepository
-
-                // Load system info
                 val sysInfoResult = repo.getSystemInfo()
                 val versionResult = repo.getVersion()
 
-                // Load containers
-                repo.getContainers(all = true)
-                    .catch { e -> _state.update { it.copy(error = e.message) } }
-                    .collect { containers ->
-                        _state.update { it.copy(containers = containers) }
-                    }
-
-                // Load images
-                repo.getImages()
-                    .catch { e -> _state.update { it.copy(error = e.message) } }
-                    .collect { images ->
-                        _state.update { it.copy(images = images) }
-                    }
-
-                // Load volumes
-                repo.getVolumes()
-                    .catch { e -> _state.update { it.copy(error = e.message) } }
-                    .collect { volumes ->
-                        _state.update { it.copy(volumes = volumes) }
-                    }
-
-                // Load networks
-                repo.getNetworks()
-                    .catch { e -> _state.update { it.copy(error = e.message) } }
-                    .collect { networks ->
-                        _state.update { it.copy(networks = networks) }
-                    }
-
-                _state.update {
-                    it.copy(
-                        systemInfo = sysInfoResult.getOrNull(),
-                        version = versionResult.getOrNull(),
-                        isLoading = false,
-                        isConnected = sysInfoResult.isSuccess
-                    )
-                }
+                _systemInfo.value = sysInfoResult.getOrNull()
+                _version.value = versionResult.getOrNull()
+                _isConnected.value = sysInfoResult.isSuccess
             } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "Failed to connect to container engine",
-                        isConnected = false
-                    )
-                }
+                _error.value = e.message ?: "Failed to connect to container engine"
+                _isConnected.value = false
             }
         }
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _error.value = null
     }
 }
