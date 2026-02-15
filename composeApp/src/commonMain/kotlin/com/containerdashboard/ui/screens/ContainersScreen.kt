@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -484,7 +486,7 @@ private fun CompactContainerRow(
                         },
                         leadingIcon = {
                             Icon(
-                                if (isViewingLogs) Icons.Filled.Article else Icons.Outlined.Article,
+                                if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
                                 contentDescription = null,
                                 tint = if (isViewingLogs) DockerColors.DockerBlue
                                     else MaterialTheme.colorScheme.onSurface
@@ -693,7 +695,7 @@ private fun ExpandedContainerRow(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        if (isViewingLogs) Icons.Filled.Article else Icons.Outlined.Article,
+                        if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
                         contentDescription = "View Logs",
                         modifier = Modifier.size(18.dp),
                         tint = if (isViewingLogs) DockerColors.DockerBlue

@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -48,7 +49,7 @@ fun LogsPane(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
-                        Icons.Outlined.Article,
+                        Icons.AutoMirrored.Outlined.Article,
                         contentDescription = null,
                         tint = DockerColors.DockerBlue,
                         modifier = Modifier.size(20.dp)
@@ -181,7 +182,7 @@ fun LogsPane(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(
-                                    Icons.Outlined.Article,
+                                    Icons.AutoMirrored.Outlined.Article,
                                     contentDescription = null,
                                     tint = Color.White.copy(alpha = 0.3f),
                                     modifier = Modifier.size(48.dp)
