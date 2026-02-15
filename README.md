@@ -1,6 +1,6 @@
 # Container Dashboard
 
-A modern container management dashboard built with **Jetpack Compose Multiplatform**. This application provides a beautiful and intuitive interface to manage your containers, images, volumes, and networks.
+A container management dashboard built with **Jetpack Compose Multiplatform**. This application provides interface to manage your containers, images, volumes, and networks.
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-blue)
 ![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-green)
@@ -18,7 +18,7 @@ A modern container management dashboard built with **Jetpack Compose Multiplatfo
 
 ## Screenshots
 
-The application features a modern dark theme:
+The application features :
 
 - Sidebar navigation with branding
 - Statistics cards with real-time data
@@ -110,10 +110,6 @@ The `DockerRepository` interface in `data/repository/` defines all container ope
 1. Implement the `DockerRepository` interface using your preferred client
 2. Connect to the API via Unix socket or TCP
 3. Replace `MockDockerRepository` with your implementation
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
