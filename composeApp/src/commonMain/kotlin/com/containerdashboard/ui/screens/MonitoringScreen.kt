@@ -1,5 +1,6 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,14 +14,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
-import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.DockerColors
 
 @Composable
@@ -30,7 +34,7 @@ fun MonitoringScreen(
 ) {
     val stats by viewModel.containerStats.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
-    val refreshInterval by viewModel.refreshInterval.collectAsState()
+    val history by viewModel.usageHistory.collectAsState(UsageHistory())
     val scrollState = rememberScrollState()
 
     Column(
@@ -73,11 +77,38 @@ fun MonitoringScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                CircularSlider(
-                    value = refreshInterval,
-                    onValueChange = { viewModel.setRefreshInterval(it) },
-                    valueRange = 1f..5f,
-                    activeColor = DockerColors.DockerBlue
+            }
+        }
+
+        // Usage History Graphs
+        if (stats.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                UsageHistoryGraph(
+                    title = "CPU Usage",
+                    icon = Icons.Outlined.Memory,
+                    iconTint = DockerColors.DockerBlue,
+                    history = history.cpuHistory,
+                    maxHistorySize = 60,
+                    barColor = { getCpuColor(it) },
+                    currentValue = "%.1f%%".format(
+                        stats.sumOf { it.cpuPercent } / stats.size
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                UsageHistoryGraph(
+                    title = "Memory Usage",
+                    icon = Icons.Outlined.Storage,
+                    iconTint = DockerColors.DockerBlueDark,
+                    history = history.memoryHistory,
+                    maxHistorySize = 60,
+                    barColor = { getMemoryColor(it) },
+                    currentValue = "%.1f%%".format(
+                        stats.sumOf { it.memoryPercent } / stats.size
+                    ),
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -401,6 +432,129 @@ private fun StatsTableRow(stat: ContainerStats) {
             color = getMemoryColor(stat.memoryPercent),
             modifier = Modifier.weight(0.7f)
         )
+    }
+}
+
+@Composable
+private fun UsageHistoryGraph(
+    title: String,
+    icon: ImageVector,
+    iconTint: Color,
+    history: List<Double>,
+    maxHistorySize: Int,
+    barColor: (Double) -> Color,
+    currentValue: String,
+    maxValue: Double = 100.0,
+    modifier: Modifier = Modifier
+) {
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Title row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = iconTint
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    text = currentValue,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = iconTint
+                )
+            }
+
+            // Graph
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+            ) {
+                // Y-axis labels
+                Box(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {
+                    Text(
+                        text = "100%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    )
+                    Text(
+                        text = "50%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    )
+                    Text(
+                        text = "0%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    )
+                }
+
+                Canvas(modifier = Modifier.fillMaxSize().padding(start = 32.dp)) {
+                    val chartWidth = size.width
+                    val chartHeight = size.height
+                    val barWidth = chartWidth / maxHistorySize
+                    val gap = 1f
+
+                    // Grid lines at 25%, 50%, 75%
+                    for (i in 1..3) {
+                        val y = chartHeight * (1 - i / 4f)
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(0f, y),
+                            end = Offset(chartWidth, y),
+                            strokeWidth = 1f
+                        )
+                    }
+
+                    // Bars — oldest on left, newest on right
+                    val startOffset = (maxHistorySize - history.size) * barWidth
+                    history.forEachIndexed { index, value ->
+                        val x = startOffset + index * barWidth
+                        val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
+                        val barHeight = chartHeight * fraction
+
+                        drawRoundRect(
+                            color = barColor(value),
+                            topLeft = Offset(x + gap, chartHeight - barHeight),
+                            size = Size((barWidth - gap * 2).coerceAtLeast(1f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2f, 2f)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

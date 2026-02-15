@@ -42,7 +42,8 @@ interface DockerRepository {
     suspend fun removeNetwork(id: String): Result<Unit>
     
 // Stats
-fun getContainerStats(intervalMillis: Long = 3000L): Flow<List<ContainerStats>>
+fun getContainerStats(): Flow<List<ContainerStats>>
+
 
     // Prune operations
     suspend fun pruneContainers(): Result<PruneResult>

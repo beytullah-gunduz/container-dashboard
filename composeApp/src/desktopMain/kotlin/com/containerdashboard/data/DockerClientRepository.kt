@@ -22,17 +22,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
 import java.time.Duration
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 class DockerClientRepository(
     dockerHost: String = "unix:///var/run/docker.sock"
@@ -418,59 +418,52 @@ class DockerClientRepository(
         }
     }
     
-    // Stats
-    override fun getContainerStats(intervalMillis: Long): Flow<List<ContainerStats>> = flow {
-        while (true) {
-            try {
-                val runningContainers = dockerClient.listContainersCmd()
-                    .withShowAll(false)
-                    .exec()
-
-                val statsList = runningContainers.mapNotNull { container ->
-                    try {
-                        val latch = CountDownLatch(1)
-                        var stats: com.github.dockerjava.api.model.Statistics? = null
-
-                        dockerClient.statsCmd(container.id)
-                            .withNoStream(true)
-                            .exec(object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
-                                override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
-                                    stats = s
-                                    latch.countDown()
-                                }
-
-                                override fun onError(throwable: Throwable?) {
-                                    latch.countDown()
-                                }
-                            })
-
-                        latch.await(5, TimeUnit.SECONDS)
-
-                        stats?.let { s ->
-                            val cpuPercent = calculateCpuPercent(s)
-                            val memUsage = s.memoryStats?.usage ?: 0L
-                            val memLimit = s.memoryStats?.limit ?: 0L
-
-                            ContainerStats(
-                                containerId = container.id ?: "",
-                                containerName = container.names?.firstOrNull()?.removePrefix("/") ?: container.id?.take(12) ?: "",
-                                cpuPercent = cpuPercent,
-                                memoryUsage = memUsage,
-                                memoryLimit = memLimit
-                            )
-                        }
-                    } catch (e: Exception) {
-                        null
+    // Stats — reacts to container changes, streams each container's stats via callbackFlow and combines them
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun getContainerStats(): Flow<List<ContainerStats>> =
+        getContainers(true).flatMapLatest { containers ->
+            val running = containers.filter { it.isRunning }
+            if (running.isEmpty()) {
+                flowOf(emptyList())
+            } else {
+                combine(
+                    running.map { container ->
+                        singleContainerStats(container.id, container.displayName)
                     }
-                }
-
-                emit(statsList)
-            } catch (e: Exception) {
-                emit(emptyList())
+                ) { stats -> stats.toList() }
             }
-            delay(intervalMillis)
         }
-    }.flowOn(Dispatchers.IO)
+
+    private fun singleContainerStats(containerId: String, containerName: String): Flow<ContainerStats> = callbackFlow {
+        val callback = object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
+            override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
+                s?.let {
+                    val cpuPercent = calculateCpuPercent(it)
+                    val memUsage = it.memoryStats?.usage ?: 0L
+                    val memLimit = it.memoryStats?.limit ?: 0L
+                    trySend(
+                        ContainerStats(
+                            containerId = containerId,
+                            containerName = containerName,
+                            cpuPercent = cpuPercent,
+                            memoryUsage = memUsage,
+                            memoryLimit = memLimit
+                        )
+                    )
+                }
+            }
+
+            override fun onError(throwable: Throwable?) {
+                close(throwable?.let { Exception(it) })
+            }
+
+            override fun onComplete() {
+                close()
+            }
+        }
+        dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
+        awaitClose { callback.close() }
+    }
 
     private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
         val cpuStats = stats.cpuStats ?: return 0.0
