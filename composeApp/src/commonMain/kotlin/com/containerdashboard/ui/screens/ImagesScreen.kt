@@ -1,5 +1,8 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,29 +26,23 @@ import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.components.SearchBar
-import kotlinx.coroutines.delay
 
 @Composable
 fun ImagesScreen(
     modifier: Modifier = Modifier,
     viewModel: ImagesScreenViewModel = viewModel { ImagesScreenViewModel() }
 ) {
-    val state by viewModel.state.collectAsState()
+    val images by viewModel.images.collectAsState(listOf())
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedImage by viewModel.selectedImageId.collectAsState()
-    val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
-    val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
     val sortColumn by viewModel.sortColumn.collectAsState()
     val sortDirection by viewModel.sortDirection.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    LaunchedEffect(autoRefresh, refreshInterval) {
-        while (autoRefresh) {
-            delay((refreshInterval * 1000).toLong())
-            viewModel.loadImages()
-        }
-    }
+    var namedImagesVisible by remember { mutableStateOf(true) }
+    var unnamedImagesVisible by remember { mutableStateOf(true) }
 
-    val filteredImages = state.images
+    val filteredImages = images
         .filter { image ->
             searchQuery.isEmpty() ||
                 image.repository.contains(searchQuery, ignoreCase = true) ||
@@ -61,7 +58,10 @@ fun ImagesScreen(
             }
         }
 
-    val totalSize = state.images.sumOf { it.size }
+    val namedImages = filteredImages.filter { it.repository != "<none>" }
+    val unnamedImages = filteredImages.filter { it.repository == "<none>" }
+
+    val totalSize = images.sumOf { it.size }
 
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp)
@@ -79,37 +79,18 @@ fun ImagesScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${state.images.size} images, ${formatBytes(totalSize)} total",
+                    text = "${images.size} images, ${formatBytes(totalSize)} total",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            if (!autoRefresh) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
-                        onClick = { viewModel.loadImages() },
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Refresh")
-                    }
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         // Error message
-        state.error?.let { error ->
+        error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(
@@ -122,7 +103,7 @@ fun ImagesScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(error, color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
@@ -141,22 +122,7 @@ fun ImagesScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Table Header
-        ImageTableHeader(
-            sortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSort = { viewModel.toggleSort(it) }
-        )
-
-        // Loading indicator
-        if (state.isLoading && state.images.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (filteredImages.isEmpty()) {
+        if (filteredImages.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                 contentAlignment = Alignment.Center
@@ -168,19 +134,133 @@ fun ImagesScreen(
                 )
             }
         } else {
-            // Image List
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                items(filteredImages, key = { it.id }) { image ->
-                    ImageRow(
-                        image = image,
-                        isSelected = selectedImage == image.id,
-                        onClick = { viewModel.setSelectedImage(image.id) },
-                        onRemove = { viewModel.removeImage(image.id) }
-                    )
+                // Named images section
+                if (namedImages.isNotEmpty()) {
+                    item(key = "named-header") {
+                        ImageSectionHeader(
+                            title = "Images",
+                            count = namedImages.size,
+                            expanded = namedImagesVisible,
+                            onToggle = { namedImagesVisible = !namedImagesVisible }
+                        )
+                    }
+
+                    item(key = "named-table-header") {
+                        AnimatedVisibility(
+                            visible = namedImagesVisible,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            ImageTableHeader(
+                                sortColumn = sortColumn,
+                                sortDirection = sortDirection,
+                                onSort = { viewModel.toggleSort(it) }
+                            )
+                        }
+                    }
+
+                    items(namedImages, key = { "named-${it.id}" }) { image ->
+                        AnimatedVisibility(
+                            visible = namedImagesVisible,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            ImageRow(
+                                image = image,
+                                isSelected = selectedImage == image.id,
+                                onClick = { viewModel.setSelectedImage(image.id) },
+                                onRemove = { viewModel.removeImage(image.id) }
+                            )
+                        }
+                    }
+                }
+
+                // Unnamed images section
+                if (unnamedImages.isNotEmpty()) {
+                    item(key = "unnamed-header") {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ImageSectionHeader(
+                            title = "Dangling Images",
+                            count = unnamedImages.size,
+                            expanded = unnamedImagesVisible,
+                            onToggle = { unnamedImagesVisible = !unnamedImagesVisible }
+                        )
+                    }
+
+                    item(key = "unnamed-table-header") {
+                        AnimatedVisibility(
+                            visible = unnamedImagesVisible,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            ImageTableHeader(
+                                sortColumn = sortColumn,
+                                sortDirection = sortDirection,
+                                onSort = { viewModel.toggleSort(it) }
+                            )
+                        }
+                    }
+
+                    items(unnamedImages, key = { "unnamed-${it.id}" }) { image ->
+                        AnimatedVisibility(
+                            visible = unnamedImagesVisible,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            ImageRow(
+                                image = image,
+                                isSelected = selectedImage == image.id,
+                                onClick = { viewModel.setSelectedImage(image.id) },
+                                onRemove = { viewModel.removeImage(image.id) }
+                            )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ImageSectionHeader(
+    title: String,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            contentDescription = if (expanded) "Collapse" else "Expand",
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
         }
     }
 }
