@@ -7,8 +7,10 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel : ViewModel() {
@@ -32,8 +34,8 @@ class DashboardScreenViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    val isConnected: StateFlow<Boolean> = repo.isDockerAvailable()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
         loadSystemInfo()
@@ -47,10 +49,8 @@ class DashboardScreenViewModel : ViewModel() {
 
                 _systemInfo.value = sysInfoResult.getOrNull()
                 _version.value = versionResult.getOrNull()
-                _isConnected.value = sysInfoResult.isSuccess
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to connect to container engine"
-                _isConnected.value = false
             }
         }
     }

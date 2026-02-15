@@ -2,6 +2,7 @@
 kotlin = "2.1.20"
 compose = "1.10.1"
 compose-material3 = "1.10.0-alpha05"
+compose-material3-adaptive = "1.3.0-alpha02"
 compose-material-icons-extended = "1.7.3"
 lifecycle = "2.10.0-alpha08"
 coroutines = "1.10.2"
@@ -21,6 +22,9 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "compose-material-icons-extended" }
+compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-layout = { module = "org.jetbrains.compose.material3.adaptive:adaptive-layout", version.ref = "compose-material3-adaptive" }
+compose-material3-adaptive-navigation = { module = "org.jetbrains.compose.material3.adaptive:adaptive-navigation", version.ref = "compose-material3-adaptive" }
 
 # Lifecycle
 lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
@@ -46,6 +50,7 @@ docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-ja
 [bundles]
 android-datastore = ["androidx-datastore-core", "androidx-datastore-preferences"]
 compose-common = ["compose-runtime", "compose-foundation", "compose-material3", "compose-ui", "compose-components-resources", "compose-material-icons-extended"]
+compose-material3-adaptive = ["compose-material3-adaptive", "compose-material3-adaptive-layout", "compose-material3-adaptive-navigation"]
 lifecycle = ["lifecycle-runtime-compose","lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
 docker-java = ["docker-java-core", "docker-java-transport-httpclient5"]

@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
  * This can be implemented with actual Docker API calls.
  */
 interface DockerRepository {
+// Availability
+fun isDockerAvailable(checkIntervalMillis: Long = 5000L): Flow<Boolean>
+
     // System
     suspend fun getSystemInfo(): Result<SystemInfo>
     suspend fun getVersion(): Result<DockerVersion>

@@ -20,6 +20,9 @@ kotlin {
                 // Compose (using explicit coordinates as compose.* aliases are deprecated in 1.10)
                 implementation(libs.bundles.compose.common)
                 
+                // Material3 Adaptive (AnimatedPane, adaptive layouts)
+                implementation(libs.bundles.compose.material3.adaptive)
+                
                 // Lifecycle ViewModel
                 implementation(libs.bundles.lifecycle)
                 

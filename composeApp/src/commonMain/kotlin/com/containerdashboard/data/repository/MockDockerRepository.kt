@@ -3,12 +3,17 @@ package com.containerdashboard.data.repository
 import com.containerdashboard.data.models.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+
 
 /**
  * Mock implementation for UI development and testing.
  */
 class MockDockerRepository : DockerRepository {
-    
+
+
+override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = flowOf(true)
+
     override suspend fun getSystemInfo(): Result<SystemInfo> = Result.success(
         SystemInfo(
             id = "ABCD:1234:5678",

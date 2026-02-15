@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -34,10 +36,11 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.Duration
 
 class DockerClientRepository(
-    dockerHost: String = "unix:///var/run/docker.sock"
+    private val dockerHost: String = "unix:///var/run/docker.sock"
 ) : DockerRepository {
     
     private val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -55,14 +58,48 @@ class DockerClientRepository(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    /**
+     * Periodically checks whether the Docker daemon is reachable by pinging it.
+     * Emits `true` when Docker is available, `false` otherwise.
+     * Uses [distinctUntilChanged] so collectors only receive updates on actual status changes.
+     */
+    override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = flow {
+        while (true) {
+            val available = try {
+                val socketPath = dockerHost.removePrefix("unix://")
+                if (!File(socketPath).exists()) {
+                    false
+                } else {
+                    // Verify the daemon actually responds
+                    dockerClient.pingCmd().exec()
+                    true
+                }
+            } catch (_: Exception) {
+                false
+            }
+            emit(available)
+            delay(checkIntervalMillis)
+        }
+    }.distinctUntilChanged().flowOn(Dispatchers.IO)
+
     private val dockerEvents: SharedFlow<Event> = callbackFlow {
         val callback = object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
             override fun onNext(event: Event?) {
                 event?.let { trySend(it) }
             }
+            override fun onError(throwable: Throwable?) {
+                // Don't propagate – the flow simply stops producing events
+                close()
+            }
         }
-        dockerClient.eventsCmd().exec(callback)
-        awaitClose { callback.close() }
+        try {
+            dockerClient.eventsCmd().exec(callback)
+        } catch (_: Exception) {
+            close()
+        }
+        awaitClose {
+            try { callback.close() } catch (_: Exception) {}
+        }
     }.shareIn(scope, SharingStarted.Lazily)
     
     // System
@@ -118,18 +155,28 @@ class DockerClientRepository(
     override fun getContainers(all: Boolean): Flow<List<Container>> = dockerEvents
         .filter { it.type == EventType.CONTAINER }
         .map {
-            dockerClient.listContainersCmd()
-                .withShowAll(all)
-                .exec()
-                .map { it.toContainer() }
+            try {
+                dockerClient.listContainersCmd()
+                    .withShowAll(all)
+                    .exec()
+                    .map { it.toContainer() }
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
         .onStart {
-            emit(dockerClient.listContainersCmd()
-                .withShowAll(all)
-                .exec()
-                .map { it.toContainer() }
+            emit(
+                try {
+                    dockerClient.listContainersCmd()
+                        .withShowAll(all)
+                        .exec()
+                        .map { it.toContainer() }
+                } catch (_: Exception) {
+                    emptyList()
+                }
             )
         }
+        .catch { emit(emptyList()) }
         .flowOn(Dispatchers.IO)
 
     
@@ -232,18 +279,28 @@ class DockerClientRepository(
     override fun getImages(): Flow<List<DockerImage>> = dockerEvents
         .filter { it.type == EventType.IMAGE }
         .map {
-            dockerClient.listImagesCmd()
-                .withShowAll(true)
-                .exec()
-                .map { it.toDockerImage() }
+            try {
+                dockerClient.listImagesCmd()
+                    .withShowAll(true)
+                    .exec()
+                    .map { it.toDockerImage() }
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
         .onStart {
-            emit(dockerClient.listImagesCmd()
-                .withShowAll(true)
-                .exec()
-                .map { it.toDockerImage() }
+            emit(
+                try {
+                    dockerClient.listImagesCmd()
+                        .withShowAll(true)
+                        .exec()
+                        .map { it.toDockerImage() }
+                } catch (_: Exception) {
+                    emptyList()
+                }
             )
         }
+        .catch { emit(emptyList()) }
         .flowOn(Dispatchers.IO)
     
     override suspend fun getImage(id: String): Result<DockerImage> = withContext(Dispatchers.IO) {
@@ -286,36 +343,46 @@ class DockerClientRepository(
     override fun getVolumes(): Flow<List<Volume>> = dockerEvents
         .filter { it.type == EventType.VOLUME }
         .map {
-            dockerClient.listVolumesCmd()
-                .exec()
-                .volumes
-                ?.map { volume ->
-                    Volume(
-                        name = volume.name ?: "",
-                        driver = volume.driver ?: "local",
-                        mountpoint = volume.mountpoint ?: "",
-                        scope = "local",
-                        labels = volume.labels
-                    )
-                }
-                ?: emptyList()
+            try {
+                dockerClient.listVolumesCmd()
+                    .exec()
+                    .volumes
+                    ?.map { volume ->
+                        Volume(
+                            name = volume.name ?: "",
+                            driver = volume.driver ?: "local",
+                            mountpoint = volume.mountpoint ?: "",
+                            scope = "local",
+                            labels = volume.labels
+                        )
+                    }
+                    ?: emptyList()
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
         .onStart {
-            emit(dockerClient.listVolumesCmd()
-                .exec()
-                .volumes
-                ?.map { volume ->
-                    Volume(
-                        name = volume.name ?: "",
-                        driver = volume.driver ?: "local",
-                        mountpoint = volume.mountpoint ?: "",
-                        scope = "local",
-                        labels = volume.labels
-                    )
+            emit(
+                try {
+                    dockerClient.listVolumesCmd()
+                        .exec()
+                        .volumes
+                        ?.map { volume ->
+                            Volume(
+                                name = volume.name ?: "",
+                                driver = volume.driver ?: "local",
+                                mountpoint = volume.mountpoint ?: "",
+                                scope = "local",
+                                labels = volume.labels
+                            )
+                        }
+                        ?: emptyList()
+                } catch (_: Exception) {
+                    emptyList()
                 }
-                ?: emptyList()
             )
         }
+        .catch { emit(emptyList()) }
         .flowOn(Dispatchers.IO)
     
     override suspend fun getVolume(name: String): Result<Volume> = withContext(Dispatchers.IO) {
@@ -365,16 +432,26 @@ class DockerClientRepository(
     override fun getNetworks(): Flow<List<DockerNetwork>> = dockerEvents
         .filter { it.type == EventType.NETWORK }
         .map {
-            dockerClient.listNetworksCmd()
-                .exec()
-                .map { it.toDockerNetwork() }
+            try {
+                dockerClient.listNetworksCmd()
+                    .exec()
+                    .map { it.toDockerNetwork() }
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
         .onStart {
-            emit(dockerClient.listNetworksCmd()
-                .exec()
-                .map { it.toDockerNetwork() }
+            emit(
+                try {
+                    dockerClient.listNetworksCmd()
+                        .exec()
+                        .map { it.toDockerNetwork() }
+                } catch (_: Exception) {
+                    emptyList()
+                }
             )
         }
+        .catch { emit(emptyList()) }
         .flowOn(Dispatchers.IO)
     
     override suspend fun getNetwork(id: String): Result<DockerNetwork> = withContext(Dispatchers.IO) {
@@ -459,16 +536,22 @@ class DockerClientRepository(
             }
 
             override fun onError(throwable: Throwable?) {
-                close(throwable?.let { Exception(it) })
+                close()
             }
 
             override fun onComplete() {
                 close()
             }
         }
-        dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
-        awaitClose { callback.close() }
-    }.sample(refreshRateMillis)
+        try {
+            dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
+        } catch (_: Exception) {
+            close()
+        }
+        awaitClose {
+            try { callback.close() } catch (_: Exception) {}
+        }
+    }.catch { /* silently recover */ }.sample(refreshRateMillis)
 
     private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
         val cpuStats = stats.cpuStats ?: return 0.0

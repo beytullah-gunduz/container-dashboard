@@ -22,14 +22,19 @@ The app have been done using Claude Opus 4.5 and 4.6.
 ## Screenshots
 
 ![Dashboard Screen](docs/dashboard_screen.png)
+![Monitoring Screen](docs/monitoring_screen.png)
 
 The application features :
 
-- Sidebar navigation with branding
+- Sidebar navigation with branding and connection status indicator
 - Statistics cards with real-time data
-- Sortable and filterable data tables
-- Status badges and indicators
-- Action buttons for common operations
+- Searchable and filterable data tables
+- Status badges with color-coded container states (running, stopped, paused, etc.)
+- Action buttons for common container operations
+- Live CPU and memory usage graphs with adjustable refresh rate
+- Container logs viewer in a resizable sliding pane
+- Three-pane layout with draggable dividers
+- Material3 dark theme
 
 ## Project Structure
 
