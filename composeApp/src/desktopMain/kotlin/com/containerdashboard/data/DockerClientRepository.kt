@@ -24,12 +24,15 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class DockerClientRepository(
     dockerHost: String = "unix:///var/run/docker.sock"
@@ -415,6 +418,73 @@ class DockerClientRepository(
         }
     }
     
+    // Stats
+    override fun getContainerStats(intervalMillis: Long): Flow<List<ContainerStats>> = flow {
+        while (true) {
+            try {
+                val runningContainers = dockerClient.listContainersCmd()
+                    .withShowAll(false)
+                    .exec()
+
+                val statsList = runningContainers.mapNotNull { container ->
+                    try {
+                        val latch = CountDownLatch(1)
+                        var stats: com.github.dockerjava.api.model.Statistics? = null
+
+                        dockerClient.statsCmd(container.id)
+                            .withNoStream(true)
+                            .exec(object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
+                                override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
+                                    stats = s
+                                    latch.countDown()
+                                }
+
+                                override fun onError(throwable: Throwable?) {
+                                    latch.countDown()
+                                }
+                            })
+
+                        latch.await(5, TimeUnit.SECONDS)
+
+                        stats?.let { s ->
+                            val cpuPercent = calculateCpuPercent(s)
+                            val memUsage = s.memoryStats?.usage ?: 0L
+                            val memLimit = s.memoryStats?.limit ?: 0L
+
+                            ContainerStats(
+                                containerId = container.id ?: "",
+                                containerName = container.names?.firstOrNull()?.removePrefix("/") ?: container.id?.take(12) ?: "",
+                                cpuPercent = cpuPercent,
+                                memoryUsage = memUsage,
+                                memoryLimit = memLimit
+                            )
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+                emit(statsList)
+            } catch (e: Exception) {
+                emit(emptyList())
+            }
+            delay(intervalMillis)
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
+        val cpuStats = stats.cpuStats ?: return 0.0
+        val preCpuStats = stats.preCpuStats ?: return 0.0
+
+        val cpuDelta = (cpuStats.cpuUsage?.totalUsage ?: 0L) - (preCpuStats.cpuUsage?.totalUsage ?: 0L)
+        val systemDelta = (cpuStats.systemCpuUsage ?: 0L) - (preCpuStats.systemCpuUsage ?: 0L)
+
+        if (systemDelta <= 0L || cpuDelta < 0L) return 0.0
+
+        val numCpus = cpuStats.cpuUsage?.percpuUsage?.size ?: cpuStats.onlineCpus?.toInt() ?: 1
+        return (cpuDelta.toDouble() / systemDelta.toDouble()) * numCpus * 100.0
+    }
+
     // Prune operations
     override suspend fun pruneContainers(): Result<PruneResult> = withContext(Dispatchers.IO) {
         try {

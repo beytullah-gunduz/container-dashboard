@@ -147,6 +147,27 @@ class MockDockerRepository : DockerRepository {
     
     override suspend fun removeNetwork(id: String): Result<Unit> = Result.success(Unit)
     
+    override fun getContainerStats(intervalMillis: Long): Flow<List<ContainerStats>> = flow {
+        emit(
+            listOf(
+                ContainerStats(
+                    containerId = "abc123def456",
+                    containerName = "nginx-proxy",
+                    cpuPercent = 12.5,
+                    memoryUsage = 52_428_800,
+                    memoryLimit = 1_073_741_824
+                ),
+                ContainerStats(
+                    containerId = "def456ghi789",
+                    containerName = "postgres-db",
+                    cpuPercent = 35.2,
+                    memoryUsage = 268_435_456,
+                    memoryLimit = 1_073_741_824
+                )
+            )
+        )
+    }
+
     override suspend fun pruneContainers(): Result<PruneResult> = Result.success(PruneResult(3, 500000000))
     override suspend fun pruneImages(): Result<PruneResult> = Result.success(PruneResult(5, 1200000000))
     override suspend fun pruneVolumes(): Result<PruneResult> = Result.success(PruneResult(2, 300000000))

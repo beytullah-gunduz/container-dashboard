@@ -126,6 +126,7 @@ fun App() {
                             Screen.Images.route -> ImagesScreen()
                             Screen.Volumes.route -> VolumesScreen()
                             Screen.Networks.route -> NetworksScreen()
+                            Screen.Monitoring.route -> MonitoringScreen()
                             Screen.Settings.route -> SettingsScreen()
                         }
                     }

@@ -41,6 +41,12 @@ enum class Screen(
         icon = Icons.Outlined.Hub,
         selectedIcon = Icons.Filled.Hub
     ),
+    Monitoring(
+        route = "monitoring",
+        title = "Monitoring",
+        icon = Icons.Outlined.MonitorHeart,
+        selectedIcon = Icons.Filled.MonitorHeart
+    ),
     Settings(
         route = "settings",
         title = "Settings",
@@ -49,7 +55,7 @@ enum class Screen(
     );
 
     companion object {
-        val mainScreens = listOf(Dashboard, Containers, Images, Volumes, Networks)
+        val mainScreens = listOf(Dashboard, Containers, Images, Volumes, Networks, Monitoring)
         val allScreens = entries.toList()
     }
 }
