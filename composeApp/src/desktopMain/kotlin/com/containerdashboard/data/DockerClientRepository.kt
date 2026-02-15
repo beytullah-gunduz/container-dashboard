@@ -18,13 +18,15 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
 import java.time.Duration
@@ -106,21 +108,25 @@ class DockerClientRepository(
             Result.failure(e)
         }
     }
-    
-    // Containers
-    override fun getContainers(all: Boolean): Flow<List<Container>> = channelFlow {
-        send(fetchContainers(all))
-        dockerEvents
-            .filter { it.type == EventType.CONTAINER }
-            .collect { send(fetchContainers(all)) }
-    }.flowOn(Dispatchers.IO)
 
-    private fun fetchContainers(all: Boolean): List<Container> {
-        return dockerClient.listContainersCmd()
-            .withShowAll(all)
-            .exec()
-            .map { it.toContainer() }
-    }
+    // Containers
+    override fun getContainers(all: Boolean): Flow<List<Container>> = dockerEvents
+        .filter { it.type == EventType.CONTAINER }
+        .map {
+            dockerClient.listContainersCmd()
+                .withShowAll(all)
+                .exec()
+                .map { it.toContainer() }
+        }
+        .onStart {
+            emit(dockerClient.listContainersCmd()
+                .withShowAll(all)
+                .exec()
+                .map { it.toContainer() }
+            )
+        }
+        .flowOn(Dispatchers.IO)
+
     
     override suspend fun getContainer(id: String): Result<Container> = withContext(Dispatchers.IO) {
         try {
@@ -218,19 +224,22 @@ class DockerClientRepository(
     }
     
     // Images
-    override fun getImages(): Flow<List<DockerImage>> = channelFlow {
-        send(fetchImages())
-        dockerEvents
-            .filter { it.type == EventType.IMAGE }
-            .collect { send(fetchImages()) }
-    }.flowOn(Dispatchers.IO)
-
-    private fun fetchImages(): List<DockerImage> {
-        return dockerClient.listImagesCmd()
-            .withShowAll(true)
-            .exec()
-            .map { it.toDockerImage() }
-    }
+    override fun getImages(): Flow<List<DockerImage>> = dockerEvents
+        .filter { it.type == EventType.IMAGE }
+        .map {
+            dockerClient.listImagesCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toDockerImage() }
+        }
+        .onStart {
+            emit(dockerClient.listImagesCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toDockerImage() }
+            )
+        }
+        .flowOn(Dispatchers.IO)
     
     override suspend fun getImage(id: String): Result<DockerImage> = withContext(Dispatchers.IO) {
         try {
@@ -269,28 +278,40 @@ class DockerClientRepository(
     }
     
     // Volumes
-    override fun getVolumes(): Flow<List<Volume>> = channelFlow {
-        send(fetchVolumes())
-        dockerEvents
-            .filter { it.type == EventType.VOLUME }
-            .collect { send(fetchVolumes()) }
-    }.flowOn(Dispatchers.IO)
-
-    private fun fetchVolumes(): List<Volume> {
-        return dockerClient.listVolumesCmd()
-            .exec()
-            .volumes
-            ?.map { volume ->
-                Volume(
-                    name = volume.name ?: "",
-                    driver = volume.driver ?: "local",
-                    mountpoint = volume.mountpoint ?: "",
-                    scope = "local",
-                    labels = volume.labels
-                )
-            }
-            ?: emptyList()
-    }
+    override fun getVolumes(): Flow<List<Volume>> = dockerEvents
+        .filter { it.type == EventType.VOLUME }
+        .map {
+            dockerClient.listVolumesCmd()
+                .exec()
+                .volumes
+                ?.map { volume ->
+                    Volume(
+                        name = volume.name ?: "",
+                        driver = volume.driver ?: "local",
+                        mountpoint = volume.mountpoint ?: "",
+                        scope = "local",
+                        labels = volume.labels
+                    )
+                }
+                ?: emptyList()
+        }
+        .onStart {
+            emit(dockerClient.listVolumesCmd()
+                .exec()
+                .volumes
+                ?.map { volume ->
+                    Volume(
+                        name = volume.name ?: "",
+                        driver = volume.driver ?: "local",
+                        mountpoint = volume.mountpoint ?: "",
+                        scope = "local",
+                        labels = volume.labels
+                    )
+                }
+                ?: emptyList()
+            )
+        }
+        .flowOn(Dispatchers.IO)
     
     override suspend fun getVolume(name: String): Result<Volume> = withContext(Dispatchers.IO) {
         try {
@@ -336,18 +357,20 @@ class DockerClientRepository(
     }
     
     // Networks
-    override fun getNetworks(): Flow<List<DockerNetwork>> = channelFlow {
-        send(fetchNetworks())
-        dockerEvents
-            .filter { it.type == EventType.NETWORK }
-            .collect { send(fetchNetworks()) }
-    }.flowOn(Dispatchers.IO)
-
-    private fun fetchNetworks(): List<DockerNetwork> {
-        return dockerClient.listNetworksCmd()
-            .exec()
-            .map { it.toDockerNetwork() }
-    }
+    override fun getNetworks(): Flow<List<DockerNetwork>> = dockerEvents
+        .filter { it.type == EventType.NETWORK }
+        .map {
+            dockerClient.listNetworksCmd()
+                .exec()
+                .map { it.toDockerNetwork() }
+        }
+        .onStart {
+            emit(dockerClient.listNetworksCmd()
+                .exec()
+                .map { it.toDockerNetwork() }
+            )
+        }
+        .flowOn(Dispatchers.IO)
     
     override suspend fun getNetwork(id: String): Result<DockerNetwork> = withContext(Dispatchers.IO) {
         try {
