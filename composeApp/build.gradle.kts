@@ -67,6 +67,9 @@ kotlin {
     }
 }
 
+val appVersion: String = project.findProperty("app.version")?.toString()
+    ?.removeSuffix("-SNAPSHOT") ?: "1.0.0"
+
 compose.desktop {
     application {
         mainClass = "com.containerdashboard.MainKt"
@@ -78,7 +81,7 @@ compose.desktop {
             modules("jdk.unsupported")
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.containerdashboard"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
 
             macOS {
                 bundleID = "com.containerdashboard"
