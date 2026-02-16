@@ -75,7 +75,7 @@ compose.desktop {
 
             modules("java.sql")
             modules("java.naming")
-            modules("sun.misc")
+            modules("jdk.unsupported")
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.containerdashboard"
             packageVersion = "1.0.0"
