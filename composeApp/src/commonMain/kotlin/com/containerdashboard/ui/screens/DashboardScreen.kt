@@ -1,30 +1,49 @@
 package com.containerdashboard.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.ViewInAr
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.StatsCard
+import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.DockerColors
 
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
-    viewModel: DashboardScreenViewModel = viewModel { DashboardScreenViewModel() }
+    viewModel: DashboardScreenViewModel = viewModel { DashboardScreenViewModel() },
 ) {
     val scrollState = rememberScrollState()
 
@@ -38,28 +57,29 @@ fun DashboardScreen(
     val isConnected by viewModel.isConnected.collectAsState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
                     text = "Dashboard",
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -68,24 +88,25 @@ fun DashboardScreen(
         error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Icon(
                         Icons.Default.Error,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.colorScheme.error,
                     )
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { viewModel.clearError() }) {
                         Icon(Icons.Default.Close, null)
@@ -100,7 +121,7 @@ fun DashboardScreen(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             StatsCard(
                 title = "Containers",
@@ -108,7 +129,7 @@ fun DashboardScreen(
                 subtitle = "$runningContainers running",
                 icon = Icons.Outlined.ViewInAr,
                 iconTint = DockerColors.DockerBlue,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             StatsCard(
                 title = "Images",
@@ -116,7 +137,7 @@ fun DashboardScreen(
                 subtitle = formatBytes(totalImageSize),
                 icon = Icons.Outlined.Layers,
                 iconTint = DockerColors.Running,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             StatsCard(
                 title = "Volumes",
@@ -124,7 +145,7 @@ fun DashboardScreen(
                 subtitle = "${volumes.size} total",
                 icon = Icons.Outlined.Storage,
                 iconTint = DockerColors.Warning,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             StatsCard(
                 title = "Networks",
@@ -132,30 +153,31 @@ fun DashboardScreen(
                 subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                 icon = Icons.Outlined.Hub,
                 iconTint = DockerColors.DockerBlueDark,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
 
         // Container Status Section
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Container Status Card
             Card(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(20.dp),
                 ) {
                     Text(
                         text = "Container Status",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -165,22 +187,22 @@ fun DashboardScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         MiniStatsCard(
                             label = "Running",
                             value = running.toString(),
-                            valueColor = DockerColors.Running
+                            valueColor = DockerColors.Running,
                         )
                         MiniStatsCard(
                             label = "Paused",
                             value = paused.toString(),
-                            valueColor = DockerColors.Paused
+                            valueColor = DockerColors.Paused,
                         )
                         MiniStatsCard(
                             label = "Stopped",
                             value = stopped.toString(),
-                            valueColor = DockerColors.Stopped
+                            valueColor = DockerColors.Stopped,
                         )
                     }
                 }
@@ -190,17 +212,18 @@ fun DashboardScreen(
             Card(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(20.dp),
                 ) {
                     Text(
                         text = "System Information",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -217,22 +240,23 @@ fun DashboardScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ),
         ) {
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier.padding(20.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Recent Containers",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -241,7 +265,7 @@ fun DashboardScreen(
                     Text(
                         text = "No containers found",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     containers.take(5).forEach { container ->
@@ -256,62 +280,63 @@ fun DashboardScreen(
 @Composable
 private fun SystemInfoRow(
     label: String,
-    value: String
+    value: String,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
     }
 }
 
 @Composable
-private fun RecentContainerItem(
-    container: Container
-) {
+private fun RecentContainerItem(container: Container) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Surface(
                 modifier = Modifier.size(8.dp),
                 shape = RoundedCornerShape(4.dp),
-                color = when {
-                    container.isRunning -> DockerColors.Running
-                    container.isPaused -> DockerColors.Paused
-                    else -> DockerColors.Stopped
-                }
+                color =
+                    when {
+                        container.isRunning -> DockerColors.Running
+                        container.isPaused -> DockerColors.Paused
+                        else -> DockerColors.Stopped
+                    },
             ) {}
 
             Column {
                 Text(
                     text = container.displayName,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Text(
                     text = container.status,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -319,7 +344,7 @@ private fun RecentContainerItem(
         Text(
             text = container.image,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

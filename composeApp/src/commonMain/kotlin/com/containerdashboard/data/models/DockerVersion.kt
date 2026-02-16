@@ -20,5 +20,5 @@ data class DockerVersion(
     @SerialName("Arch")
     val arch: String = "",
     @SerialName("BuildTime")
-    val buildTime: String = ""
+    val buildTime: String = "",
 )

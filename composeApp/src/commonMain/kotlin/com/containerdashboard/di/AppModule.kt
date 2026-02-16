@@ -8,14 +8,14 @@ import com.containerdashboard.data.repository.DockerRepository
  */
 object AppModule {
     private var _dockerRepository: DockerRepository? = null
-    
+
     val dockerRepository: DockerRepository
         get() = _dockerRepository ?: throw IllegalStateException("DockerRepository not initialized")
-    
+
     fun initialize(repository: DockerRepository) {
         _dockerRepository = repository
     }
-    
+
     val isInitialized: Boolean
         get() = _dockerRepository != null
 }

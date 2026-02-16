@@ -20,11 +20,11 @@ data class Volume(
     @SerialName("Options")
     val options: Map<String, String>? = null,
     @SerialName("UsageData")
-    val usageData: VolumeUsageData? = null
+    val usageData: VolumeUsageData? = null,
 ) {
     val displayName: String
         get() = if (name.length > 20) name.take(20) + "..." else name
-    
+
     val formattedSize: String
         get() = usageData?.let { DockerImage.formatBytes(it.size) } ?: "N/A"
 }

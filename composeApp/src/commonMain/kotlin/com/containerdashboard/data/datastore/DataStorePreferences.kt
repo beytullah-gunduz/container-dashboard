@@ -18,18 +18,17 @@ interface CoroutinesComponent {
 }
 
 internal class CoroutinesComponentImpl private constructor() : CoroutinesComponent {
-
     companion object {
         fun create(): CoroutinesComponent = CoroutinesComponentImpl()
     }
 
     override val mainImmediateDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate
     override val applicationScope: CoroutineScope
-        get() = CoroutineScope(
-            SupervisorJob() + mainImmediateDispatcher,
-        )
+        get() =
+            CoroutineScope(
+                SupervisorJob() + mainImmediateDispatcher,
+            )
 }
-
 
 internal fun createDataStore(
     corruptionHandler: ReplaceFileCorruptionHandler<Preferences>? = null,
@@ -43,7 +42,7 @@ internal fun createDataStore(
     migrations = migrations,
     produceFile = {
         path(context).toPath()
-    }
+    },
 )
 
 internal fun createDataStoreWithDefaults(
@@ -58,27 +57,30 @@ internal fun createDataStoreWithDefaults(
         migrations = migrations,
         produceFile = {
             path().toPath()
-        }
+        },
     )
 
 expect fun dataStorePreferences(
     corruptionHandler: ReplaceFileCorruptionHandler<Preferences>?,
     coroutineScope: CoroutineScope,
-    migrations: List<DataMigration<Preferences>>
+    migrations: List<DataMigration<Preferences>>,
 ): DataStore<Preferences>
 
 const val PREFERENCE_DATASTORE = "settings_preferences.preferences_pb"
 
-interface DataStorePreferences: CoroutinesComponent {
+interface DataStorePreferences : CoroutinesComponent {
     val instance: DataStore<Preferences>
 }
 
-internal class DataStorePreferencesImpl internal constructor(): DataStorePreferences, CoroutinesComponent by CoroutinesComponentImpl.create() {
-    override val instance: DataStore<Preferences> = dataStorePreferences(
-        null,
-        applicationScope + Dispatchers.IO,
-        emptyList()
-    )
-}
+internal class DataStorePreferencesImpl internal constructor() :
+    DataStorePreferences,
+    CoroutinesComponent by CoroutinesComponentImpl.create() {
+        override val instance: DataStore<Preferences> =
+            dataStorePreferences(
+                null,
+                applicationScope + Dispatchers.IO,
+                emptyList(),
+            )
+    }
 
 val dataStorePreferencesInstance get() = DataStorePreferencesImpl().instance

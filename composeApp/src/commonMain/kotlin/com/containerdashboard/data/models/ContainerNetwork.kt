@@ -12,5 +12,5 @@ data class ContainerNetwork(
     @SerialName("Gateway")
     val gateway: String = "",
     @SerialName("MacAddress")
-    val macAddress: String = ""
+    val macAddress: String = "",
 )

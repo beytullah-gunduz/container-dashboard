@@ -2,17 +2,55 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,13 +60,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
-import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
+import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
+import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.theme.DockerColors
 
 // Threshold for switching between compact and expanded layouts
@@ -39,7 +77,7 @@ fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
     currentLogsContainerId: String? = null,
     modifier: Modifier = Modifier,
-    viewModel: ContainersScreenViewModel = viewModel { ContainersScreenViewModel() }
+    viewModel: ContainersScreenViewModel = viewModel { ContainersScreenViewModel() },
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var containerFilter by remember { mutableStateOf(ContainerFilter.ALL) }
@@ -54,30 +92,35 @@ fun ContainersScreen(
     // State for delete all confirmation dialog
     var showDeleteAllDialog by remember { mutableStateOf(false) }
 
-    val filteredContainers = remember(containers, searchQuery, containerFilter) {
-        containers.filter { container ->
-            val matchesSearch = searchQuery.isEmpty() ||
-                    container.displayName.contains(searchQuery, ignoreCase = true) ||
-                    container.image.contains(searchQuery, ignoreCase = true)
-            val matchesFilter = when (containerFilter) {
-                ContainerFilter.ALL -> true
-                ContainerFilter.RUNNING -> container.isRunning
-                ContainerFilter.STOPPED -> !container.isRunning
+    val filteredContainers =
+        remember(containers, searchQuery, containerFilter) {
+            containers.filter { container ->
+                val matchesSearch =
+                    searchQuery.isEmpty() ||
+                        container.displayName.contains(searchQuery, ignoreCase = true) ||
+                        container.image.contains(searchQuery, ignoreCase = true)
+                val matchesFilter =
+                    when (containerFilter) {
+                        ContainerFilter.ALL -> true
+                        ContainerFilter.RUNNING -> container.isRunning
+                        ContainerFilter.STOPPED -> !container.isRunning
+                    }
+                matchesSearch && matchesFilter
             }
-            matchesSearch && matchesFilter
         }
-    }
 
     // Check if all filtered containers are selected
-    val allFilteredSelected = filteredContainers.isNotEmpty() &&
-        filteredContainers.all { it.id in selectedContainerIds }
+    val allFilteredSelected =
+        filteredContainers.isNotEmpty() &&
+            filteredContainers.all { it.id in selectedContainerIds }
 
     // Check how many selected containers can be deleted (not running)
-    val deletableSelectedCount = remember(selectedContainerIds, containers) {
-        selectedContainerIds.count { id ->
-            containers.find { it.id == id }?.isRunning == false
+    val deletableSelectedCount =
+        remember(selectedContainerIds, containers) {
+            selectedContainerIds.count { id ->
+                containers.find { it.id == id }?.isRunning == false
+            }
         }
-    }
 
     // Delete All Confirmation Dialog
     if (showDeleteAllDialog) {
@@ -87,7 +130,7 @@ fun ContainersScreen(
                 showDeleteAllDialog = false
                 viewModel.deleteAllContainers(containers)
             },
-            onDismiss = { showDeleteAllDialog = false }
+            onDismiss = { showDeleteAllDialog = false },
         )
     }
 
@@ -100,24 +143,24 @@ fun ContainersScreen(
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp)
+            modifier = Modifier.fillMaxSize().padding(24.dp),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
                     Text(
                         text = "Containers",
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = "${containers.count { it.isRunning }} running of ${containers.size} total",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -127,31 +170,33 @@ fun ContainersScreen(
                         Button(
                             onClick = { viewModel.deleteSelectedContainers() },
                             enabled = deletableSelectedCount > 0 && !isDeletingSelected,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                ),
                         ) {
                             if (isDeletingSelected) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onError
+                                    color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
                                 Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                if (deletableSelectedCount < selectedContainerIds.size)
-                                    "Delete ${deletableSelectedCount} of ${selectedContainerIds.size}"
-                                else
+                                if (deletableSelectedCount < selectedContainerIds.size) {
+                                    "Delete $deletableSelectedCount of ${selectedContainerIds.size}"
+                                } else {
                                     "Delete ${selectedContainerIds.size} selected"
+                                },
                             )
                         }
 
                         // Clear selection button
                         OutlinedButton(
-                            onClick = { viewModel.clearSelection() }
+                            onClick = { viewModel.clearSelection() },
                         ) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -164,13 +209,13 @@ fun ContainersScreen(
                         Button(
                             onClick = { showDeleteAllDialog = true },
                             enabled = !isDeletingAll && !isDeletingSelected,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
                             if (isDeletingAll) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onError
+                                    color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
                                 Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
@@ -188,14 +233,15 @@ fun ContainersScreen(
             error?.let { errorMessage ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -211,40 +257,49 @@ fun ContainersScreen(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 SearchBar(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     placeholder = "Search containers...",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
 
                 FilterChip(
                     selected = containerFilter == ContainerFilter.ALL,
                     onClick = { containerFilter = ContainerFilter.ALL },
                     label = { Text("All") },
-                    leadingIcon = if (containerFilter == ContainerFilter.ALL) {
-                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                    } else null
+                    leadingIcon =
+                        if (containerFilter == ContainerFilter.ALL) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                        } else {
+                            null
+                        },
                 )
 
                 FilterChip(
                     selected = containerFilter == ContainerFilter.RUNNING,
                     onClick = { containerFilter = ContainerFilter.RUNNING },
                     label = { Text("Running") },
-                    leadingIcon = if (containerFilter == ContainerFilter.RUNNING) {
-                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                    } else null
+                    leadingIcon =
+                        if (containerFilter == ContainerFilter.RUNNING) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                        } else {
+                            null
+                        },
                 )
 
                 FilterChip(
                     selected = containerFilter == ContainerFilter.STOPPED,
                     onClick = { containerFilter = ContainerFilter.STOPPED },
                     label = { Text("Stopped") },
-                    leadingIcon = if (containerFilter == ContainerFilter.STOPPED) {
-                        { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                    } else null
+                    leadingIcon =
+                        if (containerFilter == ContainerFilter.STOPPED) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                        } else {
+                            null
+                        },
                 )
             }
 
@@ -261,7 +316,7 @@ fun ContainersScreen(
                             viewModel.clearSelection()
                         }
                     },
-                    hasItems = filteredContainers.isNotEmpty()
+                    hasItems = filteredContainers.isNotEmpty(),
                 )
             } else {
                 ExpandedTableHeader(
@@ -273,25 +328,25 @@ fun ContainersScreen(
                             viewModel.clearSelection()
                         }
                     },
-                    hasItems = filteredContainers.isNotEmpty()
+                    hasItems = filteredContainers.isNotEmpty(),
                 )
             }
 
             if (filteredContainers.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "No containers found",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
                 // Container List
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     items(filteredContainers, key = { it.id }) { container ->
                         if (isCompactMode) {
@@ -308,7 +363,7 @@ fun ContainersScreen(
                                 onPause = { viewModel.pauseContainer(container.id) },
                                 onUnpause = { viewModel.unpauseContainer(container.id) },
                                 onRemove = { viewModel.removeContainer(container.id) },
-                                onViewLogs = { onShowLogs(container) }
+                                onViewLogs = { onShowLogs(container) },
                             )
                         } else {
                             ExpandedContainerRow(
@@ -324,7 +379,7 @@ fun ContainersScreen(
                                 onPause = { viewModel.pauseContainer(container.id) },
                                 onUnpause = { viewModel.unpauseContainer(container.id) },
                                 onRemove = { viewModel.removeContainer(container.id) },
-                                onViewLogs = { onShowLogs(container) }
+                                onViewLogs = { onShowLogs(container) },
                             )
                         }
                     }
@@ -340,20 +395,21 @@ fun ContainersScreen(
 private fun CompactTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
-    hasItems: Boolean
+    hasItems: Boolean,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = allSelected,
             onCheckedChange = onSelectAllChange,
             enabled = hasItems,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
 
         Text(
@@ -361,7 +417,7 @@ private fun CompactTableHeader(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
 
         Text(
@@ -369,7 +425,7 @@ private fun CompactTableHeader(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(100.dp)
+            modifier = Modifier.width(100.dp),
         )
 
         Spacer(modifier = Modifier.width(48.dp))
@@ -388,29 +444,29 @@ private fun CompactContainerRow(
     onPause: () -> Unit,
     onUnpause: () -> Unit,
     onRemove: () -> Unit,
-    onViewLogs: () -> Unit
+    onViewLogs: () -> Unit,
 ) {
     var showActionsMenu by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                when {
-                    isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
-                    isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    else -> MaterialTheme.colorScheme.surface
-                }
-            )
-            .clickable { onViewLogs() }
-            .padding(horizontal = 8.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    when {
+                        isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
+                        isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        else -> MaterialTheme.colorScheme.surface
+                    },
+                ).clickable { onViewLogs() }
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
 
         // Container info (Name + Image below)
@@ -420,11 +476,11 @@ private fun CompactContainerRow(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
                     text = container.image,
@@ -432,13 +488,13 @@ private fun CompactContainerRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 Text(
                     text = container.shortId,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
                 )
             }
             container.ports.firstOrNull()?.displayString?.let { port ->
@@ -446,7 +502,7 @@ private fun CompactContainerRow(
                     text = port,
                     style = MaterialTheme.typography.labelSmall,
                     color = DockerColors.DockerBlue,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
                 )
             }
         }
@@ -460,23 +516,23 @@ private fun CompactContainerRow(
             if (isActionInProgress) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp).padding(4.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
                 )
             } else {
                 IconButton(
                     onClick = { showActionsMenu = true },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(40.dp),
                 ) {
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = "Actions",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 DropdownMenu(
                     expanded = showActionsMenu,
-                    onDismissRequest = { showActionsMenu = false }
+                    onDismissRequest = { showActionsMenu = false },
                 ) {
                     DropdownMenuItem(
                         text = { Text("View Logs") },
@@ -488,10 +544,14 @@ private fun CompactContainerRow(
                             Icon(
                                 if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
                                 contentDescription = null,
-                                tint = if (isViewingLogs) DockerColors.DockerBlue
-                                    else MaterialTheme.colorScheme.onSurface
+                                tint =
+                                    if (isViewingLogs) {
+                                        DockerColors.DockerBlue
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
                             )
-                        }
+                        },
                     )
 
                     HorizontalDivider()
@@ -500,27 +560,39 @@ private fun CompactContainerRow(
                         container.isRunning -> {
                             DropdownMenuItem(
                                 text = { Text("Pause") },
-                                onClick = { showActionsMenu = false; onPause() },
-                                leadingIcon = { Icon(Icons.Outlined.Pause, null) }
+                                onClick = {
+                                    showActionsMenu = false
+                                    onPause()
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Pause, null) },
                             )
                             DropdownMenuItem(
                                 text = { Text("Stop") },
-                                onClick = { showActionsMenu = false; onStop() },
-                                leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = DockerColors.Stopped) }
+                                onClick = {
+                                    showActionsMenu = false
+                                    onStop()
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = DockerColors.Stopped) },
                             )
                         }
                         container.isPaused -> {
                             DropdownMenuItem(
                                 text = { Text("Resume") },
-                                onClick = { showActionsMenu = false; onUnpause() },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) }
+                                onClick = {
+                                    showActionsMenu = false
+                                    onUnpause()
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) },
                             )
                         }
                         else -> {
                             DropdownMenuItem(
                                 text = { Text("Start") },
-                                onClick = { showActionsMenu = false; onStart() },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) }
+                                onClick = {
+                                    showActionsMenu = false
+                                    onStart()
+                                },
+                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) },
                             )
                         }
                     }
@@ -531,19 +603,31 @@ private fun CompactContainerRow(
                         text = {
                             Text(
                                 "Delete",
-                                color = if (!container.isRunning) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                color =
+                                    if (!container.isRunning) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    },
                             )
                         },
-                        onClick = { showActionsMenu = false; onRemove() },
+                        onClick = {
+                            showActionsMenu = false
+                            onRemove()
+                        },
                         enabled = !container.isRunning,
                         leadingIcon = {
                             Icon(
-                                Icons.Outlined.Delete, null,
-                                tint = if (!container.isRunning) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                Icons.Outlined.Delete,
+                                null,
+                                tint =
+                                    if (!container.isRunning) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    },
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -557,20 +641,21 @@ private fun CompactContainerRow(
 private fun ExpandedTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
-    hasItems: Boolean
+    hasItems: Boolean,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = allSelected,
             onCheckedChange = onSelectAllChange,
             enabled = hasItems,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
 
         Text(
@@ -578,28 +663,28 @@ private fun ExpandedTableHeader(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.5f)
+            modifier = Modifier.weight(1.5f),
         )
         Text(
             text = "IMAGE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.5f)
+            modifier = Modifier.weight(1.5f),
         )
         Text(
             text = "STATUS",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Text(
             text = "PORTS",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.5f)
+            modifier = Modifier.weight(1.5f),
         )
         Spacer(modifier = Modifier.width(160.dp))
     }
@@ -617,27 +702,27 @@ private fun ExpandedContainerRow(
     onPause: () -> Unit,
     onUnpause: () -> Unit,
     onRemove: () -> Unit,
-    onViewLogs: () -> Unit
+    onViewLogs: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                when {
-                    isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
-                    isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    else -> MaterialTheme.colorScheme.surface
-                }
-            )
-            .clickable { onViewLogs() }
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    when {
+                        isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
+                        isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        else -> MaterialTheme.colorScheme.surface
+                    },
+                ).clickable { onViewLogs() }
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
 
         // Name
@@ -645,13 +730,13 @@ private fun ExpandedContainerRow(
             Text(
                 text = container.displayName,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
             )
             Text(
                 text = container.shortId,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
             )
         }
 
@@ -661,7 +746,7 @@ private fun ExpandedContainerRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1.5f),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
 
         // Status
@@ -675,31 +760,35 @@ private fun ExpandedContainerRow(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1.5f)
+            modifier = Modifier.weight(1.5f),
         )
 
         // Actions
         Row(
             modifier = Modifier.width(160.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             if (isActionInProgress) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
                 )
             } else {
                 // Logs button
                 IconButton(
                     onClick = onViewLogs,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(32.dp),
                 ) {
                     Icon(
                         if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
                         contentDescription = "View Logs",
                         modifier = Modifier.size(18.dp),
-                        tint = if (isViewingLogs) DockerColors.DockerBlue
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint =
+                            if (isViewingLogs) {
+                                DockerColors.DockerBlue
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
 
@@ -710,7 +799,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.Pause,
                                 contentDescription = "Pause",
                                 modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         IconButton(onClick = onStop, modifier = Modifier.size(32.dp)) {
@@ -718,7 +807,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.Stop,
                                 contentDescription = "Stop",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Stopped
+                                tint = DockerColors.Stopped,
                             )
                         }
                     }
@@ -728,7 +817,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.PlayArrow,
                                 contentDescription = "Resume",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Running
+                                tint = DockerColors.Running,
                             )
                         }
                     }
@@ -738,7 +827,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.PlayArrow,
                                 contentDescription = "Start",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Running
+                                tint = DockerColors.Running,
                             )
                         }
                     }
@@ -746,16 +835,18 @@ private fun ExpandedContainerRow(
                 IconButton(
                     onClick = onRemove,
                     modifier = Modifier.size(32.dp),
-                    enabled = !container.isRunning
+                    enabled = !container.isRunning,
                 ) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Delete",
                         modifier = Modifier.size(18.dp),
-                        tint = if (!container.isRunning)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        tint =
+                            if (!container.isRunning) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            },
                     )
                 }
             }

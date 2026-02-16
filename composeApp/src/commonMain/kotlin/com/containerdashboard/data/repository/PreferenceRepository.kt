@@ -10,11 +10,9 @@ import com.containerdashboard.data.datastore.dataStorePreferencesInstance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.runBlocking
 
 object PreferenceRepository {
-
     private val dataStore: DataStore<Preferences> by lazy { dataStorePreferencesInstance }
 
     private val ENGINE_HOST by lazy { stringPreferencesKey("engine_host") }
@@ -33,9 +31,11 @@ object PreferenceRepository {
                 }
             }
         }
-    fun engineHost(): Flow<String> = dataStore.data.map {
-        it[ENGINE_HOST] ?: "unix:///var/run/docker.sock"
-    }
+
+    fun engineHost(): Flow<String> =
+        dataStore.data.map {
+            it[ENGINE_HOST] ?: "unix:///var/run/docker.sock"
+        }
 
     var darkTheme: Boolean
         get() = runBlocking { dataStore.data.firstOrNull()?.get(DARK_THEME) ?: true }
@@ -46,9 +46,11 @@ object PreferenceRepository {
                 }
             }
         }
-    fun darkTheme(): Flow<Boolean> = dataStore.data.map {
-        it[DARK_THEME] ?: true
-    }
+
+    fun darkTheme(): Flow<Boolean> =
+        dataStore.data.map {
+            it[DARK_THEME] ?: true
+        }
 
     var autoRefresh: Boolean
         get() = runBlocking { dataStore.data.firstOrNull()?.get(AUTO_REFRESH) ?: true }
@@ -59,9 +61,11 @@ object PreferenceRepository {
                 }
             }
         }
-    fun autoRefresh(): Flow<Boolean> = dataStore.data.map {
-        it[AUTO_REFRESH] ?: true
-    }
+
+    fun autoRefresh(): Flow<Boolean> =
+        dataStore.data.map {
+            it[AUTO_REFRESH] ?: true
+        }
 
     var refreshInterval: Float
         get() = runBlocking { dataStore.data.firstOrNull()?.get(REFRESH_INTERVAL) ?: 5f }
@@ -72,9 +76,11 @@ object PreferenceRepository {
                 }
             }
         }
-    fun refreshInterval(): Flow<Float> = dataStore.data.map {
-        it[REFRESH_INTERVAL] ?: 5f
-    }
+
+    fun refreshInterval(): Flow<Float> =
+        dataStore.data.map {
+            it[REFRESH_INTERVAL] ?: 5f
+        }
 
     var showSystemContainers: Boolean
         get() = runBlocking { dataStore.data.firstOrNull()?.get(SHOW_SYSTEM_CONTAINERS) ?: false }
@@ -85,9 +91,11 @@ object PreferenceRepository {
                 }
             }
         }
-    fun showSystemContainers(): Flow<Boolean> = dataStore.data.map {
-        it[SHOW_SYSTEM_CONTAINERS] ?: false
-    }
+
+    fun showSystemContainers(): Flow<Boolean> =
+        dataStore.data.map {
+            it[SHOW_SYSTEM_CONTAINERS] ?: false
+        }
 
     var confirmBeforeDelete: Boolean
         get() = runBlocking { dataStore.data.firstOrNull()?.get(CONFIRM_BEFORE_DELETE) ?: true }
@@ -98,7 +106,9 @@ object PreferenceRepository {
                 }
             }
         }
-    fun confirmBeforeDelete(): Flow<Boolean> = dataStore.data.map {
-        it[CONFIRM_BEFORE_DELETE] ?: true
-    }
+
+    fun confirmBeforeDelete(): Flow<Boolean> =
+        dataStore.data.map {
+            it[CONFIRM_BEFORE_DELETE] ?: true
+        }
 }

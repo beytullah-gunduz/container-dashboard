@@ -36,7 +36,7 @@ data class SystemInfo(
     @SerialName("ServerVersion")
     val serverVersion: String = "",
     @SerialName("DockerRootDir")
-    val dockerRootDir: String = ""
+    val dockerRootDir: String = "",
 ) {
     val formattedMemory: String
         get() = DockerImage.formatBytes(memTotal)

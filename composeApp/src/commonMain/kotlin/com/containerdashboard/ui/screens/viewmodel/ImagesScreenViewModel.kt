@@ -15,16 +15,15 @@ enum class ImageSortColumn {
     REPOSITORY,
     TAG,
     IMAGE_ID,
-    SIZE
+    SIZE,
 }
 
 enum class SortDirection {
     ASC,
-    DESC
+    DESC,
 }
 
 class ImagesScreenViewModel : ViewModel() {
-
     val repo: DockerRepository = AppModule.dockerRepository
 
     val images: Flow<List<DockerImage>> = repo.getImages()
@@ -69,8 +68,11 @@ class ImagesScreenViewModel : ViewModel() {
     fun toggleSort(column: ImageSortColumn) {
         if (_sortColumn.value == column) {
             _sortDirection.value =
-                if (_sortDirection.value == SortDirection.ASC) SortDirection.DESC
-                else SortDirection.ASC
+                if (_sortDirection.value == SortDirection.ASC) {
+                    SortDirection.DESC
+                } else {
+                    SortDirection.ASC
+                }
         } else {
             _sortColumn.value = column
             _sortDirection.value = SortDirection.ASC

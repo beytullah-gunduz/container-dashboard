@@ -14,5 +14,5 @@ data class NetworkContainer(
     @SerialName("IPv4Address")
     val ipv4Address: String = "",
     @SerialName("IPv6Address")
-    val ipv6Address: String = ""
+    val ipv6Address: String = "",
 )

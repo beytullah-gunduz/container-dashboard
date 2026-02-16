@@ -10,5 +10,5 @@ data class IPAM(
     @SerialName("Config")
     val config: List<IPAMConfig>? = null,
     @SerialName("Options")
-    val options: Map<String, String>? = null
+    val options: Map<String, String>? = null,
 )

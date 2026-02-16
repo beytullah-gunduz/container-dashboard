@@ -24,24 +24,25 @@ data class DockerImage(
     @SerialName("Labels")
     val labels: Map<String, String>? = null,
     @SerialName("Containers")
-    val containers: Int = -1
+    val containers: Int = -1,
 ) {
     val displayName: String
-        get() = repoTags?.firstOrNull()?.takeIf { it != "<none>:<none>" } 
-            ?: id.removePrefix("sha256:").take(12)
-    
+        get() =
+            repoTags?.firstOrNull()?.takeIf { it != "<none>:<none>" }
+                ?: id.removePrefix("sha256:").take(12)
+
     val shortId: String
         get() = id.removePrefix("sha256:").take(12)
-    
+
     val tag: String
         get() = repoTags?.firstOrNull()?.substringAfter(":", "latest") ?: "latest"
-    
+
     val repository: String
         get() = repoTags?.firstOrNull()?.substringBefore(":") ?: "<none>"
-    
+
     val formattedSize: String
         get() = formatBytes(size)
-    
+
     companion object {
         fun formatBytes(bytes: Long): String {
             if (bytes < 1024) return "$bytes B"

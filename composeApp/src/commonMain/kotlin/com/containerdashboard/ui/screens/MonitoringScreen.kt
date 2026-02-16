@@ -2,15 +2,37 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.ViewInAr
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,8 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.CircularSlider
-
-
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.DockerColors
@@ -33,62 +53,62 @@ import com.containerdashboard.ui.theme.DockerColors
 @Composable
 fun MonitoringScreen(
     modifier: Modifier = Modifier,
-    viewModel: MonitoringScreenViewModel = viewModel { MonitoringScreenViewModel() }
+    viewModel: MonitoringScreenViewModel = viewModel { MonitoringScreenViewModel() },
 ) {
     val stats by viewModel.containerStats.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
     val history by viewModel.usageHistory.collectAsState(UsageHistory())
-val refreshRate by viewModel.refreshRate.collectAsState()
+    val refreshRate by viewModel.refreshRate.collectAsState()
 
     val scrollState = rememberScrollState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
                     text = "Monitoring",
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "${stats.size} running containers",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Surface(
                     modifier = Modifier.size(8.dp),
                     shape = RoundedCornerShape(4.dp),
-                    color = if (stats.isNotEmpty()) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (stats.isNotEmpty()) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                 ) {}
                 Text(
                     text = "Live",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-CircularSlider(
-        value = refreshRate,
-        onValueChange = { viewModel.setRefreshRate(it) },
-        valueRange = 1f..5f,
-        activeColor = DockerColors.DockerBlue
-)
-
+                CircularSlider(
+                    value = refreshRate,
+                    onValueChange = { viewModel.setRefreshRate(it) },
+                    valueRange = 1f..5f,
+                    activeColor = DockerColors.DockerBlue,
+                )
             }
         }
 
@@ -96,7 +116,7 @@ CircularSlider(
         if (stats.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 UsageHistoryGraph(
                     title = "CPU Usage",
@@ -105,10 +125,11 @@ CircularSlider(
                     history = history.cpuHistory,
                     maxHistorySize = 60,
                     barColor = { getCpuColor(it) },
-                    currentValue = "%.1f%%".format(
-                        stats.sumOf { it.cpuPercent } / stats.size
-                    ),
-                    modifier = Modifier.weight(1f)
+                    currentValue =
+                        "%.1f%%".format(
+                            stats.sumOf { it.cpuPercent } / stats.size,
+                        ),
+                    modifier = Modifier.weight(1f),
                 )
                 UsageHistoryGraph(
                     title = "Memory Usage",
@@ -117,10 +138,11 @@ CircularSlider(
                     history = history.memoryHistory,
                     maxHistorySize = 60,
                     barColor = { getMemoryColor(it) },
-                    currentValue = "%.1f%%".format(
-                        stats.sumOf { it.memoryPercent } / stats.size
-                    ),
-                    modifier = Modifier.weight(1f)
+                    currentValue =
+                        "%.1f%%".format(
+                            stats.sumOf { it.memoryPercent } / stats.size,
+                        ),
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -129,14 +151,15 @@ CircularSlider(
         error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                     Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -152,32 +175,34 @@ CircularSlider(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(48.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(48.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Icon(
                         Icons.Outlined.MonitorHeart,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = "No running containers",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = "Start some containers to see CPU and memory usage",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
                 }
             }
@@ -186,28 +211,29 @@ CircularSlider(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Memory,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = DockerColors.DockerBlue
+                            tint = DockerColors.DockerBlue,
                         )
                         Text(
                             text = "CPU Usage",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
 
@@ -217,7 +243,7 @@ CircularSlider(
                             value = stat.cpuPercent,
                             maxValue = 100.0,
                             label = "%.1f%%".format(stat.cpuPercent),
-                            barColor = getCpuColor(stat.cpuPercent)
+                            barColor = getCpuColor(stat.cpuPercent),
                         )
                     }
                 }
@@ -227,28 +253,29 @@ CircularSlider(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Storage,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = DockerColors.DockerBlueDark
+                            tint = DockerColors.DockerBlueDark,
                         )
                         Text(
                             text = "Memory Usage",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
 
@@ -258,7 +285,7 @@ CircularSlider(
                             value = stat.memoryPercent,
                             maxValue = 100.0,
                             label = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
-                            barColor = getMemoryColor(stat.memoryPercent)
+                            barColor = getMemoryColor(stat.memoryPercent),
                         )
                     }
                 }
@@ -268,55 +295,57 @@ CircularSlider(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
                         text = "Detailed Stats",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
 
                     // Table Header
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "CONTAINER",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1.5f)
+                            modifier = Modifier.weight(1.5f),
                         )
                         Text(
                             text = "CPU %",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(0.7f)
+                            modifier = Modifier.weight(0.7f),
                         )
                         Text(
                             text = "MEMORY USAGE",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1.2f)
+                            modifier = Modifier.weight(1.2f),
                         )
                         Text(
                             text = "MEMORY %",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(0.7f)
+                            modifier = Modifier.weight(0.7f),
                         )
                     }
 
@@ -335,15 +364,15 @@ private fun ContainerBarRow(
     value: Double,
     maxValue: Double,
     label: String,
-    barColor: Color
+    barColor: Color,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = containerName,
@@ -351,31 +380,33 @@ private fun ContainerBarRow(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
-                color = barColor
+                color = barColor,
             )
         }
 
         // Bar
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(20.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(20.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
             Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(barColor)
+                modifier =
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(barColor),
             )
         }
     }
@@ -384,24 +415,25 @@ private fun ContainerBarRow(
 @Composable
 private fun StatsTableRow(stat: ContainerStats) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Container name
         Row(
             modifier = Modifier.weight(1.5f),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 Icons.Outlined.ViewInAr,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = DockerColors.Running
+                tint = DockerColors.Running,
             )
             Column {
                 Text(
@@ -409,12 +441,12 @@ private fun StatsTableRow(stat: ContainerStats) {
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = stat.containerId.take(12),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -425,7 +457,7 @@ private fun StatsTableRow(stat: ContainerStats) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = getCpuColor(stat.cpuPercent),
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.7f),
         )
 
         // Memory usage
@@ -433,7 +465,7 @@ private fun StatsTableRow(stat: ContainerStats) {
             text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1.2f)
+            modifier = Modifier.weight(1.2f),
         )
 
         // Memory %
@@ -442,7 +474,7 @@ private fun StatsTableRow(stat: ContainerStats) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = getMemoryColor(stat.memoryPercent),
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.7f),
         )
     }
 }
@@ -457,7 +489,7 @@ private fun UsageHistoryGraph(
     barColor: (Double) -> Color,
     currentValue: String,
     maxValue: Double = 100.0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -465,51 +497,53 @@ private fun UsageHistoryGraph(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Title row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = iconTint
+                        tint = iconTint,
                     )
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
                 Text(
                     text = currentValue,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = iconTint
+                    color = iconTint,
                 )
             }
 
             // Graph
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             ) {
                 // Y-axis labels
                 Box(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {
@@ -517,19 +551,19 @@ private fun UsageHistoryGraph(
                         text = "100%",
                         style = MaterialTheme.typography.labelSmall,
                         color = labelColor.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.TopStart)
+                        modifier = Modifier.align(Alignment.TopStart),
                     )
                     Text(
                         text = "50%",
                         style = MaterialTheme.typography.labelSmall,
                         color = labelColor.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.CenterStart)
+                        modifier = Modifier.align(Alignment.CenterStart),
                     )
                     Text(
                         text = "0%",
                         style = MaterialTheme.typography.labelSmall,
                         color = labelColor.copy(alpha = 0.5f),
-                        modifier = Modifier.align(Alignment.BottomStart)
+                        modifier = Modifier.align(Alignment.BottomStart),
                     )
                 }
 
@@ -546,7 +580,7 @@ private fun UsageHistoryGraph(
                             color = gridColor,
                             start = Offset(0f, y),
                             end = Offset(chartWidth, y),
-                            strokeWidth = 1f
+                            strokeWidth = 1f,
                         )
                     }
 
@@ -561,7 +595,9 @@ private fun UsageHistoryGraph(
                             color = barColor(value),
                             topLeft = Offset(x + gap, chartHeight - barHeight),
                             size = Size((barWidth - gap * 2).coerceAtLeast(1f), barHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2f, 2f)
+                            cornerRadius =
+                                androidx.compose.ui.geometry
+                                    .CornerRadius(2f, 2f),
                         )
                     }
                 }
@@ -570,18 +606,16 @@ private fun UsageHistoryGraph(
     }
 }
 
-private fun getCpuColor(percent: Double): Color {
-    return when {
+private fun getCpuColor(percent: Double): Color =
+    when {
         percent < 25 -> DockerColors.Running
         percent < 60 -> DockerColors.Warning
         else -> DockerColors.Stopped
     }
-}
 
-private fun getMemoryColor(percent: Double): Color {
-    return when {
+private fun getMemoryColor(percent: Double): Color =
+    when {
         percent < 50 -> DockerColors.Running
         percent < 80 -> DockerColors.Warning
         else -> DockerColors.Stopped
     }
-}

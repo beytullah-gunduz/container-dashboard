@@ -5,7 +5,7 @@ data class ContainerStats(
     val containerName: String,
     val cpuPercent: Double,
     val memoryUsage: Long,
-    val memoryLimit: Long
+    val memoryLimit: Long,
 ) {
     val memoryPercent: Double
         get() = if (memoryLimit > 0) (memoryUsage.toDouble() / memoryLimit) * 100.0 else 0.0
