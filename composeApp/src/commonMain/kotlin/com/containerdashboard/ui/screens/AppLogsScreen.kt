@@ -3,16 +3,44 @@ package com.containerdashboard.ui.screens
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.Article
+import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.VerticalAlignBottom
+import androidx.compose.material.icons.outlined.VerticalAlignCenter
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +61,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AppLogsScreen(
     modifier: Modifier = Modifier,
-    viewModel: AppLogsScreenViewModel = viewModel { AppLogsScreenViewModel() }
+    viewModel: AppLogsScreenViewModel = viewModel { AppLogsScreenViewModel() },
 ) {
     val entries by viewModel.entries.collectAsState()
     val totalCount by viewModel.totalCount.collectAsState()
@@ -52,47 +80,56 @@ fun AppLogsScreen(
 
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // ── Header ──────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
                     text = "Application Logs",
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "${entries.size} of $totalCount entries",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Auto-scroll toggle
                 IconButton(onClick = { viewModel.toggleAutoScroll() }) {
                     Icon(
-                        imageVector = if (autoScroll) Icons.Outlined.VerticalAlignBottom
-                        else Icons.Outlined.VerticalAlignCenter,
+                        imageVector =
+                            if (autoScroll) {
+                                Icons.Outlined.VerticalAlignBottom
+                            } else {
+                                Icons.Outlined.VerticalAlignCenter
+                            },
                         contentDescription = "Toggle auto-scroll",
-                        tint = if (autoScroll) DockerColors.DockerBlue
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint =
+                            if (autoScroll) {
+                                DockerColors.DockerBlue
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
 
                 // Clear logs
                 OutlinedButton(onClick = { viewModel.clearLogs() }) {
                     Icon(
-                        Icons.Outlined.DeleteSweep, null,
-                        modifier = Modifier.size(18.dp)
+                        Icons.Outlined.DeleteSweep,
+                        null,
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Clear")
@@ -104,7 +141,7 @@ fun AppLogsScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
                 value = searchQuery,
@@ -123,13 +160,13 @@ fun AppLogsScreen(
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(10.dp),
-                textStyle = MaterialTheme.typography.bodyMedium
+                textStyle = MaterialTheme.typography.bodyMedium,
             )
         }
 
         // Level filter chips
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LevelFilterChip(label = "All", selected = levelFilter == null) {
                 viewModel.setLevelFilter(null)
@@ -138,7 +175,7 @@ fun AppLogsScreen(
                 LevelFilterChip(
                     label = level,
                     selected = levelFilter == level,
-                    color = levelColor(level)
+                    color = levelColor(level),
                 ) {
                     viewModel.setLevelFilter(level)
                 }
@@ -149,36 +186,45 @@ fun AppLogsScreen(
         Card(
             modifier = Modifier.fillMaxWidth().weight(1f),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ),
         ) {
             if (entries.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
                             Icons.Outlined.Article,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = if (searchQuery.isNotEmpty() || levelFilter != null) "No matching log entries"
-                            else "No log entries yet",
+                            text =
+                                if (searchQuery.isNotEmpty() || levelFilter != null) {
+                                    "No matching log entries"
+                                } else {
+                                    "No log entries yet"
+                                },
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            text = if (searchQuery.isNotEmpty() || levelFilter != null) "Try adjusting your search or filters"
-                            else "Logs will appear here as the application runs",
+                            text =
+                                if (searchQuery.isNotEmpty() || levelFilter != null) {
+                                    "Try adjusting your search or filters"
+                                } else {
+                                    "Logs will appear here as the application runs"
+                                },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
                     }
                 }
@@ -187,7 +233,7 @@ fun AppLogsScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     items(entries, key = { "${it.timestamp}-${it.message.hashCode()}-${it.threadName}" }) { entry ->
                         LogEntryRow(entry = entry)
@@ -201,88 +247,96 @@ fun AppLogsScreen(
 @Composable
 private fun LogEntryRow(entry: AppLogEntry) {
     val bgColor by animateColorAsState(
-        targetValue = when (entry.level) {
-            "ERROR" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
-            "WARN" -> Color(0xFFFFF3E0).copy(alpha = 0.10f)
-            else -> Color.Transparent
-        }
+        targetValue =
+            when (entry.level) {
+                "ERROR" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
+                "WARN" -> Color(0xFFFFF3E0).copy(alpha = 0.10f)
+                else -> Color.Transparent
+            },
     )
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
-            .background(bgColor)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
-            .horizontalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(6.dp))
+                .background(bgColor)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Timestamp
         Text(
             text = formatTimestamp(entry.timestamp),
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
+            maxLines = 1,
         )
 
         // Level badge
         Surface(
             shape = RoundedCornerShape(4.dp),
             color = levelColor(entry.level).copy(alpha = 0.15f),
-            modifier = Modifier.width(48.dp)
+            modifier = Modifier.width(48.dp),
         ) {
             Text(
                 text = entry.level,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp
-                ),
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                    ),
                 color = levelColor(entry.level),
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                maxLines = 1
+                maxLines = 1,
             )
         }
 
         // Thread
         Text(
             text = "[${entry.threadName}]",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = DockerColors.DockerBlue.copy(alpha = 0.7f),
-            maxLines = 1
+            maxLines = 1,
         )
 
         // Logger (short name)
         Text(
             text = entry.shortLoggerName,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            maxLines = 1
+            maxLines = 1,
         )
 
         // Message
         Text(
-            text = buildString {
-                append(entry.message)
-                entry.throwable?.let { append(" | $it") }
-            },
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp
-            ),
+            text =
+                buildString {
+                    append(entry.message)
+                    entry.throwable?.let { append(" | $it") }
+                },
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                ),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
-            overflow = TextOverflow.Visible
+            overflow = TextOverflow.Visible,
         )
     }
 }
@@ -292,7 +346,7 @@ private fun LevelFilterChip(
     label: String,
     selected: Boolean,
     color: Color = MaterialTheme.colorScheme.primary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     FilterChip(
         selected = selected,
@@ -301,34 +355,37 @@ private fun LevelFilterChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             )
         },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = color.copy(alpha = 0.15f),
-            selectedLabelColor = color
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-            selectedBorderColor = color.copy(alpha = 0.5f),
-            enabled = true,
-            selected = selected
-        )
+        colors =
+            FilterChipDefaults.filterChipColors(
+                selectedContainerColor = color.copy(alpha = 0.15f),
+                selectedLabelColor = color,
+            ),
+        border =
+            FilterChipDefaults.filterChipBorder(
+                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                selectedBorderColor = color.copy(alpha = 0.5f),
+                enabled = true,
+                selected = selected,
+            ),
     )
 }
 
-private fun levelColor(level: String): Color = when (level) {
-    "ERROR" -> DockerColors.Stopped
-    "WARN" -> DockerColors.Warning
-    "INFO" -> DockerColors.Running
-    "DEBUG" -> DockerColors.DockerBlue
-    "TRACE" -> DockerColors.TextMuted
-    else -> DockerColors.TextSecondary
-}
+private fun levelColor(level: String): Color =
+    when (level) {
+        "ERROR" -> DockerColors.Stopped
+        "WARN" -> DockerColors.Warning
+        "INFO" -> DockerColors.Running
+        "DEBUG" -> DockerColors.DockerBlue
+        "TRACE" -> DockerColors.TextMuted
+        else -> DockerColors.TextSecondary
+    }
 
-private val timestampFormatter = DateTimeFormatter
-    .ofPattern("HH:mm:ss.SSS")
-    .withZone(ZoneId.systemDefault())
+private val timestampFormatter =
+    DateTimeFormatter
+        .ofPattern("HH:mm:ss.SSS")
+        .withZone(ZoneId.systemDefault())
 
-private fun formatTimestamp(millis: Long): String =
-    timestampFormatter.format(Instant.ofEpochMilli(millis))
+private fun formatTimestamp(millis: Long): String = timestampFormatter.format(Instant.ofEpochMilli(millis))

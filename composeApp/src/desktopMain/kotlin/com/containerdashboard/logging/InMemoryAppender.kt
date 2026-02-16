@@ -21,7 +21,6 @@ import java.util.concurrent.ConcurrentLinkedDeque
  * retrieved as a snapshot via [getEntries].
  */
 class InMemoryAppender : AppenderBase<ILoggingEvent>() {
-
     /** Maximum number of log entries to keep. Configurable from logback.xml. */
     var maxEntries: Int = 100
 
@@ -43,19 +42,21 @@ class InMemoryAppender : AppenderBase<ILoggingEvent>() {
     }
 
     override fun append(event: ILoggingEvent) {
-        val formattedMessage = encoder?.let {
-            String(it.encode(event)).trimEnd()
-        } ?: "${event.formattedMessage}"
+        val formattedMessage =
+            encoder?.let {
+                String(it.encode(event)).trimEnd()
+            } ?: "${event.formattedMessage}"
 
-        val entry = LogEntry(
-            timestamp = event.timeStamp,
-            level = event.level.toString(),
-            loggerName = event.loggerName,
-            message = event.formattedMessage,
-            formattedMessage = formattedMessage,
-            threadName = event.threadName,
-            throwable = event.throwableProxy?.message
-        )
+        val entry =
+            LogEntry(
+                timestamp = event.timeStamp,
+                level = event.level.toString(),
+                loggerName = event.loggerName,
+                message = event.formattedMessage,
+                formattedMessage = formattedMessage,
+                threadName = event.threadName,
+                throwable = event.throwableProxy?.message,
+            )
 
         entries.addLast(entry)
         while (entries.size > maxEntries) {
@@ -73,8 +74,8 @@ class InMemoryAppender : AppenderBase<ILoggingEvent>() {
                 message = event.formattedMessage,
                 formattedMessage = formattedMessage,
                 threadName = event.threadName,
-                throwable = event.throwableProxy?.message
-            )
+                throwable = event.throwableProxy?.message,
+            ),
         )
     }
 
@@ -117,12 +118,13 @@ data class LogEntry(
     val message: String,
     val formattedMessage: String,
     val threadName: String,
-    val throwable: String? = null
+    val throwable: String? = null,
 ) {
     /** Human-readable timestamp. */
     val formattedTimestamp: String
-        get() = DateTimeFormatter
-            .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.ofEpochMilli(timestamp))
+        get() =
+            DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.ofEpochMilli(timestamp))
 }

@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 class AppLogsScreenViewModel : ViewModel() {
-
     /** The raw log entries from the store. */
     private val allEntries: StateFlow<List<AppLogEntry>> = AppLogStore.entries
 
@@ -33,17 +32,19 @@ class AppLogsScreenViewModel : ViewModel() {
         combine(allEntries, _searchQuery, _levelFilter) { logs, query, level ->
             logs.filter { entry ->
                 val matchesLevel = level == null || entry.level == level
-                val matchesQuery = query.isBlank()
-                        || entry.message.contains(query, ignoreCase = true)
-                        || entry.loggerName.contains(query, ignoreCase = true)
-                        || entry.threadName.contains(query, ignoreCase = true)
+                val matchesQuery =
+                    query.isBlank() ||
+                        entry.message.contains(query, ignoreCase = true) ||
+                        entry.loggerName.contains(query, ignoreCase = true) ||
+                        entry.threadName.contains(query, ignoreCase = true)
                 matchesLevel && matchesQuery
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Total (unfiltered) entry count. */
     val totalCount: StateFlow<Int> =
-        allEntries.combine(_searchQuery) { logs, _ -> logs.size }
+        allEntries
+            .combine(_searchQuery) { logs, _ -> logs.size }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     fun setSearchQuery(query: String) {

@@ -14,7 +14,7 @@ data class AppLogEntry(
     val message: String,
     val formattedMessage: String,
     val threadName: String,
-    val throwable: String? = null
+    val throwable: String? = null,
 ) {
     /** Short logger name (last segment after the last dot). */
     val shortLoggerName: String
@@ -29,7 +29,6 @@ data class AppLogEntry(
  * can display them without depending on Logback directly.
  */
 object AppLogStore {
-
     /** Maximum number of entries to keep in memory. */
     var maxEntries: Int = 100
 

@@ -13,8 +13,9 @@ import kotlinx.coroutines.flow.Flow
  * Platform-specific Docker repository.
  * Each target provides its own actual implementation.
  */
-expect class DockerRepository(dockerHost: String) {
-
+expect class DockerRepository(
+    dockerHost: String,
+) {
     // Availability
     fun isDockerAvailable(checkIntervalMillis: Long = 5000L): Flow<Boolean>
 

@@ -8,7 +8,6 @@ import com.containerdashboard.data.repository.PreferenceRepository
  * The DockerRepository is constructed lazily using the engine host from preferences.
  */
 object AppModule {
-
     val dockerRepository: DockerRepository by lazy {
         DockerRepository(PreferenceRepository.engineHost)
     }

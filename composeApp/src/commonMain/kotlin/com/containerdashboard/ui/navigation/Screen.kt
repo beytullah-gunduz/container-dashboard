@@ -65,7 +65,7 @@ enum class Screen(
         route = "app_logs",
         title = "App Logs",
         icon = Icons.Outlined.Article,
-        selectedIcon = Icons.Filled.Article
+        selectedIcon = Icons.Filled.Article,
     ),
     Settings(
         route = "settings",
