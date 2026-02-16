@@ -6,5 +6,5 @@ data class LogsPaneState(
     val container: Container? = null,
     val logs: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )

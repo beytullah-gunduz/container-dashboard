@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ContainerNetworkSettings(
     @SerialName("Networks")
-    val networks: Map<String, ContainerNetwork> = emptyMap()
+    val networks: Map<String, ContainerNetwork> = emptyMap(),
 )

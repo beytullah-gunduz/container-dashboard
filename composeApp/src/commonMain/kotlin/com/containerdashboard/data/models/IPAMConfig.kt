@@ -10,5 +10,5 @@ data class IPAMConfig(
     @SerialName("Gateway")
     val gateway: String? = null,
     @SerialName("IPRange")
-    val ipRange: String? = null
+    val ipRange: String? = null,
 )

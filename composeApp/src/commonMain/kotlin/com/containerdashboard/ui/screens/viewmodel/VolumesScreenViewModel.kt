@@ -14,11 +14,10 @@ import kotlinx.coroutines.launch
 enum class VolumeSortColumn {
     NAME,
     DRIVER,
-    MOUNTPOINT
+    MOUNTPOINT,
 }
 
 class VolumesScreenViewModel : ViewModel() {
-
     val repo: DockerRepository = AppModule.dockerRepository
 
     val volumes: Flow<List<Volume>> = repo.getVolumes()
@@ -44,8 +43,11 @@ class VolumesScreenViewModel : ViewModel() {
     fun toggleSort(column: VolumeSortColumn) {
         if (_sortColumn.value == column) {
             _sortDirection.value =
-                if (_sortDirection.value == SortDirection.ASC) SortDirection.DESC
-                else SortDirection.ASC
+                if (_sortDirection.value == SortDirection.ASC) {
+                    SortDirection.DESC
+                } else {
+                    SortDirection.ASC
+                }
         } else {
             _sortColumn.value = column
             _sortDirection.value = SortDirection.ASC

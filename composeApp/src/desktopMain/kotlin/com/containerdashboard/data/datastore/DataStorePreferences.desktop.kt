@@ -10,12 +10,13 @@ import kotlinx.coroutines.CoroutineScope
 actual fun dataStorePreferences(
     corruptionHandler: ReplaceFileCorruptionHandler<Preferences>?,
     coroutineScope: CoroutineScope,
-    migrations: List<DataMigration<Preferences>>
-): DataStore<Preferences> = createDataStoreWithDefaults(
-    corruptionHandler = corruptionHandler,
-    coroutineScope = coroutineScope,
-    migrations = migrations,
-    path = {
-        SystemDirectories.applicationDirectory.toString() + "/" + PREFERENCE_DATASTORE
-    }
-)
+    migrations: List<DataMigration<Preferences>>,
+): DataStore<Preferences> =
+    createDataStoreWithDefaults(
+        corruptionHandler = corruptionHandler,
+        coroutineScope = coroutineScope,
+        migrations = migrations,
+        path = {
+            SystemDirectories.applicationDirectory.toString() + "/" + PREFERENCE_DATASTORE
+        },
+    )

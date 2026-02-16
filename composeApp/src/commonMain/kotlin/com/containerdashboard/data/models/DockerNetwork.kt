@@ -30,17 +30,17 @@ data class DockerNetwork(
     @SerialName("Labels")
     val labels: Map<String, String>? = null,
     @SerialName("Containers")
-    val containers: Map<String, NetworkContainer>? = null
+    val containers: Map<String, NetworkContainer>? = null,
 ) {
     val shortId: String
         get() = id.take(12)
-    
+
     val containerCount: Int
         get() = containers?.size ?: 0
-    
+
     val subnet: String
         get() = ipam?.config?.firstOrNull()?.subnet ?: "N/A"
-    
+
     val gateway: String
         get() = ipam?.config?.firstOrNull()?.gateway ?: "N/A"
 }

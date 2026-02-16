@@ -33,14 +33,18 @@ fun CircularSlider(
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     thumbColor: Color = MaterialTheme.colorScheme.primary,
-    label: (Float) -> String = { "${it.toInt()}s" }
+    label: (Float) -> String = { "${it.toInt()}s" },
 ) {
     val startAngle = 135f
     val sweepAngle = 270f
     val range = valueRange.endInclusive - valueRange.start
     val fraction = ((value - valueRange.start) / range).coerceIn(0f, 1f)
 
-    fun positionToValue(position: Offset, width: Float, height: Float): Float? {
+    fun positionToValue(
+        position: Offset,
+        width: Float,
+        height: Float,
+    ): Float? {
         val center = Offset(width / 2f, height / 2f)
         val dx = position.x - center.x
         val dy = position.y - center.y
@@ -61,33 +65,34 @@ fun CircularSlider(
     }
 
     Box(
-        modifier = modifier
-            .size(72.dp)
-            .pointerInput(valueRange) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    positionToValue(
-                        down.position,
-                        size.width.toFloat(),
-                        size.height.toFloat()
-                    )?.let { onValueChange(it) }
+        modifier =
+            modifier
+                .size(72.dp)
+                .pointerInput(valueRange) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        positionToValue(
+                            down.position,
+                            size.width.toFloat(),
+                            size.height.toFloat(),
+                        )?.let { onValueChange(it) }
 
-                    do {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { change ->
-                            if (change.pressed) {
-                                positionToValue(
-                                    change.position,
-                                    size.width.toFloat(),
-                                    size.height.toFloat()
-                                )?.let { onValueChange(it) }
-                                change.consume()
+                        do {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { change ->
+                                if (change.pressed) {
+                                    positionToValue(
+                                        change.position,
+                                        size.width.toFloat(),
+                                        size.height.toFloat(),
+                                    )?.let { onValueChange(it) }
+                                    change.consume()
+                                }
                             }
-                        }
-                    } while (event.changes.any { it.pressed })
-                }
-            },
-        contentAlignment = Alignment.Center
+                        } while (event.changes.any { it.pressed })
+                    }
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             val strokeWidth = 6.dp.toPx()
@@ -103,7 +108,7 @@ fun CircularSlider(
                 useCenter = false,
                 topLeft = arcTopLeft,
                 size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
             )
 
             // Active progress
@@ -114,32 +119,34 @@ fun CircularSlider(
                 useCenter = false,
                 topLeft = arcTopLeft,
                 size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
             )
 
             // Thumb
             val thumbAngleRad = (startAngle + sweepAngle * fraction) * (PI.toFloat() / 180f)
             val radius = arcSize.width / 2
-            val arcCenter = Offset(
-                arcTopLeft.x + arcSize.width / 2,
-                arcTopLeft.y + arcSize.height / 2
-            )
-            val thumbCenter = Offset(
-                x = arcCenter.x + radius * cos(thumbAngleRad),
-                y = arcCenter.y + radius * sin(thumbAngleRad)
-            )
+            val arcCenter =
+                Offset(
+                    arcTopLeft.x + arcSize.width / 2,
+                    arcTopLeft.y + arcSize.height / 2,
+                )
+            val thumbCenter =
+                Offset(
+                    x = arcCenter.x + radius * cos(thumbAngleRad),
+                    y = arcCenter.y + radius * sin(thumbAngleRad),
+                )
 
             // Thumb outer (white border)
             drawCircle(
                 color = Color.White,
                 radius = strokeWidth * 1.0f,
-                center = thumbCenter
+                center = thumbCenter,
             )
             // Thumb inner
             drawCircle(
                 color = thumbColor,
                 radius = strokeWidth * 0.7f,
-                center = thumbCenter
+                center = thumbCenter,
             )
         }
 
@@ -148,7 +155,7 @@ fun CircularSlider(
             text = label(value),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

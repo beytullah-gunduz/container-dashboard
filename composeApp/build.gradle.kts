@@ -19,22 +19,22 @@ kotlin {
 
                 // Compose (using explicit coordinates as compose.* aliases are deprecated in 1.10)
                 implementation(libs.bundles.compose.common)
-                
+
                 // Material3 Adaptive (AnimatedPane, adaptive layouts)
                 implementation(libs.bundles.compose.material3.adaptive)
-                
+
                 // Lifecycle ViewModel
                 implementation(libs.bundles.lifecycle)
-                
+
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
-                
+
                 // Serialization
                 implementation(libs.kotlinx.serialization.json)
-                
+
                 // DateTime
                 implementation(libs.kotlinx.datetime)
-                
+
                 // Ktor Client for Docker API
                 implementation(libs.bundles.ktor.common)
             }
@@ -44,10 +44,10 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
-                
+
                 // Ktor Client CIO engine for desktop
                 implementation(libs.ktor.client.cio)
-                
+
                 // Docker Java client
                 implementation(libs.bundles.docker.java)
             }
@@ -58,7 +58,7 @@ kotlin {
 compose.desktop {
     application {
         mainClass = "com.containerdashboard.MainKt"
-        
+
         nativeDistributions {
 
             modules("java.sql")
@@ -66,7 +66,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.containerdashboard"
             packageVersion = "1.0.0"
-            
+
             macOS {
                 bundleID = "com.containerdashboard"
             }

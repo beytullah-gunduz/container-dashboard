@@ -30,20 +30,20 @@ data class Container(
     @SerialName("SizeRootFs")
     val sizeRootFs: Long? = null,
     @SerialName("NetworkSettings")
-    val networkSettings: ContainerNetworkSettings? = null
+    val networkSettings: ContainerNetworkSettings? = null,
 ) {
     val displayName: String
         get() = names.firstOrNull()?.removePrefix("/") ?: id.take(12)
-    
+
     val shortId: String
         get() = id.take(12)
-    
+
     val isRunning: Boolean
         get() = state.lowercase() == "running"
-    
+
     val isPaused: Boolean
         get() = state.lowercase() == "paused"
-    
+
     val isStopped: Boolean
         get() = state.lowercase() == "exited" || state.lowercase() == "stopped"
 }

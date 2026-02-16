@@ -8,5 +8,5 @@ data class VolumeUsageData(
     @SerialName("Size")
     val size: Long = -1,
     @SerialName("RefCount")
-    val refCount: Int = -1
+    val refCount: Int = -1,
 )

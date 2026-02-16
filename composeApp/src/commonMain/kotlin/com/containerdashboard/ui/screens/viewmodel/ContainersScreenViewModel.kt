@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ContainersScreenViewModel : ViewModel() {
-
     val repo: DockerRepository = AppModule.dockerRepository
 
     val containers: Flow<List<Container>> = repo.getContainers(all = true)
@@ -138,7 +137,10 @@ class ContainersScreenViewModel : ViewModel() {
         }
     }
 
-    fun toggleContainerSelection(containerId: String, selected: Boolean) {
+    fun toggleContainerSelection(
+        containerId: String,
+        selected: Boolean,
+    ) {
         _selectedContainerIds.update { ids ->
             if (selected) ids + containerId else ids - containerId
         }
@@ -158,5 +160,7 @@ class ContainersScreenViewModel : ViewModel() {
 }
 
 enum class ContainerFilter {
-    ALL, RUNNING, STOPPED
+    ALL,
+    RUNNING,
+    STOPPED,
 }

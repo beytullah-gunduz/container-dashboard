@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class NetworksScreenViewModel : ViewModel() {
-
     val repo: DockerRepository = AppModule.dockerRepository
 
     val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
@@ -29,7 +28,10 @@ class NetworksScreenViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun createNetwork(name: String, driver: String) {
+    fun createNetwork(
+        name: String,
+        driver: String,
+    ) {
         viewModelScope.launch {
             try {
                 repo.createNetwork(name, driver)

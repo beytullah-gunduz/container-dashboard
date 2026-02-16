@@ -2,15 +2,44 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,13 +48,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
-import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 
 @Composable
 fun NetworksScreen(
     modifier: Modifier = Modifier,
-    viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() }
+    viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() },
 ) {
     val networks by viewModel.networks.collectAsState(listOf())
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -33,9 +62,10 @@ fun NetworksScreen(
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    val filteredNetworks = networks.filter { network ->
-        searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
-    }
+    val filteredNetworks =
+        networks.filter { network ->
+            searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
+        }
 
     val systemNetworks = listOf("bridge", "host", "none")
 
@@ -53,7 +83,7 @@ fun NetworksScreen(
                         onValueChange = { networkName = it },
                         label = { Text("Network Name") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
 
                     Text("Driver", style = MaterialTheme.typography.labelMedium)
@@ -62,7 +92,7 @@ fun NetworksScreen(
                             FilterChip(
                                 selected = selectedDriver == driver,
                                 onClick = { selectedDriver = driver },
-                                label = { Text(driver) }
+                                label = { Text(driver) },
                             )
                         }
                     }
@@ -76,7 +106,7 @@ fun NetworksScreen(
                             viewModel.setShowCreateDialog(false)
                         }
                     },
-                    enabled = networkName.isNotBlank()
+                    enabled = networkName.isNotBlank(),
                 ) {
                     Text("Create")
                 }
@@ -85,29 +115,29 @@ fun NetworksScreen(
                 TextButton(onClick = { viewModel.setShowCreateDialog(false) }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp)
+        modifier = modifier.fillMaxSize().padding(24.dp),
     ) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text(
                     text = "Networks",
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "${networks.size} networks, ${networks.count { it.name !in systemNetworks }} custom",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -126,14 +156,15 @@ fun NetworksScreen(
         error?.let { errorMessage ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                     Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -150,7 +181,7 @@ fun NetworksScreen(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search networks...",
-            modifier = Modifier.fillMaxWidth(0.4f)
+            modifier = Modifier.fillMaxWidth(0.4f),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -161,18 +192,18 @@ fun NetworksScreen(
         if (filteredNetworks.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "No networks found",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
             // Network List
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 items(filteredNetworks, key = { it.id }) { network ->
                     NetworkRow(
@@ -180,7 +211,7 @@ fun NetworksScreen(
                         isSelected = selectedNetwork == network.id,
                         isSystem = network.name in systemNetworks,
                         onClick = { viewModel.setSelectedNetwork(network.id) },
-                        onRemove = { viewModel.removeNetwork(network.id) }
+                        onRemove = { viewModel.removeNetwork(network.id) },
                     )
                 }
             }
@@ -191,53 +222,54 @@ fun NetworksScreen(
 @Composable
 private fun NetworkTableHeader() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "NAME",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.2f)
+            modifier = Modifier.weight(1.2f),
         )
         Text(
             text = "NETWORK ID",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.8f)
+            modifier = Modifier.weight(0.8f),
         )
         Text(
             text = "DRIVER",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.7f),
         )
         Text(
             text = "SCOPE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.5f)
+            modifier = Modifier.weight(0.5f),
         )
         Text(
             text = "SUBNET",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Text(
             text = "CONTAINERS",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.6f)
+            modifier = Modifier.weight(0.6f),
         )
         Spacer(modifier = Modifier.width(48.dp))
     }
@@ -249,55 +281,60 @@ private fun NetworkRow(
     isSelected: Boolean,
     isSystem: Boolean,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                else MaterialTheme.colorScheme.surface
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                ).clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Name
         Row(
             modifier = Modifier.weight(1.2f),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 Icons.Outlined.Hub,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = if (isSystem)
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                else
-                    MaterialTheme.colorScheme.primary
+                tint =
+                    if (isSystem) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
             )
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = network.name,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     if (isSystem) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Text(
                                 text = "System",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
                     }
@@ -311,14 +348,14 @@ private fun NetworkRow(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.8f)
+            modifier = Modifier.weight(0.8f),
         )
 
         // Driver
         Text(
             text = network.driver,
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(0.7f)
+            modifier = Modifier.weight(0.7f),
         )
 
         // Scope
@@ -326,7 +363,7 @@ private fun NetworkRow(
             text = network.scope,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.5f)
+            modifier = Modifier.weight(0.5f),
         )
 
         // Subnet
@@ -335,7 +372,7 @@ private fun NetworkRow(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
 
         // Containers
@@ -343,19 +380,19 @@ private fun NetworkRow(
             if (network.containerCount > 0) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
                         text = "${network.containerCount}",
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
             } else {
                 Text(
                     text = "0",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -363,21 +400,23 @@ private fun NetworkRow(
         // Actions
         Row(
             modifier = Modifier.width(48.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             IconButton(
                 onClick = onRemove,
                 modifier = Modifier.size(32.dp),
-                enabled = !isSystem
+                enabled = !isSystem,
             ) {
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = "Delete",
                     modifier = Modifier.size(18.dp),
-                    tint = if (!isSystem)
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    tint =
+                        if (!isSystem) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        },
                 )
             }
         }

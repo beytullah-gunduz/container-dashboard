@@ -1,6 +1,7 @@
 package com.containerdashboard
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -11,33 +12,36 @@ import androidx.compose.ui.window.rememberWindowState
 import com.containerdashboard.data.DockerClientRepository
 import com.containerdashboard.di.AppModule
 
-fun main() = application {
-    // Initialize the Docker repository
-    val dockerRepository = remember { 
-        DockerClientRepository("unix:///var/run/docker.sock") 
-    }
-    
-    DisposableEffect(Unit) {
-        AppModule.initialize(dockerRepository)
-        onDispose {
-            dockerRepository.close()
+fun main() =
+    application {
+        // Initialize the Docker repository
+        val dockerRepository =
+            remember {
+                DockerClientRepository("unix:///var/run/docker.sock")
+            }
+
+        DisposableEffect(Unit) {
+            AppModule.initialize(dockerRepository)
+            onDispose {
+                dockerRepository.close()
+            }
+        }
+
+        val windowState =
+            rememberWindowState(
+                size = DpSize(1400.dp, 900.dp),
+                position = WindowPosition(Alignment.Center),
+            )
+
+        // Create the app icon
+        val appIcon = remember { AppIconPainter() }
+
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "Container Dashboard",
+            state = windowState,
+            icon = appIcon,
+        ) {
+            App()
         }
     }
-    
-    val windowState = rememberWindowState(
-        size = DpSize(1400.dp, 900.dp),
-        position = WindowPosition(Alignment.Center)
-    )
-    
-    // Create the app icon
-    val appIcon = remember { AppIconPainter() }
-    
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Container Dashboard",
-        state = windowState,
-        icon = appIcon
-    ) {
-        App()
-    }
-}

@@ -8,5 +8,5 @@ data class VolumeListResponse(
     @SerialName("Volumes")
     val volumes: List<Volume>? = null,
     @SerialName("Warnings")
-    val warnings: List<String>? = null
+    val warnings: List<String>? = null,
 )

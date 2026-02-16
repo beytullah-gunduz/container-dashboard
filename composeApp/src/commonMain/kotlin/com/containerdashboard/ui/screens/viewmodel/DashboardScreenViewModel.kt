@@ -2,7 +2,12 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.containerdashboard.data.models.*
+import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.data.models.DockerVersion
+import com.containerdashboard.data.models.SystemInfo
+import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +19,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel : ViewModel() {
-
     val repo: DockerRepository = AppModule.dockerRepository
 
     private val _systemInfo = MutableStateFlow<SystemInfo?>(null)
@@ -34,8 +38,10 @@ class DashboardScreenViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    val isConnected: StateFlow<Boolean> = repo.isDockerAvailable()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isConnected: StateFlow<Boolean> =
+        repo
+            .isDockerAvailable()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {
         loadSystemInfo()
