@@ -23,7 +23,8 @@ class MonitoringScreenViewModel : ViewModel() {
 
     private val maxHistorySize = 60
 
-    private val _refreshRate = MutableStateFlow(3f) // seconds
+private val _refreshRate = MutableStateFlow(1f) // seconds
+
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
