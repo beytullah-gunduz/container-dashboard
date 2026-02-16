@@ -38,6 +38,7 @@ import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
 import com.containerdashboard.ui.navigation.Screen
+import com.containerdashboard.ui.screens.AppLogsScreen
 import com.containerdashboard.ui.screens.ContainersScreen
 import com.containerdashboard.ui.screens.DashboardScreen
 import com.containerdashboard.ui.screens.ImagesScreen

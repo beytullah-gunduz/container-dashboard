@@ -1,4 +1,4 @@
-package com.containerdashboard.data
+package com.containerdashboard.data.repository
 
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerPort
@@ -11,8 +11,6 @@ import com.containerdashboard.data.models.IPAMConfig
 import com.containerdashboard.data.models.NetworkContainer
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
-import com.containerdashboard.data.repository.DockerRepository
-import com.containerdashboard.data.repository.PruneResult
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Event
 import com.github.dockerjava.api.model.EventType
@@ -49,10 +47,10 @@ import com.github.dockerjava.api.model.Container as DockerContainer
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
 
-class DockerClientRepository(
-    private val dockerHost: String = "unix:///var/run/docker.sock",
-) : DockerRepository {
-    private val logger = LoggerFactory.getLogger(DockerClientRepository::class.java)
+actual class DockerRepository actual constructor(
+    private val dockerHost: String,
+) {
+    private val logger = LoggerFactory.getLogger(DockerRepository::class.java)
 
     private val config =
         DefaultDockerClientConfig
@@ -78,7 +76,7 @@ class DockerClientRepository(
      * Emits `true` when Docker is available, `false` otherwise.
      * Uses [distinctUntilChanged] so collectors only receive updates on actual status changes.
      */
-    override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
+    actual fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
             while (true) {
                 val available =
@@ -129,7 +127,7 @@ class DockerClientRepository(
         }.shareIn(scope, SharingStarted.Lazily)
 
     // System
-    override suspend fun getSystemInfo(): Result<SystemInfo> =
+    actual suspend fun getSystemInfo(): Result<SystemInfo> =
         withContext(Dispatchers.IO) {
             try {
                 val info = dockerClient.infoCmd().exec()
@@ -159,7 +157,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun getVersion(): Result<DockerVersion> =
+    actual suspend fun getVersion(): Result<DockerVersion> =
         withContext(Dispatchers.IO) {
             try {
                 val version = dockerClient.versionCmd().exec()
@@ -182,7 +180,7 @@ class DockerClientRepository(
         }
 
     // Containers
-    override fun getContainers(all: Boolean): Flow<List<Container>> =
+    actual fun getContainers(all: Boolean): Flow<List<Container>> =
         dockerEvents
             .filter { it.type == EventType.CONTAINER }
             .map {
@@ -214,7 +212,7 @@ class DockerClientRepository(
                 emit(emptyList())
             }.flowOn(Dispatchers.IO)
 
-    override suspend fun getContainer(id: String): Result<Container> =
+    actual suspend fun getContainer(id: String): Result<Container> =
         withContext(Dispatchers.IO) {
             try {
                 val container =
@@ -233,7 +231,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun getContainerLogs(
+    actual suspend fun getContainerLogs(
         id: String,
         tail: Int,
         timestamps: Boolean,
@@ -267,7 +265,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun startContainer(id: String): Result<Unit> =
+    actual suspend fun startContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.startContainerCmd(id).exec()
@@ -279,7 +277,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun stopContainer(id: String): Result<Unit> =
+    actual suspend fun stopContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.stopContainerCmd(id).exec()
@@ -291,7 +289,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun restartContainer(id: String): Result<Unit> =
+    actual suspend fun restartContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.restartContainerCmd(id).exec()
@@ -303,7 +301,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun pauseContainer(id: String): Result<Unit> =
+    actual suspend fun pauseContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pauseContainerCmd(id).exec()
@@ -315,7 +313,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun unpauseContainer(id: String): Result<Unit> =
+    actual suspend fun unpauseContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.unpauseContainerCmd(id).exec()
@@ -327,7 +325,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun removeContainer(
+    actual suspend fun removeContainer(
         id: String,
         force: Boolean,
     ): Result<Unit> =
@@ -343,7 +341,7 @@ class DockerClientRepository(
         }
 
     // Images
-    override fun getImages(): Flow<List<DockerImage>> =
+    actual fun getImages(): Flow<List<DockerImage>> =
         dockerEvents
             .filter { it.type == EventType.IMAGE }
             .map {
@@ -375,7 +373,7 @@ class DockerClientRepository(
                 emit(emptyList())
             }.flowOn(Dispatchers.IO)
 
-    override suspend fun getImage(id: String): Result<DockerImage> =
+    actual suspend fun getImage(id: String): Result<DockerImage> =
         withContext(Dispatchers.IO) {
             try {
                 val image =
@@ -393,7 +391,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun pullImage(
+    actual suspend fun pullImage(
         name: String,
         tag: String,
     ): Flow<String> =
@@ -414,7 +412,7 @@ class DockerClientRepository(
             }
         }.flowOn(Dispatchers.IO)
 
-    override suspend fun removeImage(
+    actual suspend fun removeImage(
         id: String,
         force: Boolean,
     ): Result<Unit> =
@@ -430,7 +428,7 @@ class DockerClientRepository(
         }
 
     // Volumes
-    override fun getVolumes(): Flow<List<Volume>> =
+    actual fun getVolumes(): Flow<List<Volume>> =
         dockerEvents
             .filter { it.type == EventType.VOLUME }
             .map {
@@ -480,7 +478,7 @@ class DockerClientRepository(
                 emit(emptyList())
             }.flowOn(Dispatchers.IO)
 
-    override suspend fun getVolume(name: String): Result<Volume> =
+    actual suspend fun getVolume(name: String): Result<Volume> =
         withContext(Dispatchers.IO) {
             try {
                 val volume = dockerClient.inspectVolumeCmd(name).exec()
@@ -498,7 +496,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun createVolume(
+    actual suspend fun createVolume(
         name: String,
         driver: String,
     ): Result<Volume> =
@@ -524,7 +522,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun removeVolume(name: String): Result<Unit> =
+    actual suspend fun removeVolume(name: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeVolumeCmd(name).exec()
@@ -537,7 +535,7 @@ class DockerClientRepository(
         }
 
     // Networks
-    override fun getNetworks(): Flow<List<DockerNetwork>> =
+    actual fun getNetworks(): Flow<List<DockerNetwork>> =
         dockerEvents
             .filter { it.type == EventType.NETWORK }
             .map {
@@ -567,7 +565,7 @@ class DockerClientRepository(
                 emit(emptyList())
             }.flowOn(Dispatchers.IO)
 
-    override suspend fun getNetwork(id: String): Result<DockerNetwork> =
+    actual suspend fun getNetwork(id: String): Result<DockerNetwork> =
         withContext(Dispatchers.IO) {
             try {
                 val network = dockerClient.inspectNetworkCmd().withNetworkId(id).exec()
@@ -585,7 +583,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun createNetwork(
+    actual suspend fun createNetwork(
         name: String,
         driver: String,
     ): Result<DockerNetwork> =
@@ -611,7 +609,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun removeNetwork(id: String): Result<Unit> =
+    actual suspend fun removeNetwork(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeNetworkCmd(id).exec()
@@ -625,7 +623,7 @@ class DockerClientRepository(
 
     // Stats — reacts to container changes, streams each container's stats via callbackFlow and combines them
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    override fun getContainerStats(refreshRateMillis: Long): Flow<List<ContainerStats>> =
+    actual fun getContainerStats(refreshRateMillis: Long): Flow<List<ContainerStats>> =
         getContainers(true)
             .distinctUntilChanged()
             .flatMapLatest { containers ->
@@ -707,7 +705,7 @@ class DockerClientRepository(
     }
 
     // Prune operations
-    override suspend fun pruneContainers(): Result<PruneResult> =
+    actual suspend fun pruneContainers(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.CONTAINERS).exec()
@@ -724,7 +722,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun pruneImages(): Result<PruneResult> =
+    actual suspend fun pruneImages(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.IMAGES).exec()
@@ -741,7 +739,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun pruneVolumes(): Result<PruneResult> =
+    actual suspend fun pruneVolumes(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.VOLUMES).exec()
@@ -758,7 +756,7 @@ class DockerClientRepository(
             }
         }
 
-    override suspend fun pruneNetworks(): Result<PruneResult> =
+    actual suspend fun pruneNetworks(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.NETWORKS).exec()
@@ -775,13 +773,13 @@ class DockerClientRepository(
             }
         }
 
-    fun close() {
+    actual fun close() {
         try {
             scope.cancel()
             dockerClient.close()
             httpClient.close()
         } catch (e: Exception) {
-            logger.warn("Error during DockerClientRepository shutdown", e)
+            logger.warn("Error during DockerRepository shutdown", e)
         }
     }
 

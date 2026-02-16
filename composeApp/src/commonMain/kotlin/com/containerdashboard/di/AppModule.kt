@@ -1,21 +1,19 @@
 package com.containerdashboard.di
 
 import com.containerdashboard.data.repository.DockerRepository
+import com.containerdashboard.data.repository.PreferenceRepository
 
 /**
  * Simple dependency injection container.
- * In a real app, you might use Koin or another DI framework.
+ * The DockerRepository is constructed lazily using the engine host from preferences.
  */
 object AppModule {
-    private var _dockerRepository: DockerRepository? = null
 
-    val dockerRepository: DockerRepository
-        get() = _dockerRepository ?: throw IllegalStateException("DockerRepository not initialized")
-
-    fun initialize(repository: DockerRepository) {
-        _dockerRepository = repository
+    val dockerRepository: DockerRepository by lazy {
+        DockerRepository(PreferenceRepository.engineHost)
     }
 
-    val isInitialized: Boolean
-        get() = _dockerRepository != null
+    fun closeRepository() {
+        dockerRepository.close()
+    }
 }

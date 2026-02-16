@@ -10,11 +10,12 @@ import com.containerdashboard.data.models.Volume
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Repository interface for Docker operations.
- * This can be implemented with actual Docker API calls.
+ * Platform-specific Docker repository.
+ * Each target provides its own actual implementation.
  */
-interface DockerRepository {
-// Availability
+expect class DockerRepository(dockerHost: String) {
+
+    // Availability
     fun isDockerAvailable(checkIntervalMillis: Long = 5000L): Flow<Boolean>
 
     // System
@@ -88,7 +89,6 @@ interface DockerRepository {
     suspend fun removeNetwork(id: String): Result<Unit>
 
     // Stats
-
     fun getContainerStats(refreshRateMillis: Long = 3000L): Flow<List<ContainerStats>>
 
     // Prune operations
@@ -99,4 +99,7 @@ interface DockerRepository {
     suspend fun pruneVolumes(): Result<PruneResult>
 
     suspend fun pruneNetworks(): Result<PruneResult>
+
+    // Lifecycle
+    fun close()
 }

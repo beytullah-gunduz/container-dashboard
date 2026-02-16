@@ -10,6 +10,15 @@ plugins {
 kotlin {
     jvm("desktop")
 
+    // Suppress Beta warning for expect/actual classes
+    targets.all {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions.freeCompilerArgs.add("-Xexpect-actual-classes")
+            }
+        }
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {

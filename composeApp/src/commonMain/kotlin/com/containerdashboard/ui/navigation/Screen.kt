@@ -1,6 +1,7 @@
 package com.containerdashboard.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Layers
@@ -8,6 +9,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Layers

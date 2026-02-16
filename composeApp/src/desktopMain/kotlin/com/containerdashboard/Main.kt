@@ -15,7 +15,6 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
-import com.containerdashboard.data.DockerClientRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
 import org.slf4j.LoggerFactory
@@ -83,16 +82,9 @@ fun main() {
     log.info("Container Dashboard starting…")
 
     application {
-        // Initialize the Docker repository
-        val dockerRepository =
-            remember {
-                DockerClientRepository("unix:///var/run/docker.sock")
-            }
-
         DisposableEffect(Unit) {
-            AppModule.initialize(dockerRepository)
             onDispose {
-                dockerRepository.close()
+                AppModule.closeRepository()
             }
         }
 
