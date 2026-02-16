@@ -189,6 +189,7 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
                                     Screen.Volumes.route -> VolumesScreen()
                                     Screen.Networks.route -> NetworksScreen()
                                     Screen.Monitoring.route -> MonitoringScreen()
+                                    Screen.AppLogs.route -> AppLogsScreen()
                                     Screen.Settings.route -> SettingsScreen()
                                 }
                             }

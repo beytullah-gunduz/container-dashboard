@@ -50,6 +50,9 @@ kotlin {
 
                 // Docker Java client
                 implementation(libs.bundles.docker.java)
+                
+                // SLF4J + Logback logging
+                implementation(libs.bundles.logging)
             }
         }
     }
@@ -62,6 +65,7 @@ compose.desktop {
         nativeDistributions {
 
             modules("java.sql")
+            modules("java.naming")
             modules("sun.misc")
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.containerdashboard"

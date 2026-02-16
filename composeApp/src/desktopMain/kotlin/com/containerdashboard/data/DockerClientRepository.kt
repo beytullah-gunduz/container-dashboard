@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.time.Duration
 import com.github.dockerjava.api.model.Container as DockerContainer
@@ -51,6 +52,8 @@ import com.github.dockerjava.api.model.Network as DockerNetworkModel
 class DockerClientRepository(
     private val dockerHost: String = "unix:///var/run/docker.sock",
 ) : DockerRepository {
+    private val logger = LoggerFactory.getLogger(DockerClientRepository::class.java)
+
     private val config =
         DefaultDockerClientConfig
             .createDefaultConfigBuilder()
@@ -88,7 +91,8 @@ class DockerClientRepository(
                             dockerClient.pingCmd().exec()
                             true
                         }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        logger.debug("Docker daemon not reachable: {}", e.message)
                         false
                     }
                 emit(available)
@@ -105,19 +109,21 @@ class DockerClientRepository(
                     }
 
                     override fun onError(throwable: Throwable?) {
-                        // Don't propagate – the flow simply stops producing events
+                        logger.warn("Docker event stream error", throwable)
                         close()
                     }
                 }
             try {
                 dockerClient.eventsCmd().exec(callback)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logger.error("Failed to start Docker event stream", e)
                 close()
             }
             awaitClose {
                 try {
                     callback.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.debug("Error closing event callback: {}", e.message)
                 }
             }
         }.shareIn(scope, SharingStarted.Lazily)
@@ -148,6 +154,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to get system info", e)
                 Result.failure(e)
             }
         }
@@ -169,6 +176,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to get Docker version", e)
                 Result.failure(e)
             }
         }
@@ -184,7 +192,8 @@ class DockerClientRepository(
                         .withShowAll(all)
                         .exec()
                         .map { it.toContainer() }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.warn("Failed to list containers: {}", e.message)
                     emptyList()
                 }
             }.onStart {
@@ -195,12 +204,15 @@ class DockerClientRepository(
                             .withShowAll(all)
                             .exec()
                             .map { it.toContainer() }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        logger.warn("Failed to list containers on start: {}", e.message)
                         emptyList()
                     },
                 )
-            }.catch { emit(emptyList()) }
-            .flowOn(Dispatchers.IO)
+            }.catch { e ->
+                logger.error("Container flow error", e)
+                emit(emptyList())
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun getContainer(id: String): Result<Container> =
         withContext(Dispatchers.IO) {
@@ -216,6 +228,7 @@ class DockerClientRepository(
                         ?: throw Exception("Container not found")
                 Result.success(container)
             } catch (e: Exception) {
+                logger.error("Failed to get container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -249,6 +262,7 @@ class DockerClientRepository(
 
                 Result.success(logCallback.logs.toString())
             } catch (e: Exception) {
+                logger.error("Failed to get logs for container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -257,8 +271,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.startContainerCmd(id).exec()
+                logger.info("Started container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to start container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -267,8 +283,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.stopContainerCmd(id).exec()
+                logger.info("Stopped container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to stop container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -277,8 +295,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.restartContainerCmd(id).exec()
+                logger.info("Restarted container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to restart container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -287,8 +307,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pauseContainerCmd(id).exec()
+                logger.info("Paused container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to pause container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -297,8 +319,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.unpauseContainerCmd(id).exec()
+                logger.info("Unpaused container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to unpause container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -310,8 +334,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeContainerCmd(id).withForce(force).exec()
+                logger.info("Removed container {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to remove container {}", id, e)
                 Result.failure(e)
             }
         }
@@ -327,7 +353,8 @@ class DockerClientRepository(
                         .withShowAll(true)
                         .exec()
                         .map { it.toDockerImage() }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.warn("Failed to list images: {}", e.message)
                     emptyList()
                 }
             }.onStart {
@@ -338,12 +365,15 @@ class DockerClientRepository(
                             .withShowAll(true)
                             .exec()
                             .map { it.toDockerImage() }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        logger.warn("Failed to list images on start: {}", e.message)
                         emptyList()
                     },
                 )
-            }.catch { emit(emptyList()) }
-            .flowOn(Dispatchers.IO)
+            }.catch { e ->
+                logger.error("Image flow error", e)
+                emit(emptyList())
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun getImage(id: String): Result<DockerImage> =
         withContext(Dispatchers.IO) {
@@ -358,6 +388,7 @@ class DockerClientRepository(
                         ?: throw Exception("Image not found")
                 Result.success(image)
             } catch (e: Exception) {
+                logger.error("Failed to get image {}", id, e)
                 Result.failure(e)
             }
         }
@@ -369,13 +400,16 @@ class DockerClientRepository(
         flow {
             emit("Pulling $name:$tag...")
             try {
+                logger.info("Pulling image {}:{}", name, tag)
                 dockerClient
                     .pullImageCmd(name)
                     .withTag(tag)
                     .start()
                     .awaitCompletion()
+                logger.info("Successfully pulled image {}:{}", name, tag)
                 emit("Successfully pulled $name:$tag")
             } catch (e: Exception) {
+                logger.error("Failed to pull image {}:{}", name, tag, e)
                 emit("Error: ${e.message}")
             }
         }.flowOn(Dispatchers.IO)
@@ -387,8 +421,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeImageCmd(id).withForce(force).exec()
+                logger.info("Removed image {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to remove image {}", id, e)
                 Result.failure(e)
             }
         }
@@ -413,7 +449,8 @@ class DockerClientRepository(
                             )
                         }
                         ?: emptyList()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.warn("Failed to list volumes: {}", e.message)
                     emptyList()
                 }
             }.onStart {
@@ -433,12 +470,15 @@ class DockerClientRepository(
                                 )
                             }
                             ?: emptyList()
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        logger.warn("Failed to list volumes on start: {}", e.message)
                         emptyList()
                     },
                 )
-            }.catch { emit(emptyList()) }
-            .flowOn(Dispatchers.IO)
+            }.catch { e ->
+                logger.error("Volume flow error", e)
+                emit(emptyList())
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun getVolume(name: String): Result<Volume> =
         withContext(Dispatchers.IO) {
@@ -453,6 +493,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to get volume {}", name, e)
                 Result.failure(e)
             }
         }
@@ -469,6 +510,7 @@ class DockerClientRepository(
                         .withName(name)
                         .withDriver(driver)
                         .exec()
+                logger.info("Created volume {}", name)
                 Result.success(
                     Volume(
                         name = response.name ?: name,
@@ -477,6 +519,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to create volume {}", name, e)
                 Result.failure(e)
             }
         }
@@ -485,8 +528,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeVolumeCmd(name).exec()
+                logger.info("Removed volume {}", name)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to remove volume {}", name, e)
                 Result.failure(e)
             }
         }
@@ -501,7 +546,8 @@ class DockerClientRepository(
                         .listNetworksCmd()
                         .exec()
                         .map { it.toDockerNetwork() }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.warn("Failed to list networks: {}", e.message)
                     emptyList()
                 }
             }.onStart {
@@ -511,12 +557,15 @@ class DockerClientRepository(
                             .listNetworksCmd()
                             .exec()
                             .map { it.toDockerNetwork() }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        logger.warn("Failed to list networks on start: {}", e.message)
                         emptyList()
                     },
                 )
-            }.catch { emit(emptyList()) }
-            .flowOn(Dispatchers.IO)
+            }.catch { e ->
+                logger.error("Network flow error", e)
+                emit(emptyList())
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun getNetwork(id: String): Result<DockerNetwork> =
         withContext(Dispatchers.IO) {
@@ -531,6 +580,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to get network {}", id, e)
                 Result.failure(e)
             }
         }
@@ -547,6 +597,7 @@ class DockerClientRepository(
                         .withName(name)
                         .withDriver(driver)
                         .exec()
+                logger.info("Created network {}", name)
                 Result.success(
                     DockerNetwork(
                         id = response.id ?: "",
@@ -555,6 +606,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to create network {}", name, e)
                 Result.failure(e)
             }
         }
@@ -563,8 +615,10 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeNetworkCmd(id).exec()
+                logger.info("Removed network {}", id)
                 Result.success(Unit)
             } catch (e: Exception) {
+                logger.error("Failed to remove network {}", id, e)
                 Result.failure(e)
             }
         }
@@ -614,6 +668,7 @@ class DockerClientRepository(
                     }
 
                     override fun onError(throwable: Throwable?) {
+                        logger.warn("Stats stream error for container {}: {}", containerId, throwable?.message)
                         close()
                     }
 
@@ -623,16 +678,20 @@ class DockerClientRepository(
                 }
             try {
                 dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logger.error("Failed to start stats stream for container {}", containerId, e)
                 close()
             }
             awaitClose {
                 try {
                     callback.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logger.debug("Error closing stats callback: {}", e.message)
                 }
             }
-        }.catch { /* silently recover */ }.sample(refreshRateMillis)
+        }.catch { e ->
+            logger.debug("Stats flow error for container {}: {}", containerId, e.message)
+        }.sample(refreshRateMillis)
 
     private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
         val cpuStats = stats.cpuStats ?: return 0.0
@@ -652,6 +711,7 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.CONTAINERS).exec()
+                logger.info("Pruned containers, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
                         deletedCount = response.spaceReclaimed?.toInt() ?: 0,
@@ -659,6 +719,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to prune containers", e)
                 Result.failure(e)
             }
         }
@@ -667,6 +728,7 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.IMAGES).exec()
+                logger.info("Pruned images, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
                         deletedCount = response.spaceReclaimed?.toInt() ?: 0,
@@ -674,6 +736,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to prune images", e)
                 Result.failure(e)
             }
         }
@@ -682,6 +745,7 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.VOLUMES).exec()
+                logger.info("Pruned volumes, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
                         deletedCount = response.spaceReclaimed?.toInt() ?: 0,
@@ -689,6 +753,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to prune volumes", e)
                 Result.failure(e)
             }
         }
@@ -697,6 +762,7 @@ class DockerClientRepository(
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.NETWORKS).exec()
+                logger.info("Pruned networks")
                 Result.success(
                     PruneResult(
                         deletedCount = 0,
@@ -704,6 +770,7 @@ class DockerClientRepository(
                     ),
                 )
             } catch (e: Exception) {
+                logger.error("Failed to prune networks", e)
                 Result.failure(e)
             }
         }
@@ -714,7 +781,7 @@ class DockerClientRepository(
             dockerClient.close()
             httpClient.close()
         } catch (e: Exception) {
-            // Ignore close errors
+            logger.warn("Error during DockerClientRepository shutdown", e)
         }
     }
 

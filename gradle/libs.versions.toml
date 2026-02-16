@@ -11,6 +11,8 @@ datetime = "0.6.1"
 ktor = "3.1.0"
 docker-java = "3.3.4"
 spotless = "7.0.2"
+slf4j = "2.0.16"
+logback = "1.5.15"
 
 [libraries]
 androidx-datastore-core = { module = "androidx.datastore:datastore-core", version = "1.2.0" }
@@ -48,6 +50,10 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 docker-java-core = { module = "com.github.docker-java:docker-java-core", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
 
+# SLF4J + Logback
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
 [bundles]
 android-datastore = ["androidx-datastore-core", "androidx-datastore-preferences"]
 compose-common = ["compose-runtime", "compose-foundation", "compose-material3", "compose-ui", "compose-components-resources", "compose-material-icons-extended"]
@@ -55,6 +61,7 @@ compose-material3-adaptive = ["compose-material3-adaptive", "compose-material3-a
 lifecycle = ["lifecycle-runtime-compose","lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
 docker-java = ["docker-java-core", "docker-java-transport-httpclient5"]
+logging = ["slf4j-api", "logback-classic"]
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

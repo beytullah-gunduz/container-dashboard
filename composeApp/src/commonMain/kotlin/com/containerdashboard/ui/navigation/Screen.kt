@@ -59,6 +59,12 @@ enum class Screen(
         icon = Icons.Outlined.MonitorHeart,
         selectedIcon = Icons.Filled.MonitorHeart,
     ),
+    AppLogs(
+        route = "app_logs",
+        title = "App Logs",
+        icon = Icons.Outlined.Article,
+        selectedIcon = Icons.Filled.Article
+    ),
     Settings(
         route = "settings",
         title = "Settings",
@@ -68,7 +74,7 @@ enum class Screen(
     ;
 
     companion object {
-        val mainScreens = listOf(Dashboard, Containers, Images, Volumes, Networks, Monitoring)
+        val mainScreens = listOf(Dashboard, Containers, Images, Volumes, Networks, Monitoring, AppLogs)
         val allScreens = entries.toList()
     }
 }

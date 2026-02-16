@@ -1,0 +1,8 @@
+<!--
+    Logback is configured PROGRAMMATICALLY in Main.kt (configureLogging()).
+    This XML file is a minimal fallback only; it is intentionally kept simple
+    to avoid conflicts with the programmatic setup, which resets the context.
+-->
+<configuration>
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+</configuration>
