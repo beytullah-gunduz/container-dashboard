@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,9 +49,6 @@ fun SettingsScreen(
 
     val dockerHost by viewModel.engineHost().collectAsState(initial = "unix:///var/run/docker.sock")
     val darkTheme by viewModel.darkTheme().collectAsState(initial = true)
-    val autoRefresh by viewModel.autoRefresh().collectAsState(initial = false)
-
-    val refreshInterval by viewModel.refreshInterval().collectAsState(initial = 5f)
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
 
@@ -117,45 +113,6 @@ fun SettingsScreen(
 
         // Behavior Section
         SettingsSection(title = "Behavior") {
-            SettingsSwitch(
-                title = "Auto Refresh",
-                subtitle = "Automatically refresh container status",
-                checked = autoRefresh,
-                onCheckedChange = {
-                    viewModel.autoRefresh = it
-                },
-            )
-
-            if (autoRefresh) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Refresh Interval",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = "${refreshInterval.toInt()} seconds",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Slider(
-                        value = refreshInterval,
-                        onValueChange = { viewModel.refreshInterval = it },
-                        valueRange = 1f..30f,
-                        steps = 28,
-                    )
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
             SettingsSwitch(
                 title = "Show System Containers",
                 subtitle = "Display system containers in the list",

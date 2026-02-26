@@ -22,22 +22,6 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun darkTheme(): Flow<Boolean> = PreferenceRepository.darkTheme()
 
-    var autoRefresh: Boolean
-        get() = runBlocking { PreferenceRepository.autoRefresh }
-        set(value) {
-            runBlocking { PreferenceRepository.autoRefresh = value }
-        }
-
-    fun autoRefresh(): Flow<Boolean> = PreferenceRepository.autoRefresh()
-
-    var refreshInterval: Float
-        get() = runBlocking { PreferenceRepository.refreshInterval }
-        set(value) {
-            runBlocking { PreferenceRepository.refreshInterval = value }
-        }
-
-    fun refreshInterval(): Flow<Float> = PreferenceRepository.refreshInterval()
-
     var showSystemContainers: Boolean
         get() = runBlocking { PreferenceRepository.showSystemContainers }
         set(value) {

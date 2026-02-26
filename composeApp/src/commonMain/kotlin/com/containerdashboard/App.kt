@@ -49,6 +49,7 @@ import com.containerdashboard.ui.screens.VolumesScreen
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
+import com.containerdashboard.data.repository.PreferenceRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -57,6 +58,7 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
     var currentRoute by remember { mutableStateOf(Screen.Dashboard.route) }
     val isConnected by viewModel.isConnected.collectAsState()
     var logsPaneState by remember { mutableStateOf(LogsPaneState()) }
+    val darkTheme by PreferenceRepository.darkTheme().collectAsState(initial = true)
     val scope = rememberCoroutineScope()
 
     // Create the navigator for the three-pane scaffold
@@ -116,7 +118,7 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
         logsPaneState = LogsPaneState()
     }
 
-    ContainerDashboardTheme(darkTheme = true) {
+    ContainerDashboardTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
