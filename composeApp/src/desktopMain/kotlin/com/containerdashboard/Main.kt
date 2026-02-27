@@ -26,7 +26,6 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
-import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.LoggerContext
@@ -36,6 +35,7 @@ import ch.qos.logback.core.ConsoleAppender
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
 import com.containerdashboard.ui.navigation.Screen
+import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import org.slf4j.LoggerFactory
 
 /**

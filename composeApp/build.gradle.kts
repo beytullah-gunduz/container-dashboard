@@ -67,8 +67,11 @@ kotlin {
     }
 }
 
-val appVersion: String = project.findProperty("app.version")?.toString()
-    ?.removeSuffix("-SNAPSHOT") ?: "1.0.0"
+val appVersion: String =
+    project
+        .findProperty("app.version")
+        ?.toString()
+        ?.removeSuffix("-SNAPSHOT") ?: "1.0.0"
 
 compose.desktop {
     application {
