@@ -20,19 +20,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.containerdashboard.data.models.Container
-import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.components.LogsPane
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
@@ -47,76 +42,28 @@ import com.containerdashboard.ui.screens.NetworksScreen
 import com.containerdashboard.ui.screens.SettingsScreen
 import com.containerdashboard.ui.screens.VolumesScreen
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
-import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
-import com.containerdashboard.data.repository.PreferenceRepository
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
-    var currentRoute by remember { mutableStateOf(Screen.Dashboard.route) }
+fun App(
+    viewModel: AppViewModel = viewModel { AppViewModel() },
+    navigateToRoute: String? = null,
+    onNavigated: () -> Unit = {},
+) {
+    val currentRoute by viewModel.currentRoute.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
-    var logsPaneState by remember { mutableStateOf(LogsPaneState()) }
-    val darkTheme by PreferenceRepository.darkTheme().collectAsState(initial = true)
-    val scope = rememberCoroutineScope()
+    val logsPaneState by viewModel.logsPaneState.collectAsState()
+    val darkTheme by viewModel.darkTheme.collectAsState()
 
-    // Create the navigator for the three-pane scaffold
+    LaunchedEffect(navigateToRoute) {
+        if (navigateToRoute != null) {
+            viewModel.navigate(navigateToRoute)
+            onNavigated()
+        }
+    }
+
     val navigator = rememberThreePaneScaffoldNavigator()
-
-    // Function to show logs for a container
-    fun showContainerLogs(container: Container) {
-        scope.launch {
-            logsPaneState =
-                LogsPaneState(
-                    container = container,
-                    isLoading = true,
-                )
-            // Navigate to show the extra pane
-            navigator.showExtraPane()
-
-            try {
-                val result = AppModule.dockerRepository.getContainerLogs(container.id)
-                result.fold(
-                    onSuccess = { logs ->
-                        logsPaneState = logsPaneState.copy(logs = logs, isLoading = false)
-                    },
-                    onFailure = { e ->
-                        logsPaneState = logsPaneState.copy(error = e.message, isLoading = false)
-                    },
-                )
-            } catch (e: Exception) {
-                logsPaneState = logsPaneState.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-
-    // Function to refresh logs
-    fun refreshLogs() {
-        val container = logsPaneState.container ?: return
-        scope.launch {
-            logsPaneState = logsPaneState.copy(isLoading = true, error = null)
-            try {
-                val result = AppModule.dockerRepository.getContainerLogs(container.id)
-                result.fold(
-                    onSuccess = { logs ->
-                        logsPaneState = logsPaneState.copy(logs = logs, isLoading = false)
-                    },
-                    onFailure = { e ->
-                        logsPaneState = logsPaneState.copy(error = e.message, isLoading = false)
-                    },
-                )
-            } catch (e: Exception) {
-                logsPaneState = logsPaneState.copy(error = e.message, isLoading = false)
-            }
-        }
-    }
-
-    // Function to close logs pane
-    fun closeLogs() {
-        navigator.hideExtraPane()
-        logsPaneState = LogsPaneState()
-    }
 
     ContainerDashboardTheme(darkTheme = darkTheme) {
         Surface(
@@ -170,7 +117,7 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
                         listPane = {
                             Sidebar(
                                 currentRoute = currentRoute,
-                                onNavigate = { screen -> currentRoute = screen.route },
+                                onNavigate = { screen -> viewModel.navigate(screen.route) },
                                 isConnected = isConnected,
                             )
                         },
@@ -185,7 +132,10 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
                                     Screen.Dashboard.route -> DashboardScreen()
                                     Screen.Containers.route ->
                                         ContainersScreen(
-                                            onShowLogs = { container -> showContainerLogs(container) },
+                                            onShowLogs = { container ->
+                                                viewModel.showContainerLogs(container)
+                                                navigator.showExtraPane()
+                                            },
                                             currentLogsContainerId = logsPaneState.container?.id,
                                         )
                                     Screen.Images.route -> ImagesScreen()
@@ -200,13 +150,17 @@ fun App(viewModel: AppViewModel = viewModel { AppViewModel() }) {
                         extraPane = {
                             LogsPane(
                                 state = logsPaneState,
-                                onRefresh = { refreshLogs() },
-                                onClose = { closeLogs() },
+                                onRefresh = { viewModel.refreshLogs() },
+                                onClose = {
+                                    navigator.hideExtraPane()
+                                    viewModel.clearLogs()
+                                },
                             )
                         },
                     )
                 }
             }
         }
+
     }
 }
