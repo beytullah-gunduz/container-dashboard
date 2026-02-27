@@ -94,7 +94,9 @@ private fun configureLogging() {
 }
 
 fun main() {
-    // Configure logging BEFORE anything else
+    // Workaround for macOS accessibility crash (NPE in SemanticsOwnerAccessibility.onNodeRemoved)
+    System.setProperty("compose.accessibility.enable", "false")
+
     configureLogging()
 
     val log = LoggerFactory.getLogger("com.containerdashboard.Main")
