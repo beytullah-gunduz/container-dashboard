@@ -60,6 +60,10 @@ kotlin {
                 // Docker Java client
                 implementation(libs.bundles.docker.java)
 
+                // JediTerm terminal emulator
+                implementation(libs.jediterm.core)
+                implementation(libs.jediterm.ui)
+
                 // SLF4J + Logback logging
                 implementation(libs.bundles.logging)
             }

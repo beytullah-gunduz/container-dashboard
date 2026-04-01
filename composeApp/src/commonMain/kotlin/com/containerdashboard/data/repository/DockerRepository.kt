@@ -101,6 +101,19 @@ expect class DockerRepository(
 
     suspend fun pruneNetworks(): Result<PruneResult>
 
+    // Exec
+    suspend fun createExecSession(
+        containerId: String,
+        cmd: List<String> = listOf("/bin/sh"),
+    ): Result<ExecSession>
+
+    suspend fun sendExecInput(
+        session: ExecSession,
+        input: String,
+    ): Result<Unit>
+
+    suspend fun closeExecSession(session: ExecSession): Result<Unit>
+
     // Lifecycle
     fun close()
 }

@@ -346,12 +346,24 @@ private fun VolumeTableHeader(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = allSelected, onCheckedChange = onSelectAllChange, enabled = hasItems, modifier = Modifier.padding(end = 8.dp))
+            Checkbox(
+                checked = allSelected,
+                onCheckedChange = onSelectAllChange,
+                enabled = hasItems,
+                modifier = Modifier.padding(end = 8.dp),
+            )
             VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
             ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
             VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(driverWeight))
             ColumnResizeHandle { delta -> onResizeDriver(delta / pxPerWeight) }
-            VolumeSortableHeaderCell("MOUNTPOINT", VolumeSortColumn.MOUNTPOINT, sortColumn, sortDirection, onSort, Modifier.weight(mountpointWeight))
+            VolumeSortableHeaderCell(
+                "MOUNTPOINT",
+                VolumeSortColumn.MOUNTPOINT,
+                sortColumn,
+                sortDirection,
+                onSort,
+                Modifier.weight(mountpointWeight),
+            )
             Spacer(modifier = Modifier.width(48.dp))
         }
     }

@@ -70,6 +70,8 @@ actual class DockerRepository actual constructor(
     private var httpClient = createHttpClient()
     private var dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
 
+    val client: DockerClient get() = dockerClient
+
     private fun rebuildClient() {
         httpClient.close()
         httpClient = createHttpClient()
@@ -793,6 +795,107 @@ actual class DockerRepository actual constructor(
                 )
             } catch (e: Exception) {
                 logger.error("Failed to prune networks", e)
+                Result.failure(e)
+            }
+        }
+
+    // Exec sessions
+    private val execSessions = mutableMapOf<String, java.io.OutputStream>()
+
+    actual suspend fun createExecSession(
+        containerId: String,
+        cmd: List<String>,
+    ): Result<ExecSession> =
+        withContext(Dispatchers.IO) {
+            try {
+                val execCreate =
+                    dockerClient
+                        .execCreateCmd(containerId)
+                        .withCmd(*cmd.toTypedArray())
+                        .withAttachStdin(true)
+                        .withAttachStdout(true)
+                        .withAttachStderr(true)
+                        .withTty(true)
+                        .exec()
+
+                val execId = execCreate.id
+                val pipedOutput = java.io.PipedOutputStream()
+                val pipedInput = java.io.PipedInputStream(pipedOutput)
+
+                val outputFlow =
+                    callbackFlow {
+                        val callback =
+                            object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                                override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
+                                    frame?.let {
+                                        val text = String(it.payload ?: ByteArray(0))
+                                        trySend(text)
+                                    }
+                                }
+
+                                override fun onError(throwable: Throwable?) {
+                                    logger.warn("Exec stream error for {}: {}", execId, throwable?.message)
+                                    close()
+                                }
+
+                                override fun onComplete() {
+                                    close()
+                                }
+                            }
+
+                        val execStart =
+                            dockerClient
+                                .execStartCmd(execId)
+                                .withDetach(false)
+                                .withTty(true)
+                                .withStdIn(pipedInput)
+
+                        execStart.exec(callback)
+
+                        awaitClose {
+                            try {
+                                callback.close()
+                            } catch (e: Exception) {
+                                logger.debug("Error closing exec callback: {}", e.message)
+                            }
+                        }
+                    }.flowOn(Dispatchers.IO)
+
+                execSessions[execId] = pipedOutput
+                logger.info("Created exec session {} for container {}", execId, containerId)
+                Result.success(ExecSession(execId = execId, containerId = containerId, output = outputFlow))
+            } catch (e: Exception) {
+                logger.error("Failed to create exec session for container {}", containerId, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun sendExecInput(
+        session: ExecSession,
+        input: String,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val outputStream =
+                    execSessions[session.execId]
+                        ?: return@withContext Result.failure(Exception("Exec session not found"))
+                outputStream.write(input.toByteArray())
+                outputStream.flush()
+                Result.success(Unit)
+            } catch (e: Exception) {
+                logger.error("Failed to send input to exec session {}", session.execId, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun closeExecSession(session: ExecSession): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                execSessions.remove(session.execId)?.close()
+                logger.info("Closed exec session {}", session.execId)
+                Result.success(Unit)
+            } catch (e: Exception) {
+                logger.error("Failed to close exec session {}", session.execId, e)
                 Result.failure(e)
             }
         }

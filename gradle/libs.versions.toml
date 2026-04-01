@@ -10,6 +10,7 @@ serialization = "1.9.0"
 datetime = "0.6.1"
 ktor = "3.1.0"
 docker-java = "3.3.4"
+jediterm = "3.64"
 spotless = "7.0.2"
 slf4j = "2.0.16"
 logback = "1.5.15"
@@ -49,6 +50,10 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 # Docker Java
 docker-java-core = { module = "com.github.docker-java:docker-java-core", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
+
+# JediTerm
+jediterm-core = { module = "org.jetbrains.jediterm:jediterm-core", version.ref = "jediterm" }
+jediterm-ui = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "jediterm" }
 
 # SLF4J + Logback
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }

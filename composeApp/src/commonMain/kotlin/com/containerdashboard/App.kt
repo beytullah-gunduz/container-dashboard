@@ -35,8 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.containerdashboard.ui.components.LogsPane
-import com.containerdashboard.ui.components.LogsPaneLayout
+import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
@@ -58,6 +57,7 @@ fun App(
     viewModel: AppViewModel = viewModel { AppViewModel() },
     navigateToRoute: String? = null,
     onNavigated: () -> Unit = {},
+    consoleContent: @Composable (containerId: String, darkTheme: Boolean) -> Unit = { _, _ -> },
 ) {
     val currentRoute by viewModel.currentRoute.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
@@ -185,12 +185,17 @@ fun App(
                             }
                         },
                         extraPane = {
-                            LogsPane(
-                                state = logsPaneState,
-                                onRefresh = { viewModel.refreshLogs() },
+                            ContainerExtraPane(
+                                logsState = logsPaneState,
+                                onRefreshLogs = { viewModel.refreshLogs() },
                                 onClose = {
                                     navigator.hideExtraPane()
                                     viewModel.clearLogs()
+                                },
+                                consoleContent = {
+                                    logsPaneState.container?.let { container ->
+                                        consoleContent(container.id, darkTheme)
+                                    }
                                 },
                             )
                         },

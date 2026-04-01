@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
@@ -35,15 +36,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.ViewAgenda
-import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -77,8 +76,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
-import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
+import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
@@ -598,12 +597,14 @@ fun ContainersScreen(
             val runningContainers = filteredContainers.filter { it.isRunning }
             val otherContainers = filteredContainers.filter { !it.isRunning }
 
-            val runningGrouped = remember(runningContainers, expandedComposeProjects) {
-                groupContainers(runningContainers, expandedComposeProjects)
-            }
-            val otherGrouped = remember(otherContainers, expandedComposeProjects) {
-                groupContainers(otherContainers, expandedComposeProjects)
-            }
+            val runningGrouped =
+                remember(runningContainers, expandedComposeProjects) {
+                    groupContainers(runningContainers, expandedComposeProjects)
+                }
+            val otherGrouped =
+                remember(otherContainers, expandedComposeProjects) {
+                    groupContainers(otherContainers, expandedComposeProjects)
+                }
 
             if (filteredContainers.isEmpty()) {
                 Box(

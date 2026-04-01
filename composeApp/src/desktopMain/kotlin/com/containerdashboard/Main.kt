@@ -154,6 +154,12 @@ fun main() {
             App(
                 navigateToRoute = pendingRoute,
                 onNavigated = { pendingRoute = null },
+                consoleContent = { containerId, isDark ->
+                    com.containerdashboard.terminal.JediTermConsole(
+                        containerId = containerId,
+                        darkTheme = isDark,
+                    )
+                },
             )
         }
 
