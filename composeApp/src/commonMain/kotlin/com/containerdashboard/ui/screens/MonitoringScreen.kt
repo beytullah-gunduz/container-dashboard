@@ -48,7 +48,7 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 @Composable
 fun MonitoringScreen(
@@ -96,7 +96,7 @@ fun MonitoringScreen(
                 Surface(
                     modifier = Modifier.size(8.dp),
                     shape = RoundedCornerShape(4.dp),
-                    color = if (stats.isNotEmpty()) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (stats.isNotEmpty()) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                 ) {}
                 Text(
                     text = "Live",
@@ -107,7 +107,7 @@ fun MonitoringScreen(
                     value = refreshRate,
                     onValueChange = { viewModel.setRefreshRate(it) },
                     valueRange = 1f..5f,
-                    activeColor = DockerColors.DockerBlue,
+                    activeColor = AppColors.AccentBlue,
                 )
             }
         }
@@ -121,7 +121,7 @@ fun MonitoringScreen(
                 UsageHistoryGraph(
                     title = "CPU Usage",
                     icon = Icons.Outlined.Memory,
-                    iconTint = DockerColors.DockerBlue,
+                    iconTint = AppColors.AccentBlue,
                     history = history.cpuHistory,
                     maxHistorySize = 60,
                     barColor = { getCpuColor(it) },
@@ -134,7 +134,7 @@ fun MonitoringScreen(
                 UsageHistoryGraph(
                     title = "Memory Usage",
                     icon = Icons.Outlined.Storage,
-                    iconTint = DockerColors.DockerBlueDark,
+                    iconTint = AppColors.AccentBlueDark,
                     history = history.memoryHistory,
                     maxHistorySize = 60,
                     barColor = { getMemoryColor(it) },
@@ -228,7 +228,7 @@ fun MonitoringScreen(
                             Icons.Outlined.Memory,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = DockerColors.DockerBlue,
+                            tint = AppColors.AccentBlue,
                         )
                         Text(
                             text = "CPU Usage",
@@ -270,7 +270,7 @@ fun MonitoringScreen(
                             Icons.Outlined.Storage,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = DockerColors.DockerBlueDark,
+                            tint = AppColors.AccentBlueDark,
                         )
                         Text(
                             text = "Memory Usage",
@@ -433,7 +433,7 @@ private fun StatsTableRow(stat: ContainerStats) {
                 Icons.Outlined.ViewInAr,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = DockerColors.Running,
+                tint = AppColors.Running,
             )
             Column {
                 Text(
@@ -608,14 +608,14 @@ private fun UsageHistoryGraph(
 
 private fun getCpuColor(percent: Double): Color =
     when {
-        percent < 25 -> DockerColors.Running
-        percent < 60 -> DockerColors.Warning
-        else -> DockerColors.Stopped
+        percent < 25 -> AppColors.Running
+        percent < 60 -> AppColors.Warning
+        else -> AppColors.Stopped
     }
 
 private fun getMemoryColor(percent: Double): Color =
     when {
-        percent < 50 -> DockerColors.Running
-        percent < 80 -> DockerColors.Warning
-        else -> DockerColors.Stopped
+        percent < 50 -> AppColors.Running
+        percent < 80 -> AppColors.Warning
+        else -> AppColors.Stopped
     }

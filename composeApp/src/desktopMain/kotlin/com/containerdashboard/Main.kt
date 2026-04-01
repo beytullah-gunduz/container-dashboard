@@ -109,7 +109,7 @@ fun main() {
 
         DisposableEffect(Unit) {
             onDispose {
-                AppModule.closeRepository()
+                AppModule.dockerRepository.close()
             }
         }
 
@@ -185,7 +185,7 @@ fun main() {
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = "A desktop dashboard for managing Docker containers, images, volumes, and networks.",
+                                text = "A desktop dashboard for managing containers, images, volumes, and networks.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

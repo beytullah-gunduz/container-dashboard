@@ -19,17 +19,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +66,8 @@ fun NetworksScreen(
     val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
     val error by viewModel.error.collectAsState()
+    val checkedNetworkIds by viewModel.checkedNetworkIds.collectAsState()
+    val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
 
     val filteredNetworks =
         networks.filter { network ->
@@ -68,6 +75,7 @@ fun NetworksScreen(
         }
 
     val systemNetworks = listOf("bridge", "host", "none")
+    val customNetworks = filteredNetworks.filter { it.name !in systemNetworks }
 
     // Create Network Dialog
     if (showCreateDialog) {
@@ -142,6 +150,30 @@ fun NetworksScreen(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (checkedNetworkIds.isNotEmpty()) {
+                    Button(
+                        onClick = { viewModel.deleteSelectedNetworks() },
+                        enabled = !isDeletingSelected,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    ) {
+                        if (isDeletingSelected) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onError,
+                            )
+                        } else {
+                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete ${checkedNetworkIds.size} selected")
+                    }
+                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Clear")
+                    }
+                }
                 Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -187,7 +219,17 @@ fun NetworksScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Table Header
-        NetworkTableHeader()
+        NetworkTableHeader(
+            allSelected = customNetworks.isNotEmpty() && customNetworks.all { it.id in checkedNetworkIds },
+            onSelectAllChange = { selectAll ->
+                if (selectAll) {
+                    viewModel.checkAll(customNetworks.map { it.id })
+                } else {
+                    viewModel.clearChecked()
+                }
+            },
+            hasItems = customNetworks.isNotEmpty(),
+        )
 
         if (filteredNetworks.isEmpty()) {
             Box(
@@ -210,6 +252,8 @@ fun NetworksScreen(
                         network = network,
                         isSelected = selectedNetwork == network.id,
                         isSystem = network.name in systemNetworks,
+                        isChecked = network.id in checkedNetworkIds,
+                        onCheckedChange = { viewModel.toggleChecked(network.id, it) },
                         onClick = { viewModel.setSelectedNetwork(network.id) },
                         onRemove = { viewModel.removeNetwork(network.id) },
                     )
@@ -220,7 +264,11 @@ fun NetworksScreen(
 }
 
 @Composable
-private fun NetworkTableHeader() {
+private fun NetworkTableHeader(
+    allSelected: Boolean,
+    onSelectAllChange: (Boolean) -> Unit,
+    hasItems: Boolean,
+) {
     Row(
         modifier =
             Modifier
@@ -229,6 +277,12 @@ private fun NetworkTableHeader() {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Checkbox(
+            checked = allSelected,
+            onCheckedChange = onSelectAllChange,
+            enabled = hasItems,
+            modifier = Modifier.padding(end = 8.dp),
+        )
         Text(
             text = "NAME",
             style = MaterialTheme.typography.labelSmall,
@@ -280,6 +334,8 @@ private fun NetworkRow(
     network: DockerNetwork,
     isSelected: Boolean,
     isSystem: Boolean,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -298,6 +354,12 @@ private fun NetworkRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+            enabled = !isSystem,
+            modifier = Modifier.padding(end = 8.dp),
+        )
         // Name
         Row(
             modifier = Modifier.weight(1.2f),

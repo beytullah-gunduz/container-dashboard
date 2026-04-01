@@ -58,7 +58,7 @@ actual class DockerRepository actual constructor(
             .withDockerHost(dockerHost)
             .build()
 
-    private val httpClient =
+    private fun createHttpClient(): ApacheDockerHttpClient =
         ApacheDockerHttpClient
             .Builder()
             .dockerHost(config.dockerHost)
@@ -67,7 +67,14 @@ actual class DockerRepository actual constructor(
             .responseTimeout(Duration.ofSeconds(45))
             .build()
 
-    private val dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
+    private var httpClient = createHttpClient()
+    private var dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
+
+    private fun rebuildClient() {
+        httpClient.close()
+        httpClient = createHttpClient()
+        dockerClient = DockerClientImpl.getInstance(config, httpClient)
+    }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -75,7 +82,10 @@ actual class DockerRepository actual constructor(
      * Periodically checks whether the Docker daemon is reachable by pinging it.
      * Emits `true` when Docker is available, `false` otherwise.
      * Uses [distinctUntilChanged] so collectors only receive updates on actual status changes.
+     * Rebuilds the HTTP client after a failed attempt so a newly started daemon is picked up.
      */
+    private var lastAvailable = false
+
     actual fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
             while (true) {
@@ -85,7 +95,9 @@ actual class DockerRepository actual constructor(
                         if (!File(socketPath).exists()) {
                             false
                         } else {
-                            // Verify the daemon actually responds
+                            if (!lastAvailable) {
+                                rebuildClient()
+                            }
                             dockerClient.pingCmd().exec()
                             true
                         }
@@ -93,36 +105,48 @@ actual class DockerRepository actual constructor(
                         logger.debug("Docker daemon not reachable: {}", e.message)
                         false
                     }
+                lastAvailable = available
                 emit(available)
                 delay(checkIntervalMillis)
             }
         }.distinctUntilChanged().flowOn(Dispatchers.IO)
 
     private val dockerEvents: SharedFlow<Event> =
-        callbackFlow {
-            val callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
-                    override fun onNext(event: Event?) {
-                        event?.let { trySend(it) }
-                    }
-
-                    override fun onError(throwable: Throwable?) {
-                        logger.warn("Docker event stream error", throwable)
-                        close()
-                    }
-                }
-            try {
-                dockerClient.eventsCmd().exec(callback)
-            } catch (e: Exception) {
-                logger.error("Failed to start Docker event stream", e)
-                close()
-            }
-            awaitClose {
+        flow {
+            while (true) {
                 try {
-                    callback.close()
+                    val events =
+                        callbackFlow {
+                            val callback =
+                                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
+                                    override fun onNext(event: Event?) {
+                                        event?.let { trySend(it) }
+                                    }
+
+                                    override fun onError(throwable: Throwable?) {
+                                        logger.warn("Docker event stream error", throwable)
+                                        close()
+                                    }
+                                }
+                            try {
+                                dockerClient.eventsCmd().exec(callback)
+                            } catch (e: Exception) {
+                                logger.error("Failed to start Docker event stream", e)
+                                close()
+                            }
+                            awaitClose {
+                                try {
+                                    callback.close()
+                                } catch (e: Exception) {
+                                    logger.debug("Error closing event callback: {}", e.message)
+                                }
+                            }
+                        }
+                    events.collect { emit(it) }
                 } catch (e: Exception) {
-                    logger.debug("Error closing event callback: {}", e.message)
+                    logger.debug("Docker event stream ended, retrying in 5s: {}", e.message)
                 }
+                delay(5000)
             }
         }.shareIn(scope, SharingStarted.Lazily)
 

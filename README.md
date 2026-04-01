@@ -4,8 +4,8 @@ A container management dashboard built with **Jetpack Compose Multiplatform**. T
 
 The app have been done using Claude Opus 4.5 and 4.6.
 
-![Kotlin](https://img.shields.io/badge/Kotlin-2.1.20-blue)
-![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.10.0-green)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue)
+![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.11.0--beta01-green)
 ![Gradle](https://img.shields.io/badge/Gradle-8.14.4-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
@@ -99,9 +99,27 @@ cd container-dashboard
 
 ## Configuration
 
-The application connects to the container engine via the Unix socket. You can configure the host in Settings:
+### Supported Container Engines
 
-- **Unix socket** (default): `unix:///var/run/docker.sock`
+The application auto-detects the Docker socket at startup, probing common locations in order:
+
+| Engine | Socket Path |
+|--------|------------|
+| Docker Desktop (standard) | `/var/run/docker.sock` |
+| Colima | `~/.colima/default/docker.sock` |
+| Docker Desktop (newer) | `~/.docker/run/docker.sock` |
+| OrbStack | `~/.orbstack/run/docker.sock` |
+| Lima | `~/.lima/default/sock/docker.sock` |
+| Rancher Desktop | `~/.rd/docker.sock` |
+
+The first socket that exists on disk is used as the default. You can also select or type a custom engine host in **Settings > Container Engine** using the editable dropdown, then click **Save & Reconnect** to apply without restarting the app.
+
+If the container engine is not running at launch, the app shows a waiting screen with a **Settings** button so you can configure the connection before the engine starts.
+
+### Custom Hosts
+
+Besides Unix sockets, you can configure:
+
 - **TCP**: `tcp://localhost:2375`
 - **TLS**: `tcp://localhost:2376` (with certificates)
 

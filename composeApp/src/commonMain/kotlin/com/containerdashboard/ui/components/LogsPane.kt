@@ -41,7 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.containerdashboard.ui.state.LogsPaneState
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 @Composable
 fun LogsPane(
@@ -73,7 +73,7 @@ fun LogsPane(
                     Icon(
                         Icons.AutoMirrored.Outlined.Article,
                         contentDescription = null,
-                        tint = DockerColors.DockerBlue,
+                        tint = AppColors.AccentBlue,
                         modifier = Modifier.size(20.dp),
                     )
                     Column {
@@ -145,7 +145,7 @@ fun LogsPane(
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(32.dp),
-                                    color = DockerColors.DockerBlue,
+                                    color = AppColors.AccentBlue,
                                 )
                                 Text(
                                     text = "Loading logs...",

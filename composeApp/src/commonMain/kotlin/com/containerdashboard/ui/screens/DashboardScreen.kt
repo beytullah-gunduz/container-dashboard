@@ -38,7 +38,7 @@ import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 @Composable
 fun DashboardScreen(
@@ -79,7 +79,7 @@ fun DashboardScreen(
                 Text(
                     text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isConnected) DockerColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isConnected) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -128,7 +128,7 @@ fun DashboardScreen(
                 value = containers.size.toString(),
                 subtitle = "$runningContainers running",
                 icon = Icons.Outlined.ViewInAr,
-                iconTint = DockerColors.DockerBlue,
+                iconTint = AppColors.AccentBlue,
                 modifier = Modifier.weight(1f),
             )
             StatsCard(
@@ -136,7 +136,7 @@ fun DashboardScreen(
                 value = images.size.toString(),
                 subtitle = formatBytes(totalImageSize),
                 icon = Icons.Outlined.Layers,
-                iconTint = DockerColors.Running,
+                iconTint = AppColors.Running,
                 modifier = Modifier.weight(1f),
             )
             StatsCard(
@@ -144,7 +144,7 @@ fun DashboardScreen(
                 value = volumes.size.toString(),
                 subtitle = "${volumes.size} total",
                 icon = Icons.Outlined.Storage,
-                iconTint = DockerColors.Warning,
+                iconTint = AppColors.Warning,
                 modifier = Modifier.weight(1f),
             )
             StatsCard(
@@ -152,7 +152,7 @@ fun DashboardScreen(
                 value = networks.size.toString(),
                 subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                 icon = Icons.Outlined.Hub,
-                iconTint = DockerColors.DockerBlueDark,
+                iconTint = AppColors.AccentBlueDark,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -192,17 +192,17 @@ fun DashboardScreen(
                         MiniStatsCard(
                             label = "Running",
                             value = running.toString(),
-                            valueColor = DockerColors.Running,
+                            valueColor = AppColors.Running,
                         )
                         MiniStatsCard(
                             label = "Paused",
                             value = paused.toString(),
-                            valueColor = DockerColors.Paused,
+                            valueColor = AppColors.Paused,
                         )
                         MiniStatsCard(
                             label = "Stopped",
                             value = stopped.toString(),
-                            valueColor = DockerColors.Stopped,
+                            valueColor = AppColors.Stopped,
                         )
                     }
                 }
@@ -321,9 +321,9 @@ private fun RecentContainerItem(container: Container) {
                 shape = RoundedCornerShape(4.dp),
                 color =
                     when {
-                        container.isRunning -> DockerColors.Running
-                        container.isPaused -> DockerColors.Paused
-                        else -> DockerColors.Stopped
+                        container.isRunning -> AppColors.Running
+                        container.isPaused -> AppColors.Paused
+                        else -> AppColors.Stopped
                     },
             ) {}
 

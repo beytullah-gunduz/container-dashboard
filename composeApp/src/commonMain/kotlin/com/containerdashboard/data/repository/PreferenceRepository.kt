@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -19,63 +20,48 @@ object PreferenceRepository {
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
 
-    var engineHost: String
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(ENGINE_HOST) ?: "unix:///var/run/docker.sock" }
-        set(value) {
-            runBlocking {
-                dataStore.edit {
-                    it[ENGINE_HOST] = value
-                }
-            }
-        }
+    private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
+
+    /**
+     * Synchronous read used only for initial app startup (AppModule lazy init).
+     * All other reads should use the Flow-based [engineHost] function.
+     */
+    val initialEngineHost: String
+        get() = runBlocking { dataStore.data.firstOrNull()?.get(ENGINE_HOST) ?: DEFAULT_ENGINE_HOST }
 
     fun engineHost(): Flow<String> =
         dataStore.data.map {
-            it[ENGINE_HOST] ?: "unix:///var/run/docker.sock"
+            it[ENGINE_HOST] ?: DEFAULT_ENGINE_HOST
         }
 
-    var darkTheme: Boolean
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(DARK_THEME) ?: true }
-        set(value) {
-            runBlocking {
-                dataStore.edit {
-                    it[DARK_THEME] = value
-                }
-            }
-        }
+    suspend fun setEngineHost(value: String) {
+        dataStore.edit { it[ENGINE_HOST] = value }
+    }
 
     fun darkTheme(): Flow<Boolean> =
         dataStore.data.map {
             it[DARK_THEME] ?: true
         }
 
-    var showSystemContainers: Boolean
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(SHOW_SYSTEM_CONTAINERS) ?: false }
-        set(value) {
-            runBlocking {
-                dataStore.edit {
-                    it[SHOW_SYSTEM_CONTAINERS] = value
-                }
-            }
-        }
+    suspend fun setDarkTheme(value: Boolean) {
+        dataStore.edit { it[DARK_THEME] = value }
+    }
 
     fun showSystemContainers(): Flow<Boolean> =
         dataStore.data.map {
             it[SHOW_SYSTEM_CONTAINERS] ?: false
         }
 
-    var confirmBeforeDelete: Boolean
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(CONFIRM_BEFORE_DELETE) ?: true }
-        set(value) {
-            runBlocking {
-                dataStore.edit {
-                    it[CONFIRM_BEFORE_DELETE] = value
-                }
-            }
-        }
+    suspend fun setShowSystemContainers(value: Boolean) {
+        dataStore.edit { it[SHOW_SYSTEM_CONTAINERS] = value }
+    }
 
     fun confirmBeforeDelete(): Flow<Boolean> =
         dataStore.data.map {
             it[CONFIRM_BEFORE_DELETE] ?: true
         }
+
+    suspend fun setConfirmBeforeDelete(value: Boolean) {
+        dataStore.edit { it[CONFIRM_BEFORE_DELETE] = value }
+    }
 }

@@ -23,7 +23,7 @@ data class Volume(
     val usageData: VolumeUsageData? = null,
 ) {
     val displayName: String
-        get() = if (name.length > 20) name.take(20) + "..." else name
+        get() = name
 
     val formattedSize: String
         get() = usageData?.let { DockerImage.formatBytes(it.size) } ?: "N/A"

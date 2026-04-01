@@ -8,12 +8,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Docker-inspired color palette
-object DockerColors {
-    // Primary Docker blue
-    val DockerBlue = Color(0xFF0DB7ED)
-    val DockerBlueDark = Color(0xFF086DD7)
-    val DockerBlueLight = Color(0xFF4FC3F7)
+// Application color palette
+object AppColors {
+    // Primary blue
+    val AccentBlue = Color(0xFF0DB7ED)
+    val AccentBlueDark = Color(0xFF086DD7)
+    val AccentBlueLight = Color(0xFF4FC3F7)
 
     // Backgrounds
     val DarkBackground = Color(0xFF1E1E1E)
@@ -40,35 +40,35 @@ object DockerColors {
 
 private val DarkColorScheme =
     darkColorScheme(
-        primary = DockerColors.DockerBlue,
+        primary = AppColors.AccentBlue,
         onPrimary = Color.White,
-        primaryContainer = DockerColors.DockerBlueDark,
+        primaryContainer = AppColors.AccentBlueDark,
         onPrimaryContainer = Color.White,
-        secondary = DockerColors.DockerBlueLight,
+        secondary = AppColors.AccentBlueLight,
         onSecondary = Color.Black,
-        background = DockerColors.DarkBackground,
-        onBackground = DockerColors.TextPrimary,
-        surface = DockerColors.DarkSurface,
-        onSurface = DockerColors.TextPrimary,
-        surfaceVariant = DockerColors.DarkSurfaceVariant,
-        onSurfaceVariant = DockerColors.TextSecondary,
+        background = AppColors.DarkBackground,
+        onBackground = AppColors.TextPrimary,
+        surface = AppColors.DarkSurface,
+        onSurface = AppColors.TextPrimary,
+        surfaceVariant = AppColors.DarkSurfaceVariant,
+        onSurfaceVariant = AppColors.TextSecondary,
         outline = Color(0xFF404040),
         outlineVariant = Color(0xFF303030),
     )
 
 private val LightColorScheme =
     lightColorScheme(
-        primary = DockerColors.DockerBlueDark,
+        primary = AppColors.AccentBlueDark,
         onPrimary = Color.White,
-        primaryContainer = DockerColors.DockerBlueLight,
+        primaryContainer = AppColors.AccentBlueLight,
         onPrimaryContainer = Color.Black,
-        secondary = DockerColors.DockerBlue,
+        secondary = AppColors.AccentBlue,
         onSecondary = Color.White,
-        background = DockerColors.LightBackground,
+        background = AppColors.LightBackground,
         onBackground = Color(0xFF1A1A1A),
-        surface = DockerColors.LightSurface,
+        surface = AppColors.LightSurface,
         onSurface = Color(0xFF1A1A1A),
-        surfaceVariant = DockerColors.LightSurfaceVariant,
+        surfaceVariant = AppColors.LightSurfaceVariant,
         onSurfaceVariant = Color(0xFF424242),
         outline = Color(0xFFBDBDBD),
         outlineVariant = Color(0xFFE0E0E0),

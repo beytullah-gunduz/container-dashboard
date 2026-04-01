@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 enum class ContainerStatus {
     RUNNING,
@@ -48,12 +48,12 @@ fun StatusBadge(
 ) {
     val (backgroundColor, textColor) =
         when (status) {
-            ContainerStatus.RUNNING -> DockerColors.Running.copy(alpha = 0.15f) to DockerColors.Running
-            ContainerStatus.PAUSED -> DockerColors.Paused.copy(alpha = 0.15f) to DockerColors.Paused
-            ContainerStatus.STOPPED, ContainerStatus.EXITED -> DockerColors.Stopped.copy(alpha = 0.15f) to DockerColors.Stopped
-            ContainerStatus.CREATED -> DockerColors.DockerBlue.copy(alpha = 0.15f) to DockerColors.DockerBlue
-            ContainerStatus.RESTARTING -> DockerColors.Warning.copy(alpha = 0.15f) to DockerColors.Warning
-            ContainerStatus.REMOVING, ContainerStatus.DEAD -> DockerColors.Stopped.copy(alpha = 0.15f) to DockerColors.Stopped
+            ContainerStatus.RUNNING -> AppColors.Running.copy(alpha = 0.15f) to AppColors.Running
+            ContainerStatus.PAUSED -> AppColors.Paused.copy(alpha = 0.15f) to AppColors.Paused
+            ContainerStatus.STOPPED, ContainerStatus.EXITED -> AppColors.Stopped.copy(alpha = 0.15f) to AppColors.Stopped
+            ContainerStatus.CREATED -> AppColors.AccentBlue.copy(alpha = 0.15f) to AppColors.AccentBlue
+            ContainerStatus.RESTARTING -> AppColors.Warning.copy(alpha = 0.15f) to AppColors.Warning
+            ContainerStatus.REMOVING, ContainerStatus.DEAD -> AppColors.Stopped.copy(alpha = 0.15f) to AppColors.Stopped
         }
 
     Row(
@@ -83,8 +83,8 @@ fun StatusBadge(
 @Composable
 fun StatusDot(
     isActive: Boolean,
-    activeColor: Color = DockerColors.Running,
-    inactiveColor: Color = DockerColors.Stopped,
+    activeColor: Color = AppColors.Running,
+    inactiveColor: Color = AppColors.Stopped,
     modifier: Modifier = Modifier,
 ) {
     Surface(

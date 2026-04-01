@@ -18,7 +18,7 @@ data class UsageHistory(
 )
 
 class MonitoringScreenViewModel : ViewModel() {
-    private val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     private val maxHistorySize = 60
 

@@ -24,14 +24,20 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +70,8 @@ fun ImagesScreen(
     val sortColumn by viewModel.sortColumn.collectAsState()
     val sortDirection by viewModel.sortDirection.collectAsState()
     val error by viewModel.error.collectAsState()
+    val checkedImageIds by viewModel.checkedImageIds.collectAsState()
+    val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
 
     var namedImagesVisible by remember { mutableStateOf(true) }
     var unnamedImagesVisible by remember { mutableStateOf(true) }
@@ -133,6 +141,32 @@ fun ImagesScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (checkedImageIds.isNotEmpty()) {
+                    Button(
+                        onClick = { viewModel.deleteSelectedImages() },
+                        enabled = !isDeletingSelected,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    ) {
+                        if (isDeletingSelected) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onError,
+                            )
+                        } else {
+                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete ${checkedImageIds.size} selected")
+                    }
+                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Clear")
+                    }
+                }
             }
         }
 
@@ -208,6 +242,11 @@ fun ImagesScreen(
                                 sortColumn = sortColumn,
                                 sortDirection = sortDirection,
                                 onSort = { viewModel.toggleSort(it) },
+                                allSelected = namedImages.isNotEmpty() && namedImages.all { it.id in checkedImageIds },
+                                onSelectAllChange = { selected ->
+                                    namedImages.forEach { viewModel.toggleChecked(it.id, selected) }
+                                },
+                                hasItems = namedImages.isNotEmpty(),
                             )
                         }
                     }
@@ -221,6 +260,8 @@ fun ImagesScreen(
                             ImageRow(
                                 image = image,
                                 isSelected = selectedImage == image.id,
+                                isChecked = image.id in checkedImageIds,
+                                onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                 onClick = { viewModel.setSelectedImage(image.id) },
                                 onRemove = { viewModel.removeImage(image.id) },
                             )
@@ -250,6 +291,11 @@ fun ImagesScreen(
                                 sortColumn = sortColumn,
                                 sortDirection = sortDirection,
                                 onSort = { viewModel.toggleSort(it) },
+                                allSelected = unnamedImages.isNotEmpty() && unnamedImages.all { it.id in checkedImageIds },
+                                onSelectAllChange = { selected ->
+                                    unnamedImages.forEach { viewModel.toggleChecked(it.id, selected) }
+                                },
+                                hasItems = unnamedImages.isNotEmpty(),
                             )
                         }
                     }
@@ -263,6 +309,8 @@ fun ImagesScreen(
                             ImageRow(
                                 image = image,
                                 isSelected = selectedImage == image.id,
+                                isChecked = image.id in checkedImageIds,
+                                onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                 onClick = { viewModel.setSelectedImage(image.id) },
                                 onRemove = { viewModel.removeImage(image.id) },
                             )
@@ -321,6 +369,9 @@ private fun ImageTableHeader(
     sortColumn: ImageSortColumn,
     sortDirection: SortDirection,
     onSort: (ImageSortColumn) -> Unit,
+    allSelected: Boolean,
+    onSelectAllChange: (Boolean) -> Unit,
+    hasItems: Boolean,
 ) {
     Row(
         modifier =
@@ -330,6 +381,11 @@ private fun ImageTableHeader(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Checkbox(
+            checked = allSelected && hasItems,
+            onCheckedChange = onSelectAllChange,
+            enabled = hasItems,
+        )
         SortableHeaderCell("REPOSITORY", ImageSortColumn.REPOSITORY, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
         SortableHeaderCell("TAG", ImageSortColumn.TAG, sortColumn, sortDirection, onSort, Modifier.weight(1f))
         SortableHeaderCell("IMAGE ID", ImageSortColumn.IMAGE_ID, sortColumn, sortDirection, onSort, Modifier.weight(1f))
@@ -378,6 +434,8 @@ private fun SortableHeaderCell(
 private fun ImageRow(
     image: DockerImage,
     isSelected: Boolean,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -396,6 +454,10 @@ private fun ImageRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = onCheckedChange,
+        )
         // Repository
         Text(
             text = image.repository,

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel : ViewModel() {
-    val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     private val _systemInfo = MutableStateFlow<SystemInfo?>(null)
     val systemInfo: StateFlow<SystemInfo?> = _systemInfo.asStateFlow()

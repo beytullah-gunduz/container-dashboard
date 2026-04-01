@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AppViewModel : ViewModel() {
-    private val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val isConnected: StateFlow<Boolean> =
         repo

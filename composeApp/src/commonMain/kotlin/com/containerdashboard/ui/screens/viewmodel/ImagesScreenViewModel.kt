@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class ImageSortColumn {
@@ -24,7 +25,7 @@ enum class SortDirection {
 }
 
 class ImagesScreenViewModel : ViewModel() {
-    val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val images: Flow<List<DockerImage>> = repo.getImages()
 
@@ -40,15 +41,54 @@ class ImagesScreenViewModel : ViewModel() {
     private val _sortDirection = MutableStateFlow(SortDirection.ASC)
     val sortDirection: StateFlow<SortDirection> = _sortDirection.asStateFlow()
 
+    private val _checkedImageIds = MutableStateFlow(setOf<String>())
+    val checkedImageIds: StateFlow<Set<String>> = _checkedImageIds.asStateFlow()
+
+    private val _isDeletingSelected = MutableStateFlow(false)
+    val isDeletingSelected: StateFlow<Boolean> = _isDeletingSelected.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    fun toggleChecked(
+        id: String,
+        checked: Boolean,
+    ) {
+        _checkedImageIds.update { if (checked) it + id else it - id }
+    }
+
+    fun checkAll(ids: List<String>) {
+        _checkedImageIds.value = ids.toSet()
+    }
+
+    fun uncheckAll(ids: List<String>) {
+        _checkedImageIds.update { it - ids.toSet() }
+    }
+
+    fun clearChecked() {
+        _checkedImageIds.value = emptySet()
+    }
+
     fun removeImage(id: String) {
         viewModelScope.launch {
-            try {
-                repo.removeImage(id, force = false)
-            } catch (e: Exception) {
-                _error.value = e.message
+            repo.removeImage(id, force = false).onFailure { _error.value = it.message }
+        }
+    }
+
+    fun deleteSelectedImages() {
+        viewModelScope.launch {
+            _isDeletingSelected.value = true
+            val ids = _checkedImageIds.value.toList()
+            val errors = mutableListOf<String>()
+            for (id in ids) {
+                repo.removeImage(id, force = false).onFailure {
+                    errors.add(it.message ?: "Failed to delete image")
+                }
+            }
+            _checkedImageIds.value = emptySet()
+            _isDeletingSelected.value = false
+            if (errors.isNotEmpty()) {
+                _error.value = "Failed to delete ${errors.size} image(s)"
             }
         }
     }

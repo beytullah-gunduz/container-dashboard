@@ -23,6 +23,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,11 +39,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.data.DockerHostConfig
+import com.containerdashboard.ui.screens.viewmodel.ActionState
+import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 
 @Composable
@@ -47,10 +59,12 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
 
-    val dockerHost by viewModel.engineHost().collectAsState(initial = "unix:///var/run/docker.sock")
+    val dockerHost by viewModel.engineHost().collectAsState(initial = DockerHostConfig.detectDockerHost())
     val darkTheme by viewModel.darkTheme().collectAsState(initial = true)
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
+    val connectionTestResult by viewModel.connectionTestResult.collectAsState()
+    val actionState by viewModel.actionState.collectAsState()
 
     Column(
         modifier =
@@ -69,21 +83,54 @@ fun SettingsScreen(
 
         // Container Engine Section
         SettingsSection(title = "Container Engine") {
-            SettingsTextField(
-                label = "Engine Host",
+            EngineHostField(
                 value = dockerHost,
-                onValueChange = { viewModel.engineHost = it },
-                placeholder = "unix:///var/run/docker.sock",
+                onValueChange = { viewModel.setEngineHost(it) },
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Connection test feedback
+            when (val state = connectionTestResult) {
+                is ConnectionTestState.Testing -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                is ConnectionTestState.Success -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                is ConnectionTestState.Error -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                ConnectionTestState.Idle -> {}
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedButton(
-                    onClick = { /* Test connection */ },
+                    onClick = {
+                        viewModel.dismissTestResult()
+                        viewModel.testConnection(dockerHost)
+                    },
+                    enabled = connectionTestResult !is ConnectionTestState.Testing,
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.NetworkCheck, null, modifier = Modifier.size(18.dp))
@@ -91,12 +138,12 @@ fun SettingsScreen(
                     Text("Test Connection")
                 }
                 Button(
-                    onClick = { /* Save */ },
+                    onClick = { viewModel.saveAndReconnect(dockerHost) },
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save")
+                    Text("Save & Reconnect")
                 }
             }
         }
@@ -107,7 +154,7 @@ fun SettingsScreen(
                 title = "Dark Theme",
                 subtitle = "Use dark color scheme",
                 checked = darkTheme,
-                onCheckedChange = { viewModel.darkTheme = it },
+                onCheckedChange = { viewModel.setDarkTheme(it) },
             )
         }
 
@@ -117,7 +164,7 @@ fun SettingsScreen(
                 title = "Show System Containers",
                 subtitle = "Display system containers in the list",
                 checked = showSystemContainers,
-                onCheckedChange = { viewModel.showSystemContainers = it },
+                onCheckedChange = { viewModel.setShowSystemContainers(it) },
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -126,7 +173,7 @@ fun SettingsScreen(
                 title = "Confirm Before Delete",
                 subtitle = "Show confirmation dialog before deleting resources",
                 checked = confirmBeforeDelete,
-                onCheckedChange = { viewModel.confirmBeforeDelete = it },
+                onCheckedChange = { viewModel.setConfirmBeforeDelete(it) },
             )
         }
 
@@ -141,14 +188,51 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.error,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Action feedback
+            when (val state = actionState) {
+                is ActionState.InProgress -> {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text(state.message, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                is ActionState.Success -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                is ActionState.Error -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                ActionState.Idle -> {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedButton(
-                    onClick = { /* Prune all */ },
+                    onClick = {
+                        viewModel.dismissActionState()
+                        viewModel.pruneAll()
+                    },
+                    enabled = actionState !is ActionState.InProgress,
                     colors =
                         ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error,
@@ -161,7 +245,11 @@ fun SettingsScreen(
                 }
 
                 OutlinedButton(
-                    onClick = { /* Stop all */ },
+                    onClick = {
+                        viewModel.dismissActionState()
+                        viewModel.stopAllContainers()
+                    },
+                    enabled = actionState !is ActionState.InProgress,
                     colors =
                         ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error,
@@ -259,27 +347,61 @@ private fun SettingsSwitch(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsTextField(
-    label: String,
+private fun EngineHostField(
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column {
         Text(
-            text = label,
+            text = "Engine Host",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder) },
-            singleLine = true,
-            shape = RoundedCornerShape(8.dp),
-        )
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                placeholder = { Text(DockerHostConfig.fallbackUri) },
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                DockerHostConfig.presets.forEach { preset ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(
+                                    text = preset.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    text = preset.uri,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        onClick = {
+                            onValueChange(preset.uri)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
     }
 }

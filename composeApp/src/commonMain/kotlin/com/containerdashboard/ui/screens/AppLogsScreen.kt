@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.logging.AppLogEntry
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -117,7 +117,7 @@ fun AppLogsScreen(
                         contentDescription = "Toggle auto-scroll",
                         tint =
                             if (autoScroll) {
-                                DockerColors.DockerBlue
+                                AppColors.AccentBlue
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -235,8 +235,8 @@ fun AppLogsScreen(
                     contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(entries, key = { "${it.timestamp}-${it.message.hashCode()}-${it.threadName}" }) { entry ->
-                        LogEntryRow(entry = entry)
+                    items(entries.size) { index ->
+                        LogEntryRow(entry = entries[index])
                     }
                 }
             }
@@ -306,7 +306,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                 ),
-            color = DockerColors.DockerBlue.copy(alpha = 0.7f),
+            color = AppColors.AccentBlue.copy(alpha = 0.7f),
             maxLines = 1,
         )
 
@@ -375,12 +375,12 @@ private fun LevelFilterChip(
 
 private fun levelColor(level: String): Color =
     when (level) {
-        "ERROR" -> DockerColors.Stopped
-        "WARN" -> DockerColors.Warning
-        "INFO" -> DockerColors.Running
-        "DEBUG" -> DockerColors.DockerBlue
-        "TRACE" -> DockerColors.TextMuted
-        else -> DockerColors.TextSecondary
+        "ERROR" -> AppColors.Stopped
+        "WARN" -> AppColors.Warning
+        "INFO" -> AppColors.Running
+        "DEBUG" -> AppColors.AccentBlue
+        "TRACE" -> AppColors.TextMuted
+        else -> AppColors.TextSecondary
     }
 
 private val timestampFormatter =

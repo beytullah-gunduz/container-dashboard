@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class VolumeSortColumn {
@@ -18,7 +19,7 @@ enum class VolumeSortColumn {
 }
 
 class VolumesScreenViewModel : ViewModel() {
-    val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val volumes: Flow<List<Volume>> = repo.getVolumes()
 
@@ -37,8 +38,51 @@ class VolumesScreenViewModel : ViewModel() {
     private val _sortDirection = MutableStateFlow(SortDirection.ASC)
     val sortDirection: StateFlow<SortDirection> = _sortDirection.asStateFlow()
 
+    private val _checkedVolumeNames = MutableStateFlow(setOf<String>())
+    val checkedVolumeNames: StateFlow<Set<String>> = _checkedVolumeNames.asStateFlow()
+
+    private val _isDeletingSelected = MutableStateFlow(false)
+    val isDeletingSelected: StateFlow<Boolean> = _isDeletingSelected.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun toggleChecked(
+        name: String,
+        checked: Boolean,
+    ) {
+        _checkedVolumeNames.update { if (checked) it + name else it - name }
+    }
+
+    fun checkAll(names: List<String>) {
+        _checkedVolumeNames.value = names.toSet()
+    }
+
+    fun uncheckAll(names: List<String>) {
+        _checkedVolumeNames.update { it - names.toSet() }
+    }
+
+    fun clearChecked() {
+        _checkedVolumeNames.value = emptySet()
+    }
+
+    fun deleteSelectedVolumes() {
+        viewModelScope.launch {
+            _isDeletingSelected.value = true
+            val names = _checkedVolumeNames.value.toList()
+            val errors = mutableListOf<String>()
+            for (name in names) {
+                repo.removeVolume(name).onFailure {
+                    errors.add(it.message ?: "Failed to delete volume")
+                }
+            }
+            _checkedVolumeNames.value = emptySet()
+            _isDeletingSelected.value = false
+            if (errors.isNotEmpty()) {
+                _error.value = "Failed to delete ${errors.size} volume(s)"
+            }
+        }
+    }
 
     fun toggleSort(column: VolumeSortColumn) {
         if (_sortColumn.value == column) {

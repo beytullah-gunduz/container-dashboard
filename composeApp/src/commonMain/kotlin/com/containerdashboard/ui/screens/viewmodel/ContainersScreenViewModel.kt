@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ContainersScreenViewModel : ViewModel() {
-    val repo: DockerRepository = AppModule.dockerRepository
+    private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val containers: Flow<List<Container>> = repo.getContainers(all = true)
 
@@ -32,63 +32,43 @@ class ContainersScreenViewModel : ViewModel() {
     private val _isDeletingAll = MutableStateFlow(false)
     val isDeletingAll: StateFlow<Boolean> = _isDeletingAll.asStateFlow()
 
-    fun startContainer(id: String) {
+    private fun containerAction(
+        id: String,
+        action: suspend DockerRepository.(String) -> Result<Unit>,
+    ) {
         viewModelScope.launch {
             _actionInProgress.value = id
-            try {
-                repo.startContainer(id)
-            } catch (e: Exception) {
-                _error.value = e.message
-            }
+            repo.action(id).onFailure { _error.value = it.message }
             _actionInProgress.value = null
         }
     }
 
-    fun stopContainer(id: String) {
-        viewModelScope.launch {
-            _actionInProgress.value = id
-            try {
-                repo.stopContainer(id)
-            } catch (e: Exception) {
-                _error.value = e.message
-            }
-            _actionInProgress.value = null
-        }
-    }
+    fun startContainer(id: String) = containerAction(id) { startContainer(it) }
 
-    fun pauseContainer(id: String) {
-        viewModelScope.launch {
-            _actionInProgress.value = id
-            try {
-                repo.pauseContainer(id)
-            } catch (e: Exception) {
-                _error.value = e.message
-            }
-            _actionInProgress.value = null
-        }
-    }
+    fun stopContainer(id: String) = containerAction(id) { stopContainer(it) }
 
-    fun unpauseContainer(id: String) {
-        viewModelScope.launch {
-            _actionInProgress.value = id
-            try {
-                repo.unpauseContainer(id)
-            } catch (e: Exception) {
-                _error.value = e.message
-            }
-            _actionInProgress.value = null
-        }
-    }
+    fun pauseContainer(id: String) = containerAction(id) { pauseContainer(it) }
 
-    fun removeContainer(id: String) {
+    fun unpauseContainer(id: String) = containerAction(id) { unpauseContainer(it) }
+
+    fun removeContainer(id: String) = containerAction(id) { removeContainer(it, force = true) }
+
+    private val _isStoppingSelected = MutableStateFlow(false)
+    val isStoppingSelected: StateFlow<Boolean> = _isStoppingSelected.asStateFlow()
+
+    fun stopSelectedContainers(runningIds: List<String>) {
         viewModelScope.launch {
-            _actionInProgress.value = id
-            try {
-                repo.removeContainer(id, force = false)
-            } catch (e: Exception) {
-                _error.value = e.message
+            _isStoppingSelected.value = true
+            val errors = mutableListOf<String>()
+            for (id in runningIds) {
+                repo.stopContainer(id).onFailure {
+                    errors.add(it.message ?: "Failed to stop container")
+                }
             }
-            _actionInProgress.value = null
+            _isStoppingSelected.value = false
+            if (errors.isNotEmpty()) {
+                _error.value = "Failed to stop ${errors.size} container(s)"
+            }
         }
     }
 
@@ -99,10 +79,8 @@ class ContainersScreenViewModel : ViewModel() {
             val errors = mutableListOf<String>()
 
             for (id in idsToDelete) {
-                try {
-                    repo.removeContainer(id, force = false)
-                } catch (e: Exception) {
-                    errors.add(e.message ?: "Failed to delete container")
+                repo.removeContainer(id, force = true).onFailure {
+                    errors.add(it.message ?: "Failed to delete container")
                 }
             }
 
@@ -121,10 +99,8 @@ class ContainersScreenViewModel : ViewModel() {
             val errors = mutableListOf<String>()
 
             for (container in containers) {
-                try {
-                    repo.removeContainer(container.id, force = true)
-                } catch (e: Exception) {
-                    errors.add(e.message ?: "Failed to delete container ${container.displayName}")
+                repo.removeContainer(container.id, force = true).onFailure {
+                    errors.add(it.message ?: "Failed to delete container ${container.displayName}")
                 }
             }
 

@@ -2,11 +2,14 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,30 +24,40 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
@@ -65,6 +78,14 @@ fun VolumesScreen(
     val sortColumn by viewModel.sortColumn.collectAsState()
     val sortDirection by viewModel.sortDirection.collectAsState()
     val error by viewModel.error.collectAsState()
+    val checkedVolumeNames by viewModel.checkedVolumeNames.collectAsState()
+    val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
+
+    // Resizable column weights
+    var nameWeight by remember { mutableFloatStateOf(1.5f) }
+    var driverWeight by remember { mutableFloatStateOf(0.7f) }
+    var mountpointWeight by remember { mutableFloatStateOf(2f) }
+    val totalWeight = nameWeight + driverWeight + mountpointWeight
 
     val filteredVolumes =
         volumes
@@ -161,6 +182,30 @@ fun VolumesScreen(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (checkedVolumeNames.isNotEmpty()) {
+                    Button(
+                        onClick = { viewModel.deleteSelectedVolumes() },
+                        enabled = !isDeletingSelected,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    ) {
+                        if (isDeletingSelected) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onError,
+                            )
+                        } else {
+                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete ${checkedVolumeNames.size} selected")
+                    }
+                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Clear")
+                    }
+                }
                 Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
@@ -207,9 +252,37 @@ fun VolumesScreen(
 
         // Table Header
         VolumeTableHeader(
+            allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
+            onSelectAllChange = { selectAll ->
+                if (selectAll) {
+                    viewModel.checkAll(filteredVolumes.map { it.name })
+                } else {
+                    viewModel.clearChecked()
+                }
+            },
+            hasItems = filteredVolumes.isNotEmpty(),
             sortColumn = sortColumn,
             sortDirection = sortDirection,
             onSort = { viewModel.toggleSort(it) },
+            nameWeight = nameWeight,
+            driverWeight = driverWeight,
+            mountpointWeight = mountpointWeight,
+            onResizeName = { delta ->
+                val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
+                val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
+                if (newName >= 0.5f && newDriver >= 0.3f) {
+                    nameWeight = newName
+                    driverWeight = newDriver
+                }
+            },
+            onResizeDriver = { delta ->
+                val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
+                val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
+                if (newDriver >= 0.3f && newMount >= 0.5f) {
+                    driverWeight = newDriver
+                    mountpointWeight = newMount
+                }
+            },
         )
 
         if (filteredVolumes.isEmpty()) {
@@ -232,8 +305,13 @@ fun VolumesScreen(
                     VolumeRow(
                         volume = volume,
                         isSelected = selectedVolume == volume.name,
+                        isChecked = volume.name in checkedVolumeNames,
+                        onCheckedChange = { viewModel.toggleChecked(volume.name, it) },
                         onClick = { viewModel.setSelectedVolume(volume.name) },
                         onRemove = { viewModel.removeVolume(volume.name) },
+                        nameWeight = nameWeight,
+                        driverWeight = driverWeight,
+                        mountpointWeight = mountpointWeight,
                     )
                 }
             }
@@ -243,22 +321,66 @@ fun VolumesScreen(
 
 @Composable
 private fun VolumeTableHeader(
+    allSelected: Boolean,
+    onSelectAllChange: (Boolean) -> Unit,
+    hasItems: Boolean,
     sortColumn: VolumeSortColumn,
     sortDirection: SortDirection,
     onSort: (VolumeSortColumn) -> Unit,
+    nameWeight: Float,
+    driverWeight: Float,
+    mountpointWeight: Float,
+    onResizeName: (Float) -> Unit,
+    onResizeDriver: (Float) -> Unit,
 ) {
-    Row(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
     ) {
-        VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
-        VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
-        VolumeSortableHeaderCell("MOUNTPOINT", VolumeSortColumn.MOUNTPOINT, sortColumn, sortDirection, onSort, Modifier.weight(2f))
-        Spacer(modifier = Modifier.width(48.dp))
+        val totalWeight = nameWeight + driverWeight + mountpointWeight
+        val pxPerWeight = constraints.maxWidth / totalWeight
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = allSelected, onCheckedChange = onSelectAllChange, enabled = hasItems, modifier = Modifier.padding(end = 8.dp))
+            VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
+            ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
+            VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(driverWeight))
+            ColumnResizeHandle { delta -> onResizeDriver(delta / pxPerWeight) }
+            VolumeSortableHeaderCell("MOUNTPOINT", VolumeSortColumn.MOUNTPOINT, sortColumn, sortDirection, onSort, Modifier.weight(mountpointWeight))
+            Spacer(modifier = Modifier.width(48.dp))
+        }
+    }
+}
+
+@Composable
+private fun ColumnResizeHandle(onDrag: (Float) -> Unit) {
+    Box(
+        modifier =
+            Modifier
+                .width(8.dp)
+                .height(24.dp)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .pointerInput(Unit) {
+                    detectDragGestures { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount.x)
+                    }
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
+        )
     }
 }
 
@@ -302,8 +424,13 @@ private fun VolumeSortableHeaderCell(
 private fun VolumeRow(
     volume: Volume,
     isSelected: Boolean,
+    isChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    nameWeight: Float,
+    driverWeight: Float,
+    mountpointWeight: Float,
 ) {
     Row(
         modifier =
@@ -320,9 +447,10 @@ private fun VolumeRow(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Checkbox(checked = isChecked, onCheckedChange = onCheckedChange, modifier = Modifier.padding(end = 8.dp))
         // Name
         Row(
-            modifier = Modifier.weight(1.5f),
+            modifier = Modifier.weight(nameWeight),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -336,6 +464,8 @@ private fun VolumeRow(
                 text = volume.displayName,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -344,7 +474,7 @@ private fun VolumeRow(
             text = volume.driver,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.7f),
+            modifier = Modifier.weight(driverWeight),
         )
 
         // Mountpoint
@@ -353,8 +483,9 @@ private fun VolumeRow(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(2f),
+            modifier = Modifier.weight(mountpointWeight),
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
 
         // Actions

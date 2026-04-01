@@ -31,7 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.navigation.Screen
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 @Composable
 fun Sidebar(
@@ -61,7 +61,7 @@ fun Sidebar(
                 Surface(
                     modifier = Modifier.size(40.dp),
                     shape = RoundedCornerShape(10.dp),
-                    color = DockerColors.DockerBlue,
+                    color = AppColors.AccentBlue,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -184,7 +184,7 @@ private fun ConnectionStatus(isConnected: Boolean) {
         Surface(
             modifier = Modifier.size(8.dp),
             shape = RoundedCornerShape(4.dp),
-            color = if (isConnected) DockerColors.Running else DockerColors.Stopped,
+            color = if (isConnected) AppColors.Running else AppColors.Stopped,
         ) {}
 
         Column {

@@ -1,5 +1,8 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,11 +23,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Pause
@@ -44,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -67,10 +76,23 @@ import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
-import com.containerdashboard.ui.theme.DockerColors
+import com.containerdashboard.ui.theme.AppColors
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
+private val COMPACT_BUTTONS_THRESHOLD = 900.dp
+
+private enum class SortColumn {
+    NAME,
+    IMAGE,
+    STATUS,
+    PORTS,
+}
+
+private enum class SortDirection {
+    ASCENDING,
+    DESCENDING,
+}
 
 @Composable
 fun ContainersScreen(
@@ -81,6 +103,20 @@ fun ContainersScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var containerFilter by remember { mutableStateOf(ContainerFilter.ALL) }
+    var sortColumn by remember { mutableStateOf(SortColumn.NAME) }
+    var sortDirection by remember { mutableStateOf(SortDirection.ASCENDING) }
+    var runningVisible by remember { mutableStateOf(true) }
+    var otherVisible by remember { mutableStateOf(true) }
+
+    val onSortChange: (SortColumn) -> Unit = { column ->
+        if (sortColumn == column) {
+            sortDirection =
+                if (sortDirection == SortDirection.ASCENDING) SortDirection.DESCENDING else SortDirection.ASCENDING
+        } else {
+            sortColumn = column
+            sortDirection = SortDirection.ASCENDING
+        }
+    }
 
     val containers by viewModel.containers.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
@@ -88,25 +124,40 @@ fun ContainersScreen(
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
     val isDeletingAll by viewModel.isDeletingAll.collectAsState()
+    val isStoppingSelected by viewModel.isStoppingSelected.collectAsState()
 
     // State for delete all confirmation dialog
     var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     val filteredContainers =
-        remember(containers, searchQuery, containerFilter) {
-            containers.filter { container ->
-                val matchesSearch =
-                    searchQuery.isEmpty() ||
-                        container.displayName.contains(searchQuery, ignoreCase = true) ||
-                        container.image.contains(searchQuery, ignoreCase = true)
-                val matchesFilter =
-                    when (containerFilter) {
-                        ContainerFilter.ALL -> true
-                        ContainerFilter.RUNNING -> container.isRunning
-                        ContainerFilter.STOPPED -> !container.isRunning
+        remember(containers, searchQuery, containerFilter, sortColumn, sortDirection) {
+            containers
+                .filter { container ->
+                    val matchesSearch =
+                        searchQuery.isEmpty() ||
+                            container.displayName.contains(searchQuery, ignoreCase = true) ||
+                            container.image.contains(searchQuery, ignoreCase = true)
+                    val matchesFilter =
+                        when (containerFilter) {
+                            ContainerFilter.ALL -> true
+                            ContainerFilter.RUNNING -> container.isRunning
+                            ContainerFilter.STOPPED -> !container.isRunning
+                        }
+                    matchesSearch && matchesFilter
+                }.let { list ->
+                    val comparator =
+                        when (sortColumn) {
+                            SortColumn.NAME -> compareBy<Container> { it.displayName.lowercase() }
+                            SortColumn.IMAGE -> compareBy { it.image.lowercase() }
+                            SortColumn.STATUS -> compareBy { it.state.lowercase() }
+                            SortColumn.PORTS -> compareBy { it.ports.firstOrNull()?.displayString ?: "" }
+                        }
+                    if (sortDirection == SortDirection.DESCENDING) {
+                        list.sortedWith(comparator.reversed())
+                    } else {
+                        list.sortedWith(comparator)
                     }
-                matchesSearch && matchesFilter
-            }
+                }
         }
 
     // Check if all filtered containers are selected
@@ -114,11 +165,17 @@ fun ContainersScreen(
         filteredContainers.isNotEmpty() &&
             filteredContainers.all { it.id in selectedContainerIds }
 
-    // Check how many selected containers can be deleted (not running)
+    // Check how many selected containers can be deleted (not running) vs running
     val deletableSelectedCount =
         remember(selectedContainerIds, containers) {
             selectedContainerIds.count { id ->
                 containers.find { it.id == id }?.isRunning == false
+            }
+        }
+    val runningSelectedCount =
+        remember(selectedContainerIds, containers) {
+            selectedContainerIds.count { id ->
+                containers.find { it.id == id }?.isRunning == true
             }
         }
 
@@ -141,6 +198,7 @@ fun ContainersScreen(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
+        val iconOnly = maxWidth < COMPACT_BUTTONS_THRESHOLD
 
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -164,64 +222,162 @@ fun ContainersScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Delete Selected Button
+                Row(horizontalArrangement = Arrangement.spacedBy(if (iconOnly) 4.dp else 12.dp)) {
                     if (selectedContainerIds.isNotEmpty()) {
-                        Button(
-                            onClick = { viewModel.deleteSelectedContainers() },
-                            enabled = deletableSelectedCount > 0 && !isDeletingSelected,
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                ),
-                        ) {
-                            if (isDeletingSelected) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onError,
-                                )
+                        // Stop button for running containers
+                        if (runningSelectedCount > 0) {
+                            if (iconOnly) {
+                                IconButton(
+                                    onClick = {
+                                        val runningIds =
+                                            selectedContainerIds.filter { id ->
+                                                containers.find { it.id == id }?.isRunning == true
+                                            }
+                                        viewModel.stopSelectedContainers(runningIds)
+                                    },
+                                    enabled = !isStoppingSelected,
+                                ) {
+                                    if (isStoppingSelected) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Outlined.Stop,
+                                            contentDescription = "Stop $runningSelectedCount selected",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                }
                             } else {
-                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                                Button(
+                                    onClick = {
+                                        val runningIds =
+                                            selectedContainerIds.filter { id ->
+                                                containers.find { it.id == id }?.isRunning == true
+                                            }
+                                        viewModel.stopSelectedContainers(runningIds)
+                                    },
+                                    enabled = !isStoppingSelected,
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                        ),
+                                ) {
+                                    if (isStoppingSelected) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onError,
+                                        )
+                                    } else {
+                                        Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Stop $runningSelectedCount selected")
+                                }
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                if (deletableSelectedCount < selectedContainerIds.size) {
-                                    "Delete $deletableSelectedCount of ${selectedContainerIds.size}"
+                        }
+
+                        // Delete button (force-deletes running containers)
+                        if (iconOnly) {
+                            IconButton(
+                                onClick = { viewModel.deleteSelectedContainers() },
+                                enabled = !isDeletingSelected,
+                            ) {
+                                if (isDeletingSelected) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                    )
                                 } else {
-                                    "Delete ${selectedContainerIds.size} selected"
-                                },
-                            )
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete ${selectedContainerIds.size} selected",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = { viewModel.deleteSelectedContainers() },
+                                enabled = !isDeletingSelected,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                    ),
+                            ) {
+                                if (isDeletingSelected) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onError,
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Delete ${selectedContainerIds.size} selected")
+                            }
                         }
 
                         // Clear selection button
-                        OutlinedButton(
-                            onClick = { viewModel.clearSelection() },
-                        ) {
-                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear")
+                        if (iconOnly) {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear selection",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            OutlinedButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Clear")
+                            }
                         }
                     }
 
                     // Delete All Button
                     if (containers.isNotEmpty()) {
-                        Button(
-                            onClick = { showDeleteAllDialog = true },
-                            enabled = !isDeletingAll && !isDeletingSelected,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        ) {
-                            if (isDeletingAll) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onError,
-                                )
-                            } else {
-                                Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
+                        if (iconOnly) {
+                            IconButton(
+                                onClick = { showDeleteAllDialog = true },
+                                enabled = !isDeletingAll && !isDeletingSelected,
+                            ) {
+                                if (isDeletingAll) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.DeleteForever,
+                                        contentDescription = "Delete All",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Delete All")
+                        } else {
+                            Button(
+                                onClick = { showDeleteAllDialog = true },
+                                enabled = !isDeletingAll && !isDeletingSelected,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            ) {
+                                if (isDeletingAll) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onError,
+                                    )
+                                } else {
+                                    Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Delete All")
+                            }
                         }
                     }
                 }
@@ -305,32 +461,8 @@ fun ContainersScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Table Header - changes based on mode
-            if (isCompactMode) {
-                CompactTableHeader(
-                    allSelected = allFilteredSelected,
-                    onSelectAllChange = { selectAll ->
-                        if (selectAll) {
-                            viewModel.selectAllContainers(filteredContainers.map { it.id })
-                        } else {
-                            viewModel.clearSelection()
-                        }
-                    },
-                    hasItems = filteredContainers.isNotEmpty(),
-                )
-            } else {
-                ExpandedTableHeader(
-                    allSelected = allFilteredSelected,
-                    onSelectAllChange = { selectAll ->
-                        if (selectAll) {
-                            viewModel.selectAllContainers(filteredContainers.map { it.id })
-                        } else {
-                            viewModel.clearSelection()
-                        }
-                    },
-                    hasItems = filteredContainers.isNotEmpty(),
-                )
-            }
+            val runningContainers = filteredContainers.filter { it.isRunning }
+            val otherContainers = filteredContainers.filter { !it.isRunning }
 
             if (filteredContainers.isEmpty()) {
                 Box(
@@ -344,47 +476,317 @@ fun ContainersScreen(
                     )
                 }
             } else {
-                // Container List
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(filteredContainers, key = { it.id }) { container ->
-                        if (isCompactMode) {
-                            CompactContainerRow(
-                                container = container,
-                                isChecked = container.id in selectedContainerIds,
-                                isViewingLogs = currentLogsContainerId == container.id,
-                                onCheckedChange = { checked ->
-                                    viewModel.toggleContainerSelection(container.id, checked)
-                                },
-                                isActionInProgress = actionInProgress == container.id,
-                                onStart = { viewModel.startContainer(container.id) },
-                                onStop = { viewModel.stopContainer(container.id) },
-                                onPause = { viewModel.pauseContainer(container.id) },
-                                onUnpause = { viewModel.unpauseContainer(container.id) },
-                                onRemove = { viewModel.removeContainer(container.id) },
-                                onViewLogs = { onShowLogs(container) },
+                    // Running containers section
+                    if (runningContainers.isNotEmpty()) {
+                        item(key = "running-header") {
+                            ContainerSectionHeader(
+                                title = "Running",
+                                count = runningContainers.size,
+                                expanded = runningVisible,
+                                onToggle = { runningVisible = !runningVisible },
                             )
-                        } else {
-                            ExpandedContainerRow(
-                                container = container,
-                                isChecked = container.id in selectedContainerIds,
-                                isViewingLogs = currentLogsContainerId == container.id,
-                                onCheckedChange = { checked ->
-                                    viewModel.toggleContainerSelection(container.id, checked)
-                                },
-                                isActionInProgress = actionInProgress == container.id,
-                                onStart = { viewModel.startContainer(container.id) },
-                                onStop = { viewModel.stopContainer(container.id) },
-                                onPause = { viewModel.pauseContainer(container.id) },
-                                onUnpause = { viewModel.unpauseContainer(container.id) },
-                                onRemove = { viewModel.removeContainer(container.id) },
-                                onViewLogs = { onShowLogs(container) },
+                        }
+
+                        item(key = "running-table-header") {
+                            val allRunningSelected =
+                                runningContainers.isNotEmpty() &&
+                                    runningContainers.all { it.id in selectedContainerIds }
+                            AnimatedVisibility(
+                                visible = runningVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                if (isCompactMode) {
+                                    CompactTableHeader(
+                                        allSelected = allRunningSelected,
+                                        onSelectAllChange = { selectAll ->
+                                            if (selectAll) {
+                                                viewModel.selectAllContainers(
+                                                    (selectedContainerIds + runningContainers.map { it.id }).toList(),
+                                                )
+                                            } else {
+                                                runningContainers.forEach {
+                                                    viewModel.toggleContainerSelection(it.id, false)
+                                                }
+                                            }
+                                        },
+                                        hasItems = true,
+                                        sortColumn = sortColumn,
+                                        sortDirection = sortDirection,
+                                        onSortChange = onSortChange,
+                                    )
+                                } else {
+                                    ExpandedTableHeader(
+                                        allSelected = allRunningSelected,
+                                        onSelectAllChange = { selectAll ->
+                                            if (selectAll) {
+                                                viewModel.selectAllContainers(
+                                                    (selectedContainerIds + runningContainers.map { it.id }).toList(),
+                                                )
+                                            } else {
+                                                runningContainers.forEach {
+                                                    viewModel.toggleContainerSelection(it.id, false)
+                                                }
+                                            }
+                                        },
+                                        hasItems = true,
+                                        sortColumn = sortColumn,
+                                        sortDirection = sortDirection,
+                                        onSortChange = onSortChange,
+                                    )
+                                }
+                            }
+                        }
+
+                        items(runningContainers, key = { "running-${it.id}" }) { container ->
+                            AnimatedVisibility(
+                                visible = runningVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ContainerRowByMode(
+                                    isCompactMode = isCompactMode,
+                                    container = container,
+                                    isChecked = container.id in selectedContainerIds,
+                                    isViewingLogs = currentLogsContainerId == container.id,
+                                    onCheckedChange = { checked ->
+                                        viewModel.toggleContainerSelection(container.id, checked)
+                                    },
+                                    isActionInProgress = actionInProgress == container.id,
+                                    onStart = { viewModel.startContainer(container.id) },
+                                    onStop = { viewModel.stopContainer(container.id) },
+                                    onPause = { viewModel.pauseContainer(container.id) },
+                                    onUnpause = { viewModel.unpauseContainer(container.id) },
+                                    onRemove = { viewModel.removeContainer(container.id) },
+                                    onViewLogs = { onShowLogs(container) },
+                                )
+                            }
+                        }
+                    }
+
+                    // Other containers section
+                    if (otherContainers.isNotEmpty()) {
+                        item(key = "other-header") {
+                            if (runningContainers.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                            ContainerSectionHeader(
+                                title = "Stopped / Other",
+                                count = otherContainers.size,
+                                expanded = otherVisible,
+                                onToggle = { otherVisible = !otherVisible },
                             )
+                        }
+
+                        item(key = "other-table-header") {
+                            val allOtherSelected =
+                                otherContainers.isNotEmpty() &&
+                                    otherContainers.all { it.id in selectedContainerIds }
+                            AnimatedVisibility(
+                                visible = otherVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                if (isCompactMode) {
+                                    CompactTableHeader(
+                                        allSelected = allOtherSelected,
+                                        onSelectAllChange = { selectAll ->
+                                            if (selectAll) {
+                                                viewModel.selectAllContainers(
+                                                    (selectedContainerIds + otherContainers.map { it.id }).toList(),
+                                                )
+                                            } else {
+                                                otherContainers.forEach {
+                                                    viewModel.toggleContainerSelection(it.id, false)
+                                                }
+                                            }
+                                        },
+                                        hasItems = true,
+                                        sortColumn = sortColumn,
+                                        sortDirection = sortDirection,
+                                        onSortChange = onSortChange,
+                                    )
+                                } else {
+                                    ExpandedTableHeader(
+                                        allSelected = allOtherSelected,
+                                        onSelectAllChange = { selectAll ->
+                                            if (selectAll) {
+                                                viewModel.selectAllContainers(
+                                                    (selectedContainerIds + otherContainers.map { it.id }).toList(),
+                                                )
+                                            } else {
+                                                otherContainers.forEach {
+                                                    viewModel.toggleContainerSelection(it.id, false)
+                                                }
+                                            }
+                                        },
+                                        hasItems = true,
+                                        sortColumn = sortColumn,
+                                        sortDirection = sortDirection,
+                                        onSortChange = onSortChange,
+                                    )
+                                }
+                            }
+                        }
+
+                        items(otherContainers, key = { "other-${it.id}" }) { container ->
+                            AnimatedVisibility(
+                                visible = otherVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ContainerRowByMode(
+                                    isCompactMode = isCompactMode,
+                                    container = container,
+                                    isChecked = container.id in selectedContainerIds,
+                                    isViewingLogs = currentLogsContainerId == container.id,
+                                    onCheckedChange = { checked ->
+                                        viewModel.toggleContainerSelection(container.id, checked)
+                                    },
+                                    isActionInProgress = actionInProgress == container.id,
+                                    onStart = { viewModel.startContainer(container.id) },
+                                    onStop = { viewModel.stopContainer(container.id) },
+                                    onPause = { viewModel.pauseContainer(container.id) },
+                                    onUnpause = { viewModel.unpauseContainer(container.id) },
+                                    onRemove = { viewModel.removeContainer(container.id) },
+                                    onViewLogs = { onShowLogs(container) },
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ContainerSectionHeader(
+    title: String,
+    count: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            contentDescription = if (expanded) "Collapse" else "Expand",
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContainerRowByMode(
+    isCompactMode: Boolean,
+    container: Container,
+    isChecked: Boolean,
+    isViewingLogs: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    isActionInProgress: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onPause: () -> Unit,
+    onUnpause: () -> Unit,
+    onRemove: () -> Unit,
+    onViewLogs: () -> Unit,
+) {
+    if (isCompactMode) {
+        CompactContainerRow(
+            container = container,
+            isChecked = isChecked,
+            isViewingLogs = isViewingLogs,
+            onCheckedChange = onCheckedChange,
+            isActionInProgress = isActionInProgress,
+            onStart = onStart,
+            onStop = onStop,
+            onPause = onPause,
+            onUnpause = onUnpause,
+            onRemove = onRemove,
+            onViewLogs = onViewLogs,
+        )
+    } else {
+        ExpandedContainerRow(
+            container = container,
+            isChecked = isChecked,
+            isViewingLogs = isViewingLogs,
+            onCheckedChange = onCheckedChange,
+            isActionInProgress = isActionInProgress,
+            onStart = onStart,
+            onStop = onStop,
+            onPause = onPause,
+            onUnpause = onUnpause,
+            onRemove = onRemove,
+            onViewLogs = onViewLogs,
+        )
+    }
+}
+
+// ============== SORTABLE HEADER ==============
+
+@Composable
+private fun SortableHeaderCell(
+    text: String,
+    column: SortColumn,
+    currentSortColumn: SortColumn,
+    sortDirection: SortDirection,
+    onSortChange: (SortColumn) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isActive = currentSortColumn == column
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(4.dp))
+                .clickable { onSortChange(column) }
+                .padding(vertical = 4.dp, horizontal = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color =
+                if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (isActive) {
+            Icon(
+                imageVector =
+                    if (sortDirection == SortDirection.ASCENDING) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
@@ -396,6 +798,9 @@ private fun CompactTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
     hasItems: Boolean,
+    sortColumn: SortColumn,
+    sortDirection: SortDirection,
+    onSortChange: (SortColumn) -> Unit,
 ) {
     Row(
         modifier =
@@ -412,19 +817,21 @@ private fun CompactTableHeader(
             modifier = Modifier.padding(end = 8.dp),
         )
 
-        Text(
+        SortableHeaderCell(
             text = "CONTAINER",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.NAME,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.weight(1f),
         )
 
-        Text(
+        SortableHeaderCell(
             text = "STATUS",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.STATUS,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.width(100.dp),
         )
 
@@ -455,7 +862,7 @@ private fun CompactContainerRow(
                 .clip(RoundedCornerShape(8.dp))
                 .background(
                     when {
-                        isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
+                        isViewingLogs -> AppColors.AccentBlue.copy(alpha = 0.15f)
                         isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         else -> MaterialTheme.colorScheme.surface
                     },
@@ -501,7 +908,7 @@ private fun CompactContainerRow(
                 Text(
                     text = port,
                     style = MaterialTheme.typography.labelSmall,
-                    color = DockerColors.DockerBlue,
+                    color = AppColors.AccentBlue,
                     fontFamily = FontFamily.Monospace,
                 )
             }
@@ -546,7 +953,7 @@ private fun CompactContainerRow(
                                 contentDescription = null,
                                 tint =
                                     if (isViewingLogs) {
-                                        DockerColors.DockerBlue
+                                        AppColors.AccentBlue
                                     } else {
                                         MaterialTheme.colorScheme.onSurface
                                     },
@@ -572,7 +979,7 @@ private fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStop()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = DockerColors.Stopped) },
+                                leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = AppColors.Stopped) },
                             )
                         }
                         container.isPaused -> {
@@ -582,7 +989,7 @@ private fun CompactContainerRow(
                                     showActionsMenu = false
                                     onUnpause()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) },
+                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
                             )
                         }
                         else -> {
@@ -592,7 +999,7 @@ private fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStart()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = DockerColors.Running) },
+                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
                             )
                         }
                     }
@@ -615,17 +1022,11 @@ private fun CompactContainerRow(
                             showActionsMenu = false
                             onRemove()
                         },
-                        enabled = !container.isRunning,
                         leadingIcon = {
                             Icon(
                                 Icons.Outlined.Delete,
                                 null,
-                                tint =
-                                    if (!container.isRunning) {
-                                        MaterialTheme.colorScheme.error
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                    },
+                                tint = MaterialTheme.colorScheme.error,
                             )
                         },
                     )
@@ -642,6 +1043,9 @@ private fun ExpandedTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
     hasItems: Boolean,
+    sortColumn: SortColumn,
+    sortDirection: SortDirection,
+    onSortChange: (SortColumn) -> Unit,
 ) {
     Row(
         modifier =
@@ -658,32 +1062,36 @@ private fun ExpandedTableHeader(
             modifier = Modifier.padding(end = 8.dp),
         )
 
-        Text(
+        SortableHeaderCell(
             text = "NAME",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.NAME,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.weight(1.5f),
         )
-        Text(
+        SortableHeaderCell(
             text = "IMAGE",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.IMAGE,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.weight(1.5f),
         )
-        Text(
+        SortableHeaderCell(
             text = "STATUS",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.STATUS,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.weight(1f),
         )
-        Text(
+        SortableHeaderCell(
             text = "PORTS",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            column = SortColumn.PORTS,
+            currentSortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSortChange = onSortChange,
             modifier = Modifier.weight(1.5f),
         )
         Spacer(modifier = Modifier.width(160.dp))
@@ -711,7 +1119,7 @@ private fun ExpandedContainerRow(
                 .clip(RoundedCornerShape(8.dp))
                 .background(
                     when {
-                        isViewingLogs -> DockerColors.DockerBlue.copy(alpha = 0.15f)
+                        isViewingLogs -> AppColors.AccentBlue.copy(alpha = 0.15f)
                         isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         else -> MaterialTheme.colorScheme.surface
                     },
@@ -785,7 +1193,7 @@ private fun ExpandedContainerRow(
                         modifier = Modifier.size(18.dp),
                         tint =
                             if (isViewingLogs) {
-                                DockerColors.DockerBlue
+                                AppColors.AccentBlue
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -807,7 +1215,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.Stop,
                                 contentDescription = "Stop",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Stopped,
+                                tint = AppColors.Stopped,
                             )
                         }
                     }
@@ -817,7 +1225,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.PlayArrow,
                                 contentDescription = "Resume",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Running,
+                                tint = AppColors.Running,
                             )
                         }
                     }
@@ -827,7 +1235,7 @@ private fun ExpandedContainerRow(
                                 Icons.Outlined.PlayArrow,
                                 contentDescription = "Start",
                                 modifier = Modifier.size(18.dp),
-                                tint = DockerColors.Running,
+                                tint = AppColors.Running,
                             )
                         }
                     }
@@ -835,18 +1243,12 @@ private fun ExpandedContainerRow(
                 IconButton(
                     onClick = onRemove,
                     modifier = Modifier.size(32.dp),
-                    enabled = !container.isRunning,
                 ) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "Delete",
                         modifier = Modifier.size(18.dp),
-                        tint =
-                            if (!container.isRunning) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            },
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
