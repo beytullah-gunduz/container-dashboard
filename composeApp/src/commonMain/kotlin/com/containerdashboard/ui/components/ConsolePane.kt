@@ -56,7 +56,7 @@ fun ContainerExtraPane(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color(0xFF1A1A1A),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -65,7 +65,7 @@ fun ContainerExtraPane(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF252526))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -74,7 +74,7 @@ fun ContainerExtraPane(
                     selectedTabIndex = selectedTab,
                     modifier = Modifier.weight(1f),
                     containerColor = Color.Transparent,
-                    contentColor = AppColors.AccentBlue,
+                    contentColor = MaterialTheme.colorScheme.primary,
                     divider = {},
                 ) {
                     tabs.forEachIndexed { index, title ->
@@ -92,9 +92,9 @@ fun ContainerExtraPane(
                                     style = MaterialTheme.typography.labelMedium,
                                     color =
                                         if (selectedTab == index) {
-                                            AppColors.AccentBlue
+                                            MaterialTheme.colorScheme.primary
                                         } else {
-                                            Color.White.copy(alpha = 0.6f)
+                                            MaterialTheme.colorScheme.onSurfaceVariant
                                         },
                                 )
                             },
@@ -108,7 +108,7 @@ fun ContainerExtraPane(
                     Text(
                         text = it.displayName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -119,12 +119,12 @@ fun ContainerExtraPane(
                         Icons.Default.Close,
                         contentDescription = "Close",
                         modifier = Modifier.size(18.dp),
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            HorizontalDivider(color = Color(0xFF404040))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
             when (selectedTab) {
                 0 ->
@@ -179,7 +179,7 @@ private fun LogsTabContent(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "No logs available",
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -197,11 +197,11 @@ private fun LogsTabContent(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp,
                             lineHeight = 18.sp,
-                            color = Color(0xFFD4D4D4),
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
-                    HorizontalDivider(color = Color(0xFF404040))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -209,12 +209,12 @@ private fun LogsTabContent(
                         Text(
                             text = "${state.logs.lines().size} lines",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "Last 500 lines",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }

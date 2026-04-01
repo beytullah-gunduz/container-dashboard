@@ -35,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +51,7 @@ fun LogsPane(
 ) {
     Surface(
         modifier = modifier.fillMaxSize().widthIn(min = 400.dp),
-        color = Color(0xFF1A1A1A),
+        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -61,7 +60,7 @@ fun LogsPane(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF252525))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -73,7 +72,7 @@ fun LogsPane(
                     Icon(
                         Icons.AutoMirrored.Outlined.Article,
                         contentDescription = null,
-                        tint = AppColors.AccentBlue,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                     Column {
@@ -81,13 +80,13 @@ fun LogsPane(
                             text = "Container Logs",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         state.container?.let { container ->
                             Text(
                                 text = container.displayName,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -103,14 +102,14 @@ fun LogsPane(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = "Refresh logs",
                                 modifier = Modifier.size(18.dp),
-                                tint = Color.White.copy(alpha = 0.7f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -122,14 +121,14 @@ fun LogsPane(
                             Icons.Default.Close,
                             contentDescription = "Close logs",
                             modifier = Modifier.size(18.dp),
-                            tint = Color.White.copy(alpha = 0.7f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
 
             // Divider
-            HorizontalDivider(color = Color(0xFF333333))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
             // Logs content
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -150,7 +149,7 @@ fun LogsPane(
                                 Text(
                                     text = "Loading logs...",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -173,19 +172,19 @@ fun LogsPane(
                                 Text(
                                     text = "Failed to load logs",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     text = state.error,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.6f),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedButton(
                                     onClick = onRefresh,
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(
-                                            contentColor = Color.White,
+                                            contentColor = MaterialTheme.colorScheme.onSurface,
                                         ),
                                 ) {
                                     Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
@@ -207,13 +206,13 @@ fun LogsPane(
                                 Icon(
                                     Icons.AutoMirrored.Outlined.Article,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.3f),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                     modifier = Modifier.size(48.dp),
                                 )
                                 Text(
                                     text = "No logs available",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -244,7 +243,7 @@ fun LogsPane(
                                             fontSize = 12.sp,
                                             lineHeight = 18.sp,
                                         ),
-                                    color = Color(0xFFE0E0E0),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }
@@ -254,12 +253,12 @@ fun LogsPane(
 
             // Footer with log stats
             if (state.logs.isNotEmpty()) {
-                HorizontalDivider(color = Color(0xFF333333))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF252525))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -267,12 +266,12 @@ fun LogsPane(
                     Text(
                         text = "${state.logs.lines().size} lines",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = "Last 500 lines",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

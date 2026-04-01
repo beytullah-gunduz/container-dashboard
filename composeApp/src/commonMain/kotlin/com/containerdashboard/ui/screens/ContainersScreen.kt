@@ -3,7 +3,11 @@ package com.containerdashboard.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,10 +32,12 @@ import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
@@ -53,6 +59,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -271,65 +278,119 @@ fun ContainersScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(if (iconOnly) 4.dp else 12.dp)) {
-                    if (selectedContainerIds.isNotEmpty()) {
-                        // Stop button for running containers
-                        if (runningSelectedCount > 0) {
-                            if (iconOnly) {
-                                IconButton(
-                                    onClick = {
-                                        val runningIds =
-                                            selectedContainerIds.filter { id ->
-                                                containers.find { it.id == id }?.isRunning == true
-                                            }
-                                        viewModel.stopSelectedContainers(runningIds)
-                                    },
-                                    enabled = !isStoppingSelected,
-                                ) {
-                                    if (isStoppingSelected) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Outlined.Stop,
-                                            contentDescription = "Stop $runningSelectedCount selected",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
-                                }
-                            } else {
-                                Button(
-                                    onClick = {
-                                        val runningIds =
-                                            selectedContainerIds.filter { id ->
-                                                containers.find { it.id == id }?.isRunning == true
-                                            }
-                                        viewModel.stopSelectedContainers(runningIds)
-                                    },
-                                    enabled = !isStoppingSelected,
-                                    colors =
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.error,
-                                        ),
-                                ) {
-                                    if (isStoppingSelected) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                            color = MaterialTheme.colorScheme.onError,
-                                        )
-                                    } else {
-                                        Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Stop $runningSelectedCount selected")
-                                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(if (iconOnly) 4.dp else 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val hasSelection = selectedContainerIds.isNotEmpty()
+
+                    // Clear selection button (leftmost, animates last)
+                    AnimatedVisibility(
+                        visible = hasSelection,
+                        enter = expandHorizontally(
+                            animationSpec = tween(durationMillis = 200, delayMillis = 100),
+                            expandFrom = Alignment.Start,
+                        ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 100)),
+                        exit = shrinkHorizontally(
+                            animationSpec = tween(durationMillis = 150),
+                            shrinkTowards = Alignment.Start,
+                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                    ) {
+                        if (iconOnly) {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(
+                                    Icons.Default.RemoveDone,
+                                    contentDescription = "Clear selection",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            OutlinedButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(Icons.Default.RemoveDone, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Clear")
                             }
                         }
+                    }
 
-                        // Delete button (force-deletes running containers)
+                    // Stop button for running containers (middle, animates second)
+                    AnimatedVisibility(
+                        visible = hasSelection && runningSelectedCount > 0,
+                        enter = expandHorizontally(
+                            animationSpec = tween(durationMillis = 200, delayMillis = 50),
+                            expandFrom = Alignment.Start,
+                        ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 50)),
+                        exit = shrinkHorizontally(
+                            animationSpec = tween(durationMillis = 150),
+                            shrinkTowards = Alignment.Start,
+                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                    ) {
+                        if (iconOnly) {
+                            IconButton(
+                                onClick = {
+                                    val runningIds =
+                                        selectedContainerIds.filter { id ->
+                                            containers.find { it.id == id }?.isRunning == true
+                                        }
+                                    viewModel.stopSelectedContainers(runningIds)
+                                },
+                                enabled = !isStoppingSelected,
+                            ) {
+                                if (isStoppingSelected) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Outlined.Stop,
+                                        contentDescription = "Stop $runningSelectedCount selected",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    val runningIds =
+                                        selectedContainerIds.filter { id ->
+                                            containers.find { it.id == id }?.isRunning == true
+                                        }
+                                    viewModel.stopSelectedContainers(runningIds)
+                                },
+                                enabled = !isStoppingSelected,
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                    ),
+                            ) {
+                                if (isStoppingSelected) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onError,
+                                    )
+                                } else {
+                                    Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Stop $runningSelectedCount selected")
+                            }
+                        }
+                    }
+
+                    // Delete button (rightmost selection button, animates first)
+                    AnimatedVisibility(
+                        visible = hasSelection,
+                        enter = expandHorizontally(
+                            animationSpec = tween(durationMillis = 200),
+                            expandFrom = Alignment.Start,
+                        ) + fadeIn(animationSpec = tween(durationMillis = 200)),
+                        exit = shrinkHorizontally(
+                            animationSpec = tween(durationMillis = 150),
+                            shrinkTowards = Alignment.Start,
+                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                    ) {
                         if (iconOnly) {
                             IconButton(
                                 onClick = { viewModel.deleteSelectedContainers() },
@@ -368,23 +429,6 @@ fun ContainersScreen(
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Delete ${selectedContainerIds.size} selected")
-                            }
-                        }
-
-                        // Clear selection button
-                        if (iconOnly) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Clear selection",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        } else {
-                            OutlinedButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Clear")
                             }
                         }
                     }
@@ -431,6 +475,10 @@ fun ContainersScreen(
                     }
 
                     // Layout toggle
+                    VerticalDivider(
+                        modifier = Modifier.height(24.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
                     Box {
                         var showLayoutMenu by remember { mutableStateOf(false) }
                         val layoutIcon =
@@ -441,14 +489,21 @@ fun ContainersScreen(
                             }
                         IconButton(
                             onClick = { showLayoutMenu = true },
-                            modifier = Modifier.size(32.dp),
                         ) {
-                            Icon(
-                                layoutIcon,
-                                contentDescription = "Log panel layout",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    layoutIcon,
+                                    contentDescription = "Log panel layout",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                         DropdownMenu(
                             expanded = showLayoutMenu,

@@ -1,5 +1,10 @@
 package com.containerdashboard.terminal
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,62 +77,56 @@ fun JediTermConsole(
         }
     }
 
-    when {
-        isConnecting -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        color = AppColors.AccentBlue,
-                        strokeWidth = 3.dp,
-                    )
-                    Text(
-                        text = "Connecting to container...",
-                        color = Color.White.copy(alpha = 0.6f),
-                    )
-                }
+    if (error != null) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(text = error!!, color = AppColors.Stopped)
+                Button(onClick = { connect() }) { Text("Retry") }
             }
         }
-        error != null -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(text = error!!, color = AppColors.Stopped)
-                    Button(onClick = { connect() }) { Text("Retry") }
-                }
+    } else {
+        Box(modifier = modifier.fillMaxSize()) {
+            if (connector != null) {
+                val conn = connector!!
+                SwingPanel(
+                    background = Color.Black,
+                    modifier = Modifier.fillMaxSize(),
+                    factory = {
+                        createTerminalWidget(conn, darkTheme)
+                    },
+                )
             }
-        }
-        connector != null -> {
-            val conn = connector!!
-            SwingPanel(
-                background = Color.Black,
-                modifier = modifier.fillMaxSize(),
-                factory = {
-                    createTerminalWidget(conn, darkTheme)
-                },
-            )
-        }
-        else -> {
-            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+
+            // Loading overlay on top of terminal (or black background)
+            AnimatedVisibility(
+                visible = isConnecting,
+                enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 300)),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.7f)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Outlined.Terminal,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = Color.White.copy(alpha = 0.3f),
-                    )
-                    Text(
-                        text = "Interactive shell",
-                        color = Color.White.copy(alpha = 0.6f),
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = AppColors.AccentBlue,
+                            strokeWidth = 3.dp,
+                        )
+                        Text(
+                            text = "Connecting to container...",
+                            color = Color.White.copy(alpha = 0.6f),
+                        )
+                    }
                 }
             }
         }
