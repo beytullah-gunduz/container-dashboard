@@ -35,6 +35,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
@@ -74,6 +77,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
+import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
@@ -131,6 +135,8 @@ private fun groupContainers(
 fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
     currentLogsContainerId: String? = null,
+    logsPaneLayout: LogsPaneLayout = LogsPaneLayout.AUTO,
+    onLogsPaneLayoutChange: (LogsPaneLayout) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ContainersScreenViewModel = viewModel { ContainersScreenViewModel() },
 ) {
@@ -422,6 +428,90 @@ fun ContainersScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Delete All")
                             }
+                        }
+                    }
+
+                    // Layout toggle
+                    Box {
+                        var showLayoutMenu by remember { mutableStateOf(false) }
+                        val layoutIcon =
+                            when (logsPaneLayout) {
+                                LogsPaneLayout.RIGHT -> Icons.AutoMirrored.Outlined.ViewSidebar
+                                LogsPaneLayout.BOTTOM -> Icons.Outlined.ViewAgenda
+                                LogsPaneLayout.AUTO -> Icons.Outlined.AutoAwesome
+                            }
+                        IconButton(
+                            onClick = { showLayoutMenu = true },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                layoutIcon,
+                                contentDescription = "Log panel layout",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showLayoutMenu,
+                            onDismissRequest = { showLayoutMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Right") },
+                                onClick = {
+                                    onLogsPaneLayoutChange(LogsPaneLayout.RIGHT)
+                                    showLayoutMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Outlined.ViewSidebar,
+                                        null,
+                                        tint =
+                                            if (logsPaneLayout == LogsPaneLayout.RIGHT) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Bottom") },
+                                onClick = {
+                                    onLogsPaneLayoutChange(LogsPaneLayout.BOTTOM)
+                                    showLayoutMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.ViewAgenda,
+                                        null,
+                                        tint =
+                                            if (logsPaneLayout == LogsPaneLayout.BOTTOM) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Auto") },
+                                onClick = {
+                                    onLogsPaneLayoutChange(LogsPaneLayout.AUTO)
+                                    showLayoutMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.AutoAwesome,
+                                        null,
+                                        tint =
+                                            if (logsPaneLayout == LogsPaneLayout.AUTO) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                    )
+                                },
+                            )
                         }
                     }
                 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.ui.components.LogsPane
+import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
@@ -62,6 +63,7 @@ fun App(
     val isConnected by viewModel.isConnected.collectAsState()
     val logsPaneState by viewModel.logsPaneState.collectAsState()
     val darkTheme by viewModel.darkTheme.collectAsState()
+    val logsPaneLayout by viewModel.logsPaneLayout.collectAsState()
 
     LaunchedEffect(navigateToRoute) {
         if (navigateToRoute != null) {
@@ -145,6 +147,7 @@ fun App(
                 } else {
                     ThreePaneScaffold(
                         navigator = navigator,
+                        paneLayout = logsPaneLayout,
                         listPaneWidth = 220.dp,
                         listPane = {
                             Sidebar(
@@ -169,6 +172,8 @@ fun App(
                                                 navigator.showExtraPane()
                                             },
                                             currentLogsContainerId = logsPaneState.container?.id,
+                                            logsPaneLayout = logsPaneLayout,
+                                            onLogsPaneLayoutChange = { viewModel.setLogsPaneLayout(it) },
                                         )
                                     Screen.Images.route -> ImagesScreen()
                                     Screen.Volumes.route -> VolumesScreen()

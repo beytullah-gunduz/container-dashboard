@@ -3,7 +3,9 @@ package com.containerdashboard.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.hoverable
@@ -13,9 +15,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,68 +41,44 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.awt.Cursor
 
-/**
- * Navigation state for the three-pane scaffold.
- */
-enum class ThreePaneNavigationState {
-    /** Only list and detail panes are visible */
-    ListDetail,
+enum class LogsPaneLayout {
+    RIGHT,
+    BOTTOM,
+    AUTO,
+}
 
-    /** List, detail, and extra panes are all visible */
+enum class ThreePaneNavigationState {
+    ListDetail,
     ListDetailExtra,
 }
 
-/**
- * Navigator for the ThreePaneScaffold.
- */
 class ThreePaneScaffoldNavigator {
     var currentState by mutableStateOf(ThreePaneNavigationState.ListDetail)
         private set
 
-    /**
-     * Shows the extra pane (navigates to ListDetailExtra state).
-     */
     fun showExtraPane() {
         currentState = ThreePaneNavigationState.ListDetailExtra
     }
 
-    /**
-     * Hides the extra pane (navigates back to ListDetail state).
-     */
     fun hideExtraPane() {
         currentState = ThreePaneNavigationState.ListDetail
     }
 
-    /**
-     * Checks if the extra pane is currently visible.
-     */
     val isExtraPaneVisible: Boolean
         get() = currentState == ThreePaneNavigationState.ListDetailExtra
 }
 
-/**
- * Creates and remembers a ThreePaneScaffoldNavigator.
- */
 @Composable
 fun rememberThreePaneScaffoldNavigator(): ThreePaneScaffoldNavigator = remember { ThreePaneScaffoldNavigator() }
 
-/**
- * A custom three-pane scaffold for desktop applications with resizable extra pane.
- *
- * @param navigator The navigator controlling pane visibility.
- * @param listPaneWidth The width of the list (sidebar) pane.
- * @param extraPaneWidthFraction The fraction of available width for the extra pane (0.0 to 1.0).
- * @param minExtraPaneWidth The minimum width the extra pane can be resized to.
- * @param listPane The content for the list pane (typically a sidebar).
- * @param detailPane The content for the detail pane (main content area).
- * @param extraPane The content for the extra pane (e.g., logs panel).
- * @param modifier The modifier for the scaffold.
- */
+private val AUTO_BREAKPOINT = 1000.dp
+
 @Composable
 fun ThreePaneScaffold(
     navigator: ThreePaneScaffoldNavigator,
+    paneLayout: LogsPaneLayout = LogsPaneLayout.AUTO,
     listPaneWidth: Dp = 220.dp,
-    minExtraPaneWidth: Dp = 300.dp,
+    minExtraPaneSize: Dp = 250.dp,
     listPane: @Composable () -> Unit,
     detailPane: @Composable () -> Unit,
     extraPane: @Composable () -> Unit,
@@ -104,64 +86,121 @@ fun ThreePaneScaffold(
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val availableContentWidth = maxWidth - listPaneWidth
-        val minDetailPaneWidth = 450.dp
-        val maxExtraPaneWidth = (availableContentWidth - minDetailPaneWidth).coerceAtLeast(minExtraPaneWidth)
-
-        var extraPaneWidth by remember(maxExtraPaneWidth) { mutableStateOf(maxExtraPaneWidth) }
-        // Re-clamp if window was resized and current width exceeds new max
-        if (extraPaneWidth > maxExtraPaneWidth) {
-            extraPaneWidth = maxExtraPaneWidth
-        }
+        val totalHeight = maxHeight
+        val effectiveLayout =
+            when (paneLayout) {
+                LogsPaneLayout.RIGHT -> LogsPaneLayout.RIGHT
+                LogsPaneLayout.BOTTOM -> LogsPaneLayout.BOTTOM
+                LogsPaneLayout.AUTO ->
+                    if (availableContentWidth < AUTO_BREAKPOINT) LogsPaneLayout.BOTTOM else LogsPaneLayout.RIGHT
+            }
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // List Pane (Sidebar) - Fixed width
+            // List Pane (Sidebar)
             Box(modifier = Modifier.width(listPaneWidth).fillMaxHeight()) {
                 listPane()
             }
 
-            // Detail Pane (Main Content) - Takes remaining space
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                detailPane()
+            // Detail + Extra Pane area
+            if (effectiveLayout == LogsPaneLayout.RIGHT) {
+                RightLayout(
+                    navigator = navigator,
+                    availableWidth = availableContentWidth,
+                    minExtraPaneSize = minExtraPaneSize,
+                    detailPane = detailPane,
+                    extraPane = extraPane,
+                )
+            } else {
+                BottomLayout(
+                    navigator = navigator,
+                    availableHeight = totalHeight,
+                    minExtraPaneSize = minExtraPaneSize,
+                    detailPane = detailPane,
+                    extraPane = extraPane,
+                )
             }
+        }
+    }
+}
 
-            // Extra Pane (Logs) with resizable divider - Animated sliding in/out
-            AnimatedVisibility(
-                visible = navigator.isExtraPaneVisible,
-                enter =
-                    slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = tween(durationMillis = 300),
-                    ),
-                exit =
-                    slideOutHorizontally(
-                        targetOffsetX = { it },
-                        animationSpec = tween(durationMillis = 300),
-                    ),
-            ) {
-                Row(modifier = Modifier.fillMaxHeight()) {
-                    // Resizable Divider
-                    ResizableDivider(
-                        onDrag = { delta ->
-                            val newWidth = extraPaneWidth - delta
-                            extraPaneWidth = newWidth.coerceIn(minExtraPaneWidth, maxExtraPaneWidth)
-                        },
-                    )
+@Composable
+private fun RowScope.RightLayout(
+    navigator: ThreePaneScaffoldNavigator,
+    availableWidth: Dp,
+    minExtraPaneSize: Dp,
+    detailPane: @Composable () -> Unit,
+    extraPane: @Composable () -> Unit,
+) {
+    val minDetailWidth = 450.dp
+    val maxExtraWidth = (availableWidth - minDetailWidth).coerceAtLeast(minExtraPaneSize)
+    var extraWidth by remember(maxExtraWidth) { mutableStateOf(maxExtraWidth) }
+    if (extraWidth > maxExtraWidth) extraWidth = maxExtraWidth
 
-                    // Extra Pane Content
-                    Box(modifier = Modifier.width(extraPaneWidth).fillMaxHeight()) {
-                        extraPane()
-                    }
+    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        detailPane()
+    }
+
+    AnimatedVisibility(
+        visible = navigator.isExtraPaneVisible,
+        enter = slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)),
+        exit = slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)),
+    ) {
+        Row(modifier = Modifier.fillMaxHeight()) {
+            ResizableDivider(
+                isVertical = true,
+                onDrag = { delta ->
+                    extraWidth = (extraWidth - delta).coerceIn(minExtraPaneSize, maxExtraWidth)
+                },
+            )
+            Box(modifier = Modifier.width(extraWidth).fillMaxHeight()) {
+                extraPane()
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.BottomLayout(
+    navigator: ThreePaneScaffoldNavigator,
+    availableHeight: Dp,
+    minExtraPaneSize: Dp,
+    detailPane: @Composable () -> Unit,
+    extraPane: @Composable () -> Unit,
+) {
+    val minDetailHeight = 300.dp
+    val maxExtraHeight = (availableHeight - minDetailHeight).coerceAtLeast(minExtraPaneSize)
+    val initialHeight = (availableHeight * 0.4f).coerceIn(minExtraPaneSize, maxExtraHeight)
+    var extraHeight by remember(maxExtraHeight) { mutableStateOf(initialHeight) }
+    if (extraHeight > maxExtraHeight) extraHeight = maxExtraHeight
+
+    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            detailPane()
+        }
+
+        AnimatedVisibility(
+            visible = navigator.isExtraPaneVisible,
+            enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)),
+            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ResizableDivider(
+                    isVertical = false,
+                    onDrag = { delta ->
+                        extraHeight = (extraHeight - delta).coerceIn(minExtraPaneSize, maxExtraHeight)
+                    },
+                )
+                Box(modifier = Modifier.height(extraHeight).fillMaxWidth()) {
+                    extraPane()
                 }
             }
         }
     }
 }
 
-/**
- * A vertical divider that can be dragged to resize adjacent panes.
- */
 @Composable
 private fun ResizableDivider(
+    isVertical: Boolean,
     onDrag: (Dp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -172,19 +211,26 @@ private fun ResizableDivider(
 
     val dividerColor =
         when {
-            isDragging -> Color(0xFF0DB7ED) // Docker blue when dragging
-            isHovered -> Color(0xFF0DB7ED).copy(alpha = 0.7f) // Lighter blue on hover
-            else -> Color(0xFF404040) // Dark gray normally
+            isDragging -> Color(0xFF0DB7ED)
+            isHovered -> Color(0xFF0DB7ED).copy(alpha = 0.7f)
+            else -> Color(0xFF404040)
         }
+
+    val cursor =
+        if (isVertical) Cursor(Cursor.W_RESIZE_CURSOR) else Cursor(Cursor.N_RESIZE_CURSOR)
 
     Box(
         modifier =
             modifier
-                .width(6.dp)
-                .fillMaxHeight()
-                .hoverable(interactionSource)
-                .pointerHoverIcon(PointerIcon(Cursor(Cursor.W_RESIZE_CURSOR)))
-                .pointerInput(Unit) {
+                .then(
+                    if (isVertical) {
+                        Modifier.width(6.dp).fillMaxHeight()
+                    } else {
+                        Modifier.height(6.dp).fillMaxWidth()
+                    },
+                ).hoverable(interactionSource)
+                .pointerHoverIcon(PointerIcon(cursor))
+                .pointerInput(isVertical) {
                     detectDragGestures(
                         onDragStart = { isDragging = true },
                         onDragEnd = { isDragging = false },
@@ -192,37 +238,62 @@ private fun ResizableDivider(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             with(density) {
-                                onDrag(dragAmount.x.toDp())
+                                val delta =
+                                    if (isVertical) dragAmount.x.toDp() else dragAmount.y.toDp()
+                                onDrag(delta)
                             }
                         },
                     )
                 },
         contentAlignment = Alignment.Center,
     ) {
-        // Visual divider line
+        // Divider line
         Box(
             modifier =
-                Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .background(dividerColor),
+                if (isVertical) {
+                    Modifier.width(2.dp).fillMaxHeight()
+                } else {
+                    Modifier.height(2.dp).fillMaxWidth()
+                }.background(dividerColor),
         )
 
-        // Drag handle indicator (visible on hover/drag)
+        // Drag handle dots
         if (isHovered || isDragging) {
-            Column(
-                modifier = Modifier.fillMaxHeight(),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                // Three dots as resize indicator
-                repeat(3) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(vertical = 2.dp)
-                                .size(4.dp)
-                                .background(dividerColor, shape = androidx.compose.foundation.shape.CircleShape),
-                    )
+            if (isVertical) {
+                Column(
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(vertical = 2.dp)
+                                    .size(4.dp)
+                                    .background(
+                                        dividerColor,
+                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                    ),
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 2.dp)
+                                    .size(4.dp)
+                                    .background(
+                                        dividerColor,
+                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                    ),
+                        )
+                    }
                 }
             }
         }

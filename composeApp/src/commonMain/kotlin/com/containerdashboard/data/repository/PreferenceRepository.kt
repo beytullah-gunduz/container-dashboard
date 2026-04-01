@@ -19,6 +19,7 @@ object PreferenceRepository {
     private val SHOW_SYSTEM_CONTAINERS by lazy { booleanPreferencesKey("show_system_containers") }
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
+    private val LOGS_PANE_LAYOUT by lazy { stringPreferencesKey("logs_pane_layout") }
 
     private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
 
@@ -63,5 +64,14 @@ object PreferenceRepository {
 
     suspend fun setConfirmBeforeDelete(value: Boolean) {
         dataStore.edit { it[CONFIRM_BEFORE_DELETE] = value }
+    }
+
+    fun logsPaneLayout(): Flow<String> =
+        dataStore.data.map {
+            it[LOGS_PANE_LAYOUT] ?: "AUTO"
+        }
+
+    suspend fun setLogsPaneLayout(value: String) {
+        dataStore.edit { it[LOGS_PANE_LAYOUT] = value }
     }
 }

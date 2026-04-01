@@ -6,12 +6,14 @@ import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.state.LogsPaneState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,6 +36,23 @@ class AppViewModel : ViewModel() {
         PreferenceRepository
             .darkTheme()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val logsPaneLayout: StateFlow<LogsPaneLayout> =
+        PreferenceRepository
+            .logsPaneLayout()
+            .map { name ->
+                try {
+                    LogsPaneLayout.valueOf(name)
+                } catch (_: Exception) {
+                    LogsPaneLayout.AUTO
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LogsPaneLayout.AUTO)
+
+    fun setLogsPaneLayout(layout: LogsPaneLayout) {
+        viewModelScope.launch {
+            PreferenceRepository.setLogsPaneLayout(layout.name)
+        }
+    }
 
     fun navigate(route: String) {
         _currentRoute.value = route
