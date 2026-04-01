@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,6 +95,35 @@ private enum class SortDirection {
     DESCENDING,
 }
 
+private sealed interface ContainerListItem {
+    data class ComposeGroupHeader(
+        val projectName: String,
+        val containers: List<Container>,
+        val expanded: Boolean,
+    ) : ContainerListItem
+
+    data class ContainerItem(
+        val container: Container,
+        val indented: Boolean,
+    ) : ContainerListItem
+}
+
+private fun groupContainers(
+    containers: List<Container>,
+    expandedProjects: Set<String>,
+): List<ContainerListItem> {
+    val (composeContainers, standalone) = containers.partition { it.composeProject != null }
+    val groups = composeContainers.groupBy { it.composeProject!! }
+
+    val items = mutableListOf<ContainerListItem>()
+    for ((project, members) in groups.entries.sortedBy { it.key.lowercase() }) {
+        val isExpanded = project in expandedProjects
+        items.add(ContainerListItem.ComposeGroupHeader(project, members, isExpanded))
+    }
+    standalone.forEach { items.add(ContainerListItem.ContainerItem(it, indented = false)) }
+    return items
+}
+
 @Composable
 fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
@@ -107,6 +137,16 @@ fun ContainersScreen(
     var sortDirection by remember { mutableStateOf(SortDirection.ASCENDING) }
     var runningVisible by remember { mutableStateOf(true) }
     var otherVisible by remember { mutableStateOf(true) }
+    var expandedComposeProjects by remember { mutableStateOf(setOf<String>()) }
+
+    val toggleComposeGroup: (String) -> Unit = { project ->
+        expandedComposeProjects =
+            if (project in expandedComposeProjects) {
+                expandedComposeProjects - project
+            } else {
+                expandedComposeProjects + project
+            }
+    }
 
     val onSortChange: (SortColumn) -> Unit = { column ->
         if (sortColumn == column) {
@@ -464,6 +504,13 @@ fun ContainersScreen(
             val runningContainers = filteredContainers.filter { it.isRunning }
             val otherContainers = filteredContainers.filter { !it.isRunning }
 
+            val runningGrouped = remember(runningContainers, expandedComposeProjects) {
+                groupContainers(runningContainers, expandedComposeProjects)
+            }
+            val otherGrouped = remember(otherContainers, expandedComposeProjects) {
+                groupContainers(otherContainers, expandedComposeProjects)
+            }
+
             if (filteredContainers.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -541,28 +588,71 @@ fun ContainersScreen(
                             }
                         }
 
-                        items(runningContainers, key = { "running-${it.id}" }) { container ->
+                        items(
+                            runningGrouped,
+                            key = { item ->
+                                when (item) {
+                                    is ContainerListItem.ComposeGroupHeader -> "running-group-${item.projectName}"
+                                    is ContainerListItem.ContainerItem -> "running-${item.container.id}"
+                                }
+                            },
+                        ) { item ->
                             AnimatedVisibility(
                                 visible = runningVisible,
                                 enter = expandVertically(),
                                 exit = shrinkVertically(),
                             ) {
-                                ContainerRowByMode(
-                                    isCompactMode = isCompactMode,
-                                    container = container,
-                                    isChecked = container.id in selectedContainerIds,
-                                    isViewingLogs = currentLogsContainerId == container.id,
-                                    onCheckedChange = { checked ->
-                                        viewModel.toggleContainerSelection(container.id, checked)
-                                    },
-                                    isActionInProgress = actionInProgress == container.id,
-                                    onStart = { viewModel.startContainer(container.id) },
-                                    onStop = { viewModel.stopContainer(container.id) },
-                                    onPause = { viewModel.pauseContainer(container.id) },
-                                    onUnpause = { viewModel.unpauseContainer(container.id) },
-                                    onRemove = { viewModel.removeContainer(container.id) },
-                                    onViewLogs = { onShowLogs(container) },
-                                )
+                                when (item) {
+                                    is ContainerListItem.ComposeGroupHeader -> {
+                                        ComposeProjectCard(
+                                            item = item,
+                                            sectionPrefix = "running",
+                                            isCompactMode = isCompactMode,
+                                            selectedContainerIds = selectedContainerIds,
+                                            currentLogsContainerId = currentLogsContainerId,
+                                            actionInProgress = actionInProgress,
+                                            onToggle = { toggleComposeGroup(item.projectName) },
+                                            onSelectAll = { selectAll ->
+                                                if (selectAll) {
+                                                    viewModel.selectAllContainers(
+                                                        (selectedContainerIds + item.containers.map { it.id }).toList(),
+                                                    )
+                                                } else {
+                                                    item.containers.forEach {
+                                                        viewModel.toggleContainerSelection(it.id, false)
+                                                    }
+                                                }
+                                            },
+                                            onCheckedChange = { id, checked ->
+                                                viewModel.toggleContainerSelection(id, checked)
+                                            },
+                                            onStart = { viewModel.startContainer(it) },
+                                            onStop = { viewModel.stopContainer(it) },
+                                            onPause = { viewModel.pauseContainer(it) },
+                                            onUnpause = { viewModel.unpauseContainer(it) },
+                                            onRemove = { viewModel.removeContainer(it) },
+                                            onViewLogs = { onShowLogs(it) },
+                                        )
+                                    }
+                                    is ContainerListItem.ContainerItem -> {
+                                        ContainerRowByMode(
+                                            isCompactMode = isCompactMode,
+                                            container = item.container,
+                                            isChecked = item.container.id in selectedContainerIds,
+                                            isViewingLogs = currentLogsContainerId == item.container.id,
+                                            onCheckedChange = { checked ->
+                                                viewModel.toggleContainerSelection(item.container.id, checked)
+                                            },
+                                            isActionInProgress = actionInProgress == item.container.id,
+                                            onStart = { viewModel.startContainer(item.container.id) },
+                                            onStop = { viewModel.stopContainer(item.container.id) },
+                                            onPause = { viewModel.pauseContainer(item.container.id) },
+                                            onUnpause = { viewModel.unpauseContainer(item.container.id) },
+                                            onRemove = { viewModel.removeContainer(item.container.id) },
+                                            onViewLogs = { onShowLogs(item.container) },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -632,28 +722,71 @@ fun ContainersScreen(
                             }
                         }
 
-                        items(otherContainers, key = { "other-${it.id}" }) { container ->
+                        items(
+                            otherGrouped,
+                            key = { item ->
+                                when (item) {
+                                    is ContainerListItem.ComposeGroupHeader -> "other-group-${item.projectName}"
+                                    is ContainerListItem.ContainerItem -> "other-${item.container.id}"
+                                }
+                            },
+                        ) { item ->
                             AnimatedVisibility(
                                 visible = otherVisible,
                                 enter = expandVertically(),
                                 exit = shrinkVertically(),
                             ) {
-                                ContainerRowByMode(
-                                    isCompactMode = isCompactMode,
-                                    container = container,
-                                    isChecked = container.id in selectedContainerIds,
-                                    isViewingLogs = currentLogsContainerId == container.id,
-                                    onCheckedChange = { checked ->
-                                        viewModel.toggleContainerSelection(container.id, checked)
-                                    },
-                                    isActionInProgress = actionInProgress == container.id,
-                                    onStart = { viewModel.startContainer(container.id) },
-                                    onStop = { viewModel.stopContainer(container.id) },
-                                    onPause = { viewModel.pauseContainer(container.id) },
-                                    onUnpause = { viewModel.unpauseContainer(container.id) },
-                                    onRemove = { viewModel.removeContainer(container.id) },
-                                    onViewLogs = { onShowLogs(container) },
-                                )
+                                when (item) {
+                                    is ContainerListItem.ComposeGroupHeader -> {
+                                        ComposeProjectCard(
+                                            item = item,
+                                            sectionPrefix = "other",
+                                            isCompactMode = isCompactMode,
+                                            selectedContainerIds = selectedContainerIds,
+                                            currentLogsContainerId = currentLogsContainerId,
+                                            actionInProgress = actionInProgress,
+                                            onToggle = { toggleComposeGroup(item.projectName) },
+                                            onSelectAll = { selectAll ->
+                                                if (selectAll) {
+                                                    viewModel.selectAllContainers(
+                                                        (selectedContainerIds + item.containers.map { it.id }).toList(),
+                                                    )
+                                                } else {
+                                                    item.containers.forEach {
+                                                        viewModel.toggleContainerSelection(it.id, false)
+                                                    }
+                                                }
+                                            },
+                                            onCheckedChange = { id, checked ->
+                                                viewModel.toggleContainerSelection(id, checked)
+                                            },
+                                            onStart = { viewModel.startContainer(it) },
+                                            onStop = { viewModel.stopContainer(it) },
+                                            onPause = { viewModel.pauseContainer(it) },
+                                            onUnpause = { viewModel.unpauseContainer(it) },
+                                            onRemove = { viewModel.removeContainer(it) },
+                                            onViewLogs = { onShowLogs(it) },
+                                        )
+                                    }
+                                    is ContainerListItem.ContainerItem -> {
+                                        ContainerRowByMode(
+                                            isCompactMode = isCompactMode,
+                                            container = item.container,
+                                            isChecked = item.container.id in selectedContainerIds,
+                                            isViewingLogs = currentLogsContainerId == item.container.id,
+                                            onCheckedChange = { checked ->
+                                                viewModel.toggleContainerSelection(item.container.id, checked)
+                                            },
+                                            isActionInProgress = actionInProgress == item.container.id,
+                                            onStart = { viewModel.startContainer(item.container.id) },
+                                            onStop = { viewModel.stopContainer(item.container.id) },
+                                            onPause = { viewModel.pauseContainer(item.container.id) },
+                                            onUnpause = { viewModel.unpauseContainer(item.container.id) },
+                                            onRemove = { viewModel.removeContainer(item.container.id) },
+                                            onViewLogs = { onShowLogs(item.container) },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -701,6 +834,131 @@ private fun ContainerSectionHeader(
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun ComposeProjectHeader(
+    projectName: String,
+    containerCount: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    allSelected: Boolean,
+    onSelectAll: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = allSelected,
+            onCheckedChange = onSelectAll,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            contentDescription = if (expanded) "Collapse" else "Expand",
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = projectName,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+        ) {
+            Text(
+                text = "Compose",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+        ) {
+            Text(
+                text = containerCount.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ComposeProjectCard(
+    item: ContainerListItem.ComposeGroupHeader,
+    sectionPrefix: String,
+    isCompactMode: Boolean,
+    selectedContainerIds: Set<String>,
+    currentLogsContainerId: String?,
+    actionInProgress: String?,
+    onToggle: () -> Unit,
+    onSelectAll: (Boolean) -> Unit,
+    onCheckedChange: (String, Boolean) -> Unit,
+    onStart: (String) -> Unit,
+    onStop: (String) -> Unit,
+    onPause: (String) -> Unit,
+    onUnpause: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onViewLogs: (Container) -> Unit,
+) {
+    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    val shape = RoundedCornerShape(12.dp)
+
+    Column(
+        modifier =
+            if (item.expanded) {
+                Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, borderColor, shape)
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+            } else {
+                Modifier.fillMaxWidth()
+            },
+    ) {
+        ComposeProjectHeader(
+            projectName = item.projectName,
+            containerCount = item.containers.size,
+            expanded = item.expanded,
+            onToggle = onToggle,
+            allSelected = item.containers.all { it.id in selectedContainerIds },
+            onSelectAll = onSelectAll,
+        )
+        if (item.expanded) {
+            item.containers.forEach { container ->
+                ContainerRowByMode(
+                    isCompactMode = isCompactMode,
+                    container = container,
+                    isChecked = container.id in selectedContainerIds,
+                    isViewingLogs = currentLogsContainerId == container.id,
+                    onCheckedChange = { checked -> onCheckedChange(container.id, checked) },
+                    isActionInProgress = actionInProgress == container.id,
+                    onStart = { onStart(container.id) },
+                    onStop = { onStop(container.id) },
+                    onPause = { onPause(container.id) },
+                    onUnpause = { onUnpause(container.id) },
+                    onRemove = { onRemove(container.id) },
+                    onViewLogs = { onViewLogs(container) },
+                )
+            }
         }
     }
 }

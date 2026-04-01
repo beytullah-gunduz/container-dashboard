@@ -46,4 +46,10 @@ data class Container(
 
     val isStopped: Boolean
         get() = state.lowercase() == "exited" || state.lowercase() == "stopped"
+
+    val composeProject: String?
+        get() = labels["com.docker.compose.project"]
+
+    val composeService: String?
+        get() = labels["com.docker.compose.service"]
 }
