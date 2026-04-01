@@ -22,6 +22,8 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun confirmBeforeDelete(): Flow<Boolean> = PreferenceRepository.confirmBeforeDelete()
 
+    fun trayRefreshRateSeconds(): Flow<Int> = PreferenceRepository.trayRefreshRateSeconds()
+
     fun setEngineHost(value: String) {
         viewModelScope.launch { PreferenceRepository.setEngineHost(value) }
     }
@@ -36,6 +38,10 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun setConfirmBeforeDelete(value: Boolean) {
         viewModelScope.launch { PreferenceRepository.setConfirmBeforeDelete(value) }
+    }
+
+    fun setTrayRefreshRateSeconds(value: Int) {
+        viewModelScope.launch { PreferenceRepository.setTrayRefreshRateSeconds(value) }
     }
 
     // -- Connection test --

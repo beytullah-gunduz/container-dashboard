@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
@@ -20,6 +21,7 @@ object PreferenceRepository {
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
     private val LOGS_PANE_LAYOUT by lazy { stringPreferencesKey("logs_pane_layout") }
+    private val TRAY_REFRESH_RATE by lazy { intPreferencesKey("tray_refresh_rate_seconds") }
 
     private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
 
@@ -73,5 +75,14 @@ object PreferenceRepository {
 
     suspend fun setLogsPaneLayout(value: String) {
         dataStore.edit { it[LOGS_PANE_LAYOUT] = value }
+    }
+
+    fun trayRefreshRateSeconds(): Flow<Int> =
+        dataStore.data.map {
+            it[TRAY_REFRESH_RATE] ?: 5
+        }
+
+    suspend fun setTrayRefreshRateSeconds(value: Int) {
+        dataStore.edit { it[TRAY_REFRESH_RATE] = value }
     }
 }

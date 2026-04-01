@@ -34,6 +34,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +66,7 @@ fun SettingsScreen(
     val darkTheme by viewModel.darkTheme().collectAsState(initial = true)
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
+    val trayRefreshRate by viewModel.trayRefreshRateSeconds().collectAsState(initial = 5)
     val connectionTestResult by viewModel.connectionTestResult.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
 
@@ -175,6 +179,41 @@ fun SettingsScreen(
                 checked = confirmBeforeDelete,
                 onCheckedChange = { viewModel.setConfirmBeforeDelete(it) },
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Tray Stats Refresh Rate",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = "How often to update resource stats in the system tray (${trayRefreshRate}s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                val refreshOptions = listOf(3, 5, 10, 30)
+                SingleChoiceSegmentedButtonRow {
+                    refreshOptions.forEachIndexed { index, seconds ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = refreshOptions.size,
+                            ),
+                            onClick = { viewModel.setTrayRefreshRateSeconds(seconds) },
+                            selected = trayRefreshRate == seconds,
+                            label = { Text("${seconds}s") },
+                        )
+                    }
+                }
+            }
         }
 
         // Danger Zone Section
