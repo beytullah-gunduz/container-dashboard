@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +56,9 @@ fun MonitoringScreen(
     modifier: Modifier = Modifier,
     viewModel: MonitoringScreenViewModel = viewModel { MonitoringScreenViewModel() },
 ) {
-    val stats by viewModel.containerStats.collectAsState(listOf())
+    val statsOrNull by viewModel.containerStats.collectAsState(null)
+    val stats = statsOrNull.orEmpty()
+    val isLoading = statsOrNull == null
     val error by viewModel.error.collectAsState()
     val history by viewModel.usageHistory.collectAsState(UsageHistory())
     val refreshRate by viewModel.refreshRate.collectAsState()
@@ -171,7 +174,15 @@ fun MonitoringScreen(
             }
         }
 
-        if (stats.isEmpty()) {
+        if (isLoading) {
+            // Loading state
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+            }
+        } else if (stats.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),

@@ -96,7 +96,6 @@ fun rememberThreePaneScaffoldNavigator(): ThreePaneScaffoldNavigator = remember 
 fun ThreePaneScaffold(
     navigator: ThreePaneScaffoldNavigator,
     listPaneWidth: Dp = 220.dp,
-    extraPaneWidthFraction: Float = 0.5f,
     minExtraPaneWidth: Dp = 300.dp,
     listPane: @Composable () -> Unit,
     detailPane: @Composable () -> Unit,
@@ -104,11 +103,15 @@ fun ThreePaneScaffold(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        // Calculate initial extra pane width as a fraction of the available content area
         val availableContentWidth = maxWidth - listPaneWidth
-        val calculatedExtraPaneWidth = (availableContentWidth * extraPaneWidthFraction).coerceAtLeast(minExtraPaneWidth)
+        val minDetailPaneWidth = 450.dp
+        val maxExtraPaneWidth = (availableContentWidth - minDetailPaneWidth).coerceAtLeast(minExtraPaneWidth)
 
-        var extraPaneWidth by remember(calculatedExtraPaneWidth) { mutableStateOf(calculatedExtraPaneWidth) }
+        var extraPaneWidth by remember(maxExtraPaneWidth) { mutableStateOf(maxExtraPaneWidth) }
+        // Re-clamp if window was resized and current width exceeds new max
+        if (extraPaneWidth > maxExtraPaneWidth) {
+            extraPaneWidth = maxExtraPaneWidth
+        }
 
         Row(modifier = Modifier.fillMaxSize()) {
             // List Pane (Sidebar) - Fixed width
@@ -140,7 +143,7 @@ fun ThreePaneScaffold(
                     ResizableDivider(
                         onDrag = { delta ->
                             val newWidth = extraPaneWidth - delta
-                            extraPaneWidth = newWidth.coerceAtLeast(minExtraPaneWidth)
+                            extraPaneWidth = newWidth.coerceIn(minExtraPaneWidth, maxExtraPaneWidth)
                         },
                     )
 

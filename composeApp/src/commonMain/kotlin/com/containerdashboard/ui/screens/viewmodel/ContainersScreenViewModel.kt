@@ -3,12 +3,14 @@ package com.containerdashboard.ui.screens.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -16,6 +18,11 @@ class ContainersScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val containers: Flow<List<Container>> = repo.getContainers(all = true)
+
+    val statsById: Flow<Map<String, ContainerStats>> =
+        repo.getContainerStats(refreshRateMillis = 3000L).map { statsList ->
+            statsList.associateBy { it.containerId }
+        }
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

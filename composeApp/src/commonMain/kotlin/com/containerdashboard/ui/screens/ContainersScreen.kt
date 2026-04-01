@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.SearchBar
@@ -167,6 +168,7 @@ fun ContainersScreen(
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
     val isDeletingAll by viewModel.isDeletingAll.collectAsState()
     val isStoppingSelected by viewModel.isStoppingSelected.collectAsState()
+    val statsById by viewModel.statsById.collectAsState(emptyMap())
 
     // State for delete all confirmation dialog
     var showDeleteAllDialog by remember { mutableStateOf(false) }
@@ -613,6 +615,7 @@ fun ContainersScreen(
                                             selectedContainerIds = selectedContainerIds,
                                             currentLogsContainerId = currentLogsContainerId,
                                             actionInProgress = actionInProgress,
+                                            statsById = statsById,
                                             onToggle = { toggleComposeGroup(item.projectName) },
                                             onSelectAll = { selectAll ->
                                                 if (selectAll) {
@@ -747,6 +750,7 @@ fun ContainersScreen(
                                             selectedContainerIds = selectedContainerIds,
                                             currentLogsContainerId = currentLogsContainerId,
                                             actionInProgress = actionInProgress,
+                                            statsById = statsById,
                                             onToggle = { toggleComposeGroup(item.projectName) },
                                             onSelectAll = { selectAll ->
                                                 if (selectAll) {
@@ -848,8 +852,10 @@ private fun ComposeProjectHeader(
     onToggle: () -> Unit,
     allSelected: Boolean,
     onSelectAll: (Boolean) -> Unit,
+    cpuPercent: Double? = null,
+    memoryUsage: Long? = null,
 ) {
-    Row(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -857,48 +863,82 @@ private fun ComposeProjectHeader(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(
-            checked = allSelected,
-            onCheckedChange = onSelectAll,
-            modifier = Modifier.padding(end = 8.dp),
-        )
-        Icon(
-            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-            contentDescription = if (expanded) "Collapse" else "Expand",
-            modifier = Modifier.size(18.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = projectName,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+        val showStats = maxWidth > 500.dp
+        val showComposeBadge = maxWidth > 350.dp
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "Compose",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            Checkbox(
+                checked = allSelected,
+                onCheckedChange = onSelectAll,
+                modifier = Modifier.padding(end = 8.dp),
             )
-        }
-        Spacer(modifier = Modifier.width(6.dp))
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer,
-        ) {
-            Text(
-                text = containerCount.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = projectName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            if (showComposeBadge) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                ) {
+                    Text(
+                        text = "Compose",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+            ) {
+                Text(
+                    text = containerCount.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+            if (showStats && (cpuPercent != null || memoryUsage != null)) {
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    cpuPercent?.let {
+                        Text(
+                            text = "CPU %.1f%%".format(it),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    memoryUsage?.let {
+                        Text(
+                            text = "MEM ${ContainerStats.formatBytes(it)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -911,6 +951,7 @@ private fun ComposeProjectCard(
     selectedContainerIds: Set<String>,
     currentLogsContainerId: String?,
     actionInProgress: String?,
+    statsById: Map<String, ContainerStats>,
     onToggle: () -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onCheckedChange: (String, Boolean) -> Unit,
@@ -961,6 +1002,10 @@ private fun ComposeProjectCard(
                     },
             ),
     ) {
+        val groupStats = item.containers.mapNotNull { statsById[it.id] }
+        val totalCpu = groupStats.sumOf { it.cpuPercent }
+        val totalMem = groupStats.sumOf { it.memoryUsage }
+
         ComposeProjectHeader(
             projectName = item.projectName,
             containerCount = item.containers.size,
@@ -968,6 +1013,8 @@ private fun ComposeProjectCard(
             onToggle = onToggle,
             allSelected = item.containers.all { it.id in selectedContainerIds },
             onSelectAll = onSelectAll,
+            cpuPercent = if (groupStats.isNotEmpty()) totalCpu else null,
+            memoryUsage = if (groupStats.isNotEmpty()) totalMem else null,
         )
         AnimatedVisibility(
             visible = item.expanded,
