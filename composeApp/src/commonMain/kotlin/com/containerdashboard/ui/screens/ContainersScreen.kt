@@ -1,6 +1,8 @@
 package com.containerdashboard.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -921,18 +923,43 @@ private fun ComposeProjectCard(
 ) {
     val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
     val shape = RoundedCornerShape(12.dp)
+    val animatedPadding by animateDpAsState(
+        targetValue = if (item.expanded) 6.dp else 0.dp,
+        animationSpec = tween(durationMillis = 250),
+        label = "composeGroupPadding",
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (item.expanded) 2.dp else 0.dp,
+        animationSpec = tween(durationMillis = 250),
+        label = "composeGroupElevation",
+    )
 
-    Column(
+    Card(
         modifier =
-            if (item.expanded) {
-                Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, borderColor, shape)
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
-            } else {
-                Modifier.fillMaxWidth()
-            },
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = animatedPadding)
+                .then(
+                    if (item.expanded) {
+                        Modifier.border(1.dp, borderColor, shape)
+                    } else {
+                        Modifier
+                    },
+                ),
+        shape = shape,
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = animatedElevation,
+            ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (item.expanded) {
+                        MaterialTheme.colorScheme.surface
+                    } else {
+                        MaterialTheme.colorScheme.background
+                    },
+            ),
     ) {
         ComposeProjectHeader(
             projectName = item.projectName,
@@ -942,22 +969,28 @@ private fun ComposeProjectCard(
             allSelected = item.containers.all { it.id in selectedContainerIds },
             onSelectAll = onSelectAll,
         )
-        if (item.expanded) {
-            item.containers.forEach { container ->
-                ContainerRowByMode(
-                    isCompactMode = isCompactMode,
-                    container = container,
-                    isChecked = container.id in selectedContainerIds,
-                    isViewingLogs = currentLogsContainerId == container.id,
-                    onCheckedChange = { checked -> onCheckedChange(container.id, checked) },
-                    isActionInProgress = actionInProgress == container.id,
-                    onStart = { onStart(container.id) },
-                    onStop = { onStop(container.id) },
-                    onPause = { onPause(container.id) },
-                    onUnpause = { onUnpause(container.id) },
-                    onRemove = { onRemove(container.id) },
-                    onViewLogs = { onViewLogs(container) },
-                )
+        AnimatedVisibility(
+            visible = item.expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            Column {
+                item.containers.forEach { container ->
+                    ContainerRowByMode(
+                        isCompactMode = isCompactMode,
+                        container = container,
+                        isChecked = container.id in selectedContainerIds,
+                        isViewingLogs = currentLogsContainerId == container.id,
+                        onCheckedChange = { checked -> onCheckedChange(container.id, checked) },
+                        isActionInProgress = actionInProgress == container.id,
+                        onStart = { onStart(container.id) },
+                        onStop = { onStop(container.id) },
+                        onPause = { onPause(container.id) },
+                        onUnpause = { onUnpause(container.id) },
+                        onRemove = { onRemove(container.id) },
+                        onViewLogs = { onViewLogs(container) },
+                    )
+                }
             }
         }
     }

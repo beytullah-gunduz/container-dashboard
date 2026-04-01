@@ -22,6 +22,7 @@ The app have been done using Claude Opus 4.5 and 4.6.
 ## Screenshots
 
 ![Dashboard Screen](docs/dashboard_screen.png)
+![Containers Screen](docs/containers_screen.png)
 ![Monitoring Screen](docs/monitoring_screen.png)
 
 The application features :

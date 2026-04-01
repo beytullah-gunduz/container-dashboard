@@ -1,0 +1,27 @@
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6380:6379"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
