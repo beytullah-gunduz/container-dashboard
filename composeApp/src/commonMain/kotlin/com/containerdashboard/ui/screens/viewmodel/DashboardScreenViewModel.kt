@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -38,9 +39,11 @@ class DashboardScreenViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val isConnected: StateFlow<Boolean> =
-        repo
-            .isDockerAvailable()
+        AppModule
+            .dockerRepositoryFlow
+            .flatMapLatest { it.isDockerAvailable() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     init {

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -21,9 +22,11 @@ import kotlinx.coroutines.launch
 class AppViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val isConnected: StateFlow<Boolean> =
-        repo
-            .isDockerAvailable()
+        AppModule
+            .dockerRepositoryFlow
+            .flatMapLatest { it.isDockerAvailable() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val _currentRoute = MutableStateFlow(Screen.Dashboard.route)
