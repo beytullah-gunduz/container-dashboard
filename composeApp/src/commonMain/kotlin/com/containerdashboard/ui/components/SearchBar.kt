@@ -97,16 +97,18 @@ fun SearchBar(
             }
 
             if (query.isNotEmpty()) {
-                IconButton(
-                    onClick = { onQueryChange("") },
-                    modifier = Modifier.size(clearButtonSize),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(clearIconSize),
-                    )
+                AppTooltip(label = "Clear search") {
+                    IconButton(
+                        onClick = { onQueryChange("") },
+                        modifier = Modifier.size(clearButtonSize),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(clearIconSize),
+                        )
+                    }
                 }
             }
         }

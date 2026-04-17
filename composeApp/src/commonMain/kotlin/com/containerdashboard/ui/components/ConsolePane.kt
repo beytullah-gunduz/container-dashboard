@@ -185,13 +185,15 @@ fun ContainerExtraPane(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Close",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                AppTooltip(label = "Close logs pane", shortcut = "Esc") {
+                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -296,17 +298,19 @@ private fun PaneActionButton(
     onClick: () -> Unit,
     tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.size(32.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(18.dp),
-            tint = if (enabled) tint else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-        )
+    AppTooltip(label = contentDescription) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(18.dp),
+                tint = if (enabled) tint else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+            )
+        }
     }
 }
 
@@ -561,38 +565,42 @@ private fun LogsTabContent(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            IconButton(
-                                onClick = {
-                                    scope.launch { PreferenceRepository.setLogsWordWrap(!wordWrap) }
-                                },
-                                modifier = Modifier.size(20.dp),
-                            ) {
-                                Icon(
-                                    Icons.Outlined.WrapText,
-                                    contentDescription = if (wordWrap) "Disable word wrap" else "Enable word wrap",
-                                    modifier = Modifier.size(14.dp),
-                                    tint =
-                                        if (wordWrap) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                )
+                            AppTooltip(label = if (wordWrap) "Disable word wrap" else "Enable word wrap") {
+                                IconButton(
+                                    onClick = {
+                                        scope.launch { PreferenceRepository.setLogsWordWrap(!wordWrap) }
+                                    },
+                                    modifier = Modifier.size(20.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.WrapText,
+                                        contentDescription = if (wordWrap) "Disable word wrap" else "Enable word wrap",
+                                        modifier = Modifier.size(14.dp),
+                                        tint =
+                                            if (wordWrap) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                    )
+                                }
                             }
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        verticalScrollState.animateScrollTo(verticalScrollState.maxValue)
-                                    }
-                                },
-                                modifier = Modifier.size(20.dp),
-                            ) {
-                                Icon(
-                                    Icons.Outlined.VerticalAlignBottom,
-                                    contentDescription = "Scroll to bottom",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            AppTooltip(label = "Scroll to bottom") {
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            verticalScrollState.animateScrollTo(verticalScrollState.maxValue)
+                                        }
+                                    },
+                                    modifier = Modifier.size(20.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.VerticalAlignBottom,
+                                        contentDescription = "Scroll to bottom",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                         if (state.isFollowing) {
