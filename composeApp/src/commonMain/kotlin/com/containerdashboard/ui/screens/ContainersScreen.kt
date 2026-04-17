@@ -102,6 +102,7 @@ import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
+import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.AppColors
 
 // Threshold for switching between compact and expanded layouts
@@ -640,6 +641,7 @@ fun ContainersScreen(
                     placeholder = if (isCompactMode) "Search..." else "Search containers...",
                     modifier = Modifier.weight(1f),
                     compact = isCompactMode,
+                    focusRequester = LocalSearchFocusRequester.current,
                 )
 
                 FilterChip(

@@ -65,6 +65,8 @@ class ContainersScreenViewModel : ViewModel() {
 
     fun stopContainer(id: String) = containerAction(id) { stopContainer(it) }
 
+    fun restartContainer(id: String) = containerAction(id) { restartContainer(it) }
+
     fun pauseContainer(id: String) = containerAction(id) { pauseContainer(it) }
 
     fun unpauseContainer(id: String) = containerAction(id) { unpauseContainer(it) }

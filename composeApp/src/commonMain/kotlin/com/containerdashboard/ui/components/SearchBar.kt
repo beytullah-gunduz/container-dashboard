@@ -21,6 +21,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,6 +38,7 @@ fun SearchBar(
     placeholder: String = "Search...",
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    focusRequester: FocusRequester? = null,
 ) {
     val height = if (compact) 30.dp else 40.dp
     val iconSize = if (compact) 14.dp else IconSize.md
@@ -79,7 +82,10 @@ fun SearchBar(
                 BasicTextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier.fillMaxWidth().let { base ->
+                            if (focusRequester != null) base.focusRequester(focusRequester) else base
+                        },
                     textStyle =
                         TextStyle(
                             color = MaterialTheme.colorScheme.onSurface,

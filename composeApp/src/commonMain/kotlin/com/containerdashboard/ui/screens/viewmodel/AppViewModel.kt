@@ -46,12 +46,14 @@ class AppViewModel : ViewModel() {
     val logsPaneState: StateFlow<LogsPaneState> = _logsPaneState.asStateFlow()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val containersFlow =
-        AppModule.dockerRepositoryFlow.flatMapLatest { it.getContainers(all = true) }
+    val containers: StateFlow<List<Container>> =
+        AppModule.dockerRepositoryFlow
+            .flatMapLatest { it.getContainers(all = true) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
-            containersFlow.collect { liveContainers ->
+            containers.collect { liveContainers ->
                 val tracked = _logsPaneState.value.containers
                 if (tracked.isEmpty()) return@collect
 
