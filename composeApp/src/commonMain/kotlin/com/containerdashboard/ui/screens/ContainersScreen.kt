@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -81,13 +82,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
@@ -96,14 +101,18 @@ import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
+import com.containerdashboard.ui.components.InspectDialog
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
+import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.util.copyToClipboard
+import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
@@ -850,6 +859,7 @@ fun ContainersScreen(
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },
                                                 onStop = { viewModel.stopContainer(item.container.id) },
+                                                onRestart = { viewModel.restartContainer(item.container.id) },
                                                 onPause = { viewModel.pauseContainer(item.container.id) },
                                                 onUnpause = { viewModel.unpauseContainer(item.container.id) },
                                                 onRemove = { viewModel.removeContainer(item.container.id) },
@@ -1005,6 +1015,7 @@ fun ContainersScreen(
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },
                                                 onStop = { viewModel.stopContainer(item.container.id) },
+                                                onRestart = { viewModel.restartContainer(item.container.id) },
                                                 onPause = { viewModel.pauseContainer(item.container.id) },
                                                 onUnpause = { viewModel.unpauseContainer(item.container.id) },
                                                 onRemove = { viewModel.removeContainer(item.container.id) },
@@ -1330,40 +1341,91 @@ private fun ContainerRowByMode(
     onUnpause: () -> Unit,
     onRemove: () -> Unit,
     onViewLogs: () -> Unit,
+    onRestart: () -> Unit = {},
 ) {
-    if (isCompactMode) {
-        CompactContainerRow(
+    var ctxMenuExpanded by remember { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var inspectOpen by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    Box(
+        modifier =
+            Modifier.pointerInput(container.id) {
+                awaitEachGesture {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull()
+                    if (change != null && event.buttons.isSecondaryPressed && change.changedToDown()) {
+                        change.consume()
+                        pressOffset =
+                            with(density) {
+                                DpOffset(change.position.x.toDp(), change.position.y.toDp())
+                            }
+                        ctxMenuExpanded = true
+                    }
+                }
+            },
+    ) {
+        if (isCompactMode) {
+            CompactContainerRow(
+                container = container,
+                isChecked = isChecked,
+                isViewingLogs = isViewingLogs,
+                onCheckedChange = onCheckedChange,
+                isActionInProgress = isActionInProgress,
+                isPendingDelete = isPendingDelete,
+                onStart = onStart,
+                onStop = onStop,
+                onPause = onPause,
+                onUnpause = onUnpause,
+                onRemove = onRemove,
+                onViewLogs = onViewLogs,
+            )
+        } else {
+            ExpandedContainerRow(
+                container = container,
+                isChecked = isChecked,
+                isViewingLogs = isViewingLogs,
+                onCheckedChange = onCheckedChange,
+                isActionInProgress = isActionInProgress,
+                isPendingDelete = isPendingDelete,
+                columnWidths = columnWidths,
+                onStart = onStart,
+                onStop = onStop,
+                onPause = onPause,
+                onUnpause = onUnpause,
+                onRemove = onRemove,
+                onViewLogs = onViewLogs,
+            )
+        }
+
+        ContainerContextMenu(
             container = container,
-            isChecked = isChecked,
+            expanded = ctxMenuExpanded,
+            onDismiss = { ctxMenuExpanded = false },
             isViewingLogs = isViewingLogs,
-            onCheckedChange = onCheckedChange,
-            isActionInProgress = isActionInProgress,
-            isPendingDelete = isPendingDelete,
+            offset = pressOffset,
+            onViewLogs = onViewLogs,
             onStart = onStart,
             onStop = onStop,
+            onRestart = onRestart,
             onPause = onPause,
             onUnpause = onUnpause,
+            onInspect = { inspectOpen = true },
+            onCopyId = { copyToClipboard(container.id) },
             onRemove = onRemove,
-            onViewLogs = onViewLogs,
         )
-    } else {
-        ExpandedContainerRow(
-            container = container,
-            isChecked = isChecked,
-            isViewingLogs = isViewingLogs,
-            onCheckedChange = onCheckedChange,
-            isActionInProgress = isActionInProgress,
-            isPendingDelete = isPendingDelete,
-            columnWidths = columnWidths,
-            onStart = onStart,
-            onStop = onStop,
-            onPause = onPause,
-            onUnpause = onUnpause,
-            onRemove = onRemove,
-            onViewLogs = onViewLogs,
-        )
+
+        if (inspectOpen) {
+            InspectDialog(
+                title = "Container: ${container.displayName}",
+                jsonText = runCatching { inspectJson.encodeToString(container) }.getOrElse { it.message ?: "" },
+                onDismiss = { inspectOpen = false },
+            )
+        }
     }
 }
+
+private val inspectJson = kotlinx.serialization.json.Json { prettyPrint = true }
 
 // ============== SORTABLE HEADER ==============
 

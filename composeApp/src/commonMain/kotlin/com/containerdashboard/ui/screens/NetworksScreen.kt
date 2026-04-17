@@ -2,6 +2,7 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -48,15 +49,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.InspectDialog
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
+import com.containerdashboard.ui.util.copyToClipboard
+import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -370,7 +381,28 @@ private fun NetworkRow(
     onRemove: () -> Unit,
     isCompactMode: Boolean,
 ) {
-    Column {
+    var ctxMenuExpanded by remember { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var inspectOpen by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    Column(
+        modifier =
+            Modifier.pointerInput(network.id) {
+                awaitEachGesture {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull()
+                    if (change != null && event.buttons.isSecondaryPressed && change.changedToDown()) {
+                        change.consume()
+                        pressOffset =
+                            with(density) {
+                                DpOffset(change.position.x.toDp(), change.position.y.toDp())
+                            }
+                        ctxMenuExpanded = true
+                    }
+                }
+            },
+    ) {
         Row(
             modifier =
                 Modifier
@@ -587,5 +619,27 @@ private fun NetworkRow(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
             thickness = 0.5.dp,
         )
+
+        NetworkContextMenu(
+            networkName = network.name,
+            expanded = ctxMenuExpanded,
+            onDismiss = { ctxMenuExpanded = false },
+            offset = pressOffset,
+            onInspect = { inspectOpen = true },
+            onCopyId = { copyToClipboard(network.id) },
+            onRemove = onRemove,
+        )
+
+        if (inspectOpen) {
+            InspectDialog(
+                title = "Network: ${network.name}",
+                jsonText =
+                    runCatching { networkInspectJson.encodeToString(network) }
+                        .getOrElse { it.message ?: "" },
+                onDismiss = { inspectOpen = false },
+            )
+        }
     }
 }
+
+private val networkInspectJson = kotlinx.serialization.json.Json { prettyPrint = true }
