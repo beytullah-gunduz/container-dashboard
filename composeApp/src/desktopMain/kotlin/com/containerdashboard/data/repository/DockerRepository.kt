@@ -339,6 +339,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     actual fun followContainerLogs(
         id: String,
         tail: Int,
@@ -397,6 +398,7 @@ actual class DockerRepository actual constructor(
             }
         }.conflate().sample(100).flowOn(Dispatchers.IO)
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     actual fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int,

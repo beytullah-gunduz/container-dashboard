@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.WrapText
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -35,7 +36,6 @@ import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
-import androidx.compose.material.icons.outlined.WrapText
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -573,7 +573,7 @@ private fun LogsTabContent(
                                     modifier = Modifier.size(20.dp),
                                 ) {
                                     Icon(
-                                        Icons.Outlined.WrapText,
+                                        Icons.AutoMirrored.Outlined.WrapText,
                                         contentDescription = if (wordWrap) "Disable word wrap" else "Enable word wrap",
                                         modifier = Modifier.size(14.dp),
                                         tint =
