@@ -61,7 +61,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.InspectDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
@@ -85,6 +87,25 @@ fun NetworksScreen(
     val error by viewModel.error.collectAsState()
     val checkedNetworkIds by viewModel.checkedNetworkIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
+
+    val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
+    var pendingConfirmTitle by remember { mutableStateOf("") }
+    var pendingConfirmBody by remember { mutableStateOf("") }
+    var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun askConfirm(
+        title: String,
+        body: String,
+        action: () -> Unit,
+    ) {
+        if (confirmBeforeDelete) {
+            pendingConfirmTitle = title
+            pendingConfirmBody = body
+            pendingConfirmAction = action
+        } else {
+            action()
+        }
+    }
 
     val filteredNetworks =
         networks.filter { network ->
@@ -172,7 +193,12 @@ fun NetworksScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (checkedNetworkIds.isNotEmpty()) {
                         Button(
-                            onClick = { viewModel.deleteSelectedNetworks() },
+                            onClick = {
+                                askConfirm(
+                                    "Delete selected networks?",
+                                    "This will delete ${checkedNetworkIds.size} network(s).",
+                                ) { viewModel.deleteSelectedNetworks() }
+                            },
                             enabled = !isDeletingSelected,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
@@ -277,13 +303,30 @@ fun NetworksScreen(
                             isChecked = network.id in checkedNetworkIds,
                             onCheckedChange = { viewModel.toggleChecked(network.id, it) },
                             onClick = { viewModel.setSelectedNetwork(network.id) },
-                            onRemove = { viewModel.removeNetwork(network.id) },
+                            onRemove = {
+                                askConfirm(
+                                    "Delete network?",
+                                    "This will delete \"${network.name}\".",
+                                ) { viewModel.removeNetwork(network.id) }
+                            },
                             isCompactMode = isCompactMode,
                         )
                     }
                 }
             }
         }
+    }
+
+    pendingConfirmAction?.let { action ->
+        ConfirmActionDialog(
+            title = pendingConfirmTitle,
+            body = pendingConfirmBody,
+            onConfirm = {
+                action()
+                pendingConfirmAction = null
+            },
+            onDismiss = { pendingConfirmAction = null },
+        )
     }
 }
 

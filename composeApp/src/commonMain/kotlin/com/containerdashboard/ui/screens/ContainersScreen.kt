@@ -98,7 +98,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.ContainerColumnWidths
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.InspectDialog
@@ -220,6 +222,25 @@ fun ContainersScreen(
     // State for delete all confirmation dialog
     var showDeleteAllDialog by remember { mutableStateOf(false) }
 
+    val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
+    var pendingConfirmTitle by remember { mutableStateOf("") }
+    var pendingConfirmBody by remember { mutableStateOf("") }
+    var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun askConfirm(
+        title: String,
+        body: String,
+        action: () -> Unit,
+    ) {
+        if (confirmBeforeDelete) {
+            pendingConfirmTitle = title
+            pendingConfirmBody = body
+            pendingConfirmAction = action
+        } else {
+            action()
+        }
+    }
+
     val filteredContainers =
         remember(containers, searchQuery, containerFilter, sortColumn, sortDirection) {
             containers
@@ -279,6 +300,18 @@ fun ContainersScreen(
                 viewModel.deleteAllContainers(containers)
             },
             onDismiss = { showDeleteAllDialog = false },
+        )
+    }
+
+    pendingConfirmAction?.let { action ->
+        ConfirmActionDialog(
+            title = pendingConfirmTitle,
+            body = pendingConfirmBody,
+            onConfirm = {
+                action()
+                pendingConfirmAction = null
+            },
+            onDismiss = { pendingConfirmAction = null },
         )
     }
 
@@ -434,7 +467,12 @@ fun ContainersScreen(
                     ) {
                         if (iconOnly) {
                             IconButton(
-                                onClick = { viewModel.deleteSelectedContainers() },
+                                onClick = {
+                                    askConfirm(
+                                        "Delete selected containers?",
+                                        "This will force-stop and delete ${selectedContainerIds.size} container(s).",
+                                    ) { viewModel.deleteSelectedContainers() }
+                                },
                                 enabled = !isDeletingSelected,
                             ) {
                                 if (isDeletingSelected) {
@@ -452,7 +490,12 @@ fun ContainersScreen(
                             }
                         } else {
                             Button(
-                                onClick = { viewModel.deleteSelectedContainers() },
+                                onClick = {
+                                    askConfirm(
+                                        "Delete selected containers?",
+                                        "This will force-stop and delete ${selectedContainerIds.size} container(s).",
+                                    ) { viewModel.deleteSelectedContainers() }
+                                },
                                 enabled = !isDeletingSelected,
                                 colors =
                                     ButtonDefaults.buttonColors(
@@ -862,7 +905,12 @@ fun ContainersScreen(
                                                 onRestart = { viewModel.restartContainer(item.container.id) },
                                                 onPause = { viewModel.pauseContainer(item.container.id) },
                                                 onUnpause = { viewModel.unpauseContainer(item.container.id) },
-                                                onRemove = { viewModel.removeContainer(item.container.id) },
+                                                onRemove = {
+                                                    askConfirm(
+                                                        "Delete container?",
+                                                        "This will force-stop and remove \"${item.container.displayName}\".",
+                                                    ) { viewModel.removeContainer(item.container.id) }
+                                                },
                                                 onViewLogs = { onShowLogs(item.container) },
                                             )
                                         }
@@ -1018,7 +1066,12 @@ fun ContainersScreen(
                                                 onRestart = { viewModel.restartContainer(item.container.id) },
                                                 onPause = { viewModel.pauseContainer(item.container.id) },
                                                 onUnpause = { viewModel.unpauseContainer(item.container.id) },
-                                                onRemove = { viewModel.removeContainer(item.container.id) },
+                                                onRemove = {
+                                                    askConfirm(
+                                                        "Delete container?",
+                                                        "This will force-stop and remove \"${item.container.displayName}\".",
+                                                    ) { viewModel.removeContainer(item.container.id) }
+                                                },
                                                 onViewLogs = { onShowLogs(item.container) },
                                             )
                                         }

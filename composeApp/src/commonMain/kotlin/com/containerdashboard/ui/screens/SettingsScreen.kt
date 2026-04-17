@@ -56,6 +56,7 @@ import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.engine.ColimaConfig
 import com.containerdashboard.data.engine.EngineActionStatus
 import com.containerdashboard.data.engine.EngineType
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
@@ -81,6 +82,9 @@ fun SettingsScreen(
     val colimaConfig by viewModel.colimaConfig.collectAsState()
     val engineActionStatus by viewModel.engineActionStatus.collectAsState()
     val engineCommandOutput by viewModel.engineCommandOutput.collectAsState()
+
+    var confirmPrune by remember { mutableStateOf(false) }
+    var confirmStopAll by remember { mutableStateOf(false) }
 
     // Load Colima config when engine type is Colima
     androidx.compose.runtime.LaunchedEffect(engineType) {
@@ -335,10 +339,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedButton(
-                    onClick = {
-                        viewModel.dismissActionState()
-                        viewModel.pruneAll()
-                    },
+                    onClick = { confirmPrune = true },
                     enabled = actionState !is ActionState.InProgress,
                     colors =
                         ButtonDefaults.outlinedButtonColors(
@@ -352,10 +353,7 @@ fun SettingsScreen(
                 }
 
                 OutlinedButton(
-                    onClick = {
-                        viewModel.dismissActionState()
-                        viewModel.stopAllContainers()
-                    },
+                    onClick = { confirmStopAll = true },
                     enabled = actionState !is ActionState.InProgress,
                     colors =
                         ButtonDefaults.outlinedButtonColors(
@@ -396,6 +394,34 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+
+    if (confirmPrune) {
+        ConfirmActionDialog(
+            title = "Prune all unused resources?",
+            body = "This removes unused containers, images, volumes, and networks. This action cannot be undone.",
+            confirmLabel = "Prune",
+            onConfirm = {
+                confirmPrune = false
+                viewModel.dismissActionState()
+                viewModel.pruneAll()
+            },
+            onDismiss = { confirmPrune = false },
+        )
+    }
+
+    if (confirmStopAll) {
+        ConfirmActionDialog(
+            title = "Stop all containers?",
+            body = "This will stop every running container on the host.",
+            confirmLabel = "Stop all",
+            onConfirm = {
+                confirmStopAll = false
+                viewModel.dismissActionState()
+                viewModel.stopAllContainers()
+            },
+            onDismiss = { confirmStopAll = false },
+        )
     }
 }
 

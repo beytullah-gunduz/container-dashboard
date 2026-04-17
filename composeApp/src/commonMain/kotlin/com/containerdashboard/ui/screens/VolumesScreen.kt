@@ -67,7 +67,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.InspectDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
@@ -101,6 +103,25 @@ fun VolumesScreen(
     var driverWeight by remember { mutableFloatStateOf(0.7f) }
     var mountpointWeight by remember { mutableFloatStateOf(2f) }
     val totalWeight = nameWeight + driverWeight + mountpointWeight
+
+    val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
+    var pendingConfirmTitle by remember { mutableStateOf("") }
+    var pendingConfirmBody by remember { mutableStateOf("") }
+    var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun askConfirm(
+        title: String,
+        body: String,
+        action: () -> Unit,
+    ) {
+        if (confirmBeforeDelete) {
+            pendingConfirmTitle = title
+            pendingConfirmBody = body
+            pendingConfirmAction = action
+        } else {
+            action()
+        }
+    }
 
     val filteredVolumes =
         volumes
@@ -202,7 +223,12 @@ fun VolumesScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (checkedVolumeNames.isNotEmpty()) {
                         Button(
-                            onClick = { viewModel.deleteSelectedVolumes() },
+                            onClick = {
+                                askConfirm(
+                                    "Delete selected volumes?",
+                                    "This will delete ${checkedVolumeNames.size} volume(s).",
+                                ) { viewModel.deleteSelectedVolumes() }
+                            },
                             enabled = !isDeletingSelected,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
@@ -328,7 +354,12 @@ fun VolumesScreen(
                             isChecked = volume.name in checkedVolumeNames,
                             onCheckedChange = { viewModel.toggleChecked(volume.name, it) },
                             onClick = { viewModel.setSelectedVolume(volume.name) },
-                            onRemove = { viewModel.removeVolume(volume.name) },
+                            onRemove = {
+                                askConfirm(
+                                    "Delete volume?",
+                                    "This will delete \"${volume.name}\".",
+                                ) { viewModel.removeVolume(volume.name) }
+                            },
                             nameWeight = nameWeight,
                             driverWeight = driverWeight,
                             mountpointWeight = mountpointWeight,
@@ -338,6 +369,18 @@ fun VolumesScreen(
                 }
             }
         }
+    }
+
+    pendingConfirmAction?.let { action ->
+        ConfirmActionDialog(
+            title = pendingConfirmTitle,
+            body = pendingConfirmBody,
+            onConfirm = {
+                action()
+                pendingConfirmAction = null
+            },
+            onDismiss = { pendingConfirmAction = null },
+        )
     }
 }
 

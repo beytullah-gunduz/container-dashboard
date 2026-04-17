@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.InspectDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.ImageContextMenu
@@ -92,6 +94,25 @@ fun ImagesScreen(
 
     var namedImagesVisible by remember { mutableStateOf(true) }
     var unnamedImagesVisible by remember { mutableStateOf(true) }
+
+    val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
+    var pendingConfirmTitle by remember { mutableStateOf("") }
+    var pendingConfirmBody by remember { mutableStateOf("") }
+    var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    fun askConfirm(
+        title: String,
+        body: String,
+        action: () -> Unit,
+    ) {
+        if (confirmBeforeDelete) {
+            pendingConfirmTitle = title
+            pendingConfirmBody = body
+            pendingConfirmAction = action
+        } else {
+            action()
+        }
+    }
 
     val filteredImages =
         images
@@ -165,7 +186,12 @@ fun ImagesScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (checkedImageIds.isNotEmpty()) {
                         Button(
-                            onClick = { viewModel.deleteSelectedImages() },
+                            onClick = {
+                                askConfirm(
+                                    "Delete selected images?",
+                                    "This will delete ${checkedImageIds.size} image(s).",
+                                ) { viewModel.deleteSelectedImages() }
+                            },
                             enabled = !isDeletingSelected,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
@@ -285,7 +311,12 @@ fun ImagesScreen(
                                     isChecked = image.id in checkedImageIds,
                                     onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                     onClick = { viewModel.setSelectedImage(image.id) },
-                                    onRemove = { viewModel.removeImage(image.id) },
+                                    onRemove = {
+                                        askConfirm(
+                                            "Delete image?",
+                                            "This will delete \"${image.displayName}\".",
+                                        ) { viewModel.removeImage(image.id) }
+                                    },
                                     isCompactMode = isCompactMode,
                                 )
                             }
@@ -336,7 +367,12 @@ fun ImagesScreen(
                                     isChecked = image.id in checkedImageIds,
                                     onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                     onClick = { viewModel.setSelectedImage(image.id) },
-                                    onRemove = { viewModel.removeImage(image.id) },
+                                    onRemove = {
+                                        askConfirm(
+                                            "Delete image?",
+                                            "This will delete \"${image.displayName}\".",
+                                        ) { viewModel.removeImage(image.id) }
+                                    },
                                     isCompactMode = isCompactMode,
                                 )
                             }
@@ -345,6 +381,18 @@ fun ImagesScreen(
                 }
             }
         }
+    }
+
+    pendingConfirmAction?.let { action ->
+        ConfirmActionDialog(
+            title = pendingConfirmTitle,
+            body = pendingConfirmBody,
+            onConfirm = {
+                action()
+                pendingConfirmAction = null
+            },
+            onDismiss = { pendingConfirmAction = null },
+        )
     }
 }
 
