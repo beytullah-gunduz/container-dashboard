@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 @Composable
 fun Sidebar(
@@ -46,8 +48,22 @@ fun Sidebar(
         tonalElevation = 2.dp,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(Spacing.md),
         ) {
+            // Brand mark + wordmark
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppBrandMark(modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = "Container",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+
             // Navigation Items
             Screen.mainScreens.forEach { screen ->
                 SidebarItem(
@@ -55,14 +71,14 @@ fun Sidebar(
                     isSelected = currentRoute == screen.route,
                     onClick = { onNavigate(screen) },
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             // Settings at bottom
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             SidebarItem(
                 screen = Screen.Settings,
@@ -70,7 +86,7 @@ fun Sidebar(
                 onClick = { onNavigate(Screen.Settings) },
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Connection status
             ConnectionStatus(isConnected = isConnected, engineName = engineName)
@@ -87,7 +103,7 @@ private fun SidebarItem(
     val backgroundColor by animateColorAsState(
         targetValue =
             if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
             } else {
                 Color.Transparent
             },
@@ -102,29 +118,45 @@ private fun SidebarItem(
             },
     )
 
+    val stripColor by animateColorAsState(
+        targetValue = if (isSelected) AppColors.AccentBlue else Color.Transparent,
+    )
+
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(backgroundColor)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
-            imageVector = if (isSelected) screen.selectedIcon else screen.icon,
-            contentDescription = screen.title,
-            tint = contentColor,
-            modifier = Modifier.size(20.dp),
+        Box(
+            modifier =
+                Modifier
+                    .width(2.dp)
+                    .height(36.dp)
+                    .background(stripColor),
         )
-        Text(
-            text = screen.title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = contentColor,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-        )
+        Row(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(Radius.md))
+                    .background(backgroundColor)
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = Spacing.md, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            Icon(
+                imageVector = if (isSelected) screen.selectedIcon else screen.icon,
+                contentDescription = screen.title,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = screen.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
     }
 }
 
@@ -137,15 +169,15 @@ private fun ConnectionStatus(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(Radius.md))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(12.dp),
+                .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Surface(
             modifier = Modifier.size(8.dp),
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(Radius.sm),
             color = if (isConnected) AppColors.Running else AppColors.Stopped,
         ) {}
 
