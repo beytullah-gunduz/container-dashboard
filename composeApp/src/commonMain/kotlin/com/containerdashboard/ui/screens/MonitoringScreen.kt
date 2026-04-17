@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,10 @@ import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
+
+// Threshold for switching between compact and expanded layouts.
+// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
+private val COMPACT_THRESHOLD = 700.dp
 
 @Composable
 fun MonitoringScreen(
@@ -65,13 +72,18 @@ fun MonitoringScreen(
 
     val scrollState = rememberScrollState()
 
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isCompactMode = maxWidth < COMPACT_THRESHOLD
+        val outerPadding = if (isCompactMode) 16.dp else 24.dp
+        val sectionSpacing = if (isCompactMode) 16.dp else 24.dp
+
     Column(
         modifier =
-            modifier
+            Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+                .padding(outerPadding),
+        verticalArrangement = Arrangement.spacedBy(sectionSpacing),
     ) {
         // Header
         Row(
@@ -117,10 +129,7 @@ fun MonitoringScreen(
 
         // Usage History Graphs
         if (stats.isNotEmpty()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+            val cpuGraph: @Composable (Modifier) -> Unit = { m ->
                 UsageHistoryGraph(
                     title = "CPU Usage",
                     icon = Icons.Outlined.Memory,
@@ -132,8 +141,10 @@ fun MonitoringScreen(
                         "%.1f%%".format(
                             stats.sumOf { it.cpuPercent } / stats.size,
                         ),
-                    modifier = Modifier.weight(1f),
+                    modifier = m,
                 )
+            }
+            val memGraph: @Composable (Modifier) -> Unit = { m ->
                 UsageHistoryGraph(
                     title = "Memory Usage",
                     icon = Icons.Outlined.Storage,
@@ -145,8 +156,22 @@ fun MonitoringScreen(
                         "%.1f%%".format(
                             stats.sumOf { it.memoryPercent } / stats.size,
                         ),
-                    modifier = Modifier.weight(1f),
+                    modifier = m,
                 )
+            }
+            if (isCompactMode) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    cpuGraph(Modifier.fillMaxWidth())
+                    memGraph(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    cpuGraph(Modifier.weight(1f))
+                    memGraph(Modifier.weight(1f))
+                }
             }
         }
 
@@ -312,7 +337,7 @@ fun MonitoringScreen(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
@@ -327,45 +352,61 @@ fun MonitoringScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text(
-                            text = "CONTAINER",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1.5f),
-                        )
-                        Text(
-                            text = "CPU %",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(0.7f),
-                        )
-                        Text(
-                            text = "MEMORY USAGE",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1.2f),
-                        )
-                        Text(
-                            text = "MEMORY %",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(0.7f),
-                        )
+                        if (isCompactMode) {
+                            Text(
+                                text = "CONTAINER",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                            )
+                        } else {
+                            Text(
+                                text = "CONTAINER",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1.5f),
+                            )
+                            Text(
+                                text = "CPU %",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(0.7f),
+                            )
+                            Text(
+                                text = "MEMORY USAGE",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1.2f),
+                            )
+                            Text(
+                                text = "MEMORY %",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(0.7f),
+                            )
+                        }
                     }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        thickness = 1.dp,
+                    )
 
                     stats.forEach { stat ->
-                        StatsTableRow(stat = stat)
+                        StatsTableRow(stat = stat, isCompactMode = isCompactMode)
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -424,68 +465,147 @@ private fun ContainerBarRow(
 }
 
 @Composable
-private fun StatsTableRow(stat: ContainerStats) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Container name
+private fun StatsTableRow(
+    stat: ContainerStats,
+    isCompactMode: Boolean,
+) {
+    Column {
         Row(
-            modifier = Modifier.weight(1.5f),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 12.dp, vertical = if (isCompactMode) 8.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                Icons.Outlined.ViewInAr,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = AppColors.Running,
-            )
-            Column {
+            if (isCompactMode) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.ViewInAr,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = AppColors.Running,
+                        )
+                        Text(
+                            text = stat.containerName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text(
+                            text = stat.containerId.take(12),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = "CPU",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                        Text(
+                            text = "%.1f%%".format(stat.cpuPercent),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = getCpuColor(stat.cpuPercent),
+                            maxLines = 1,
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "MEM",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        )
+                        Text(
+                            text = "%.1f%%".format(stat.memoryPercent),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = getMemoryColor(stat.memoryPercent),
+                            maxLines = 1,
+                        )
+                    }
+                    Text(
+                        text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                // Container name (name + short id, single line)
+                Row(
+                    modifier = Modifier.weight(1.5f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.ViewInAr,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = AppColors.Running,
+                    )
+                    Text(
+                        text = "${stat.containerName} · ${stat.containerId.take(12)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                // CPU %
                 Text(
-                    text = stat.containerName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    text = "%.1f%%".format(stat.cpuPercent),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = getCpuColor(stat.cpuPercent),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(0.7f),
                 )
+
+                // Memory usage
                 Text(
-                    text = stat.containerId.take(12),
+                    text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
                     style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1.2f),
+                )
+
+                // Memory %
+                Text(
+                    text = "%.1f%%".format(stat.memoryPercent),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = getMemoryColor(stat.memoryPercent),
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.7f),
                 )
             }
         }
-
-        // CPU %
-        Text(
-            text = "%.1f%%".format(stat.cpuPercent),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = getCpuColor(stat.cpuPercent),
-            modifier = Modifier.weight(0.7f),
-        )
-
-        // Memory usage
-        Text(
-            text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1.2f),
-        )
-
-        // Memory %
-        Text(
-            text = "%.1f%%".format(stat.memoryPercent),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = getMemoryColor(stat.memoryPercent),
-            modifier = Modifier.weight(0.7f),
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            thickness = 0.5.dp,
         )
     }
 }

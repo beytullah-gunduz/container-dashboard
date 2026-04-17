@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,11 +52,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
+
+// Threshold for switching between compact and expanded layouts.
+// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
+private val COMPACT_THRESHOLD = 700.dp
 
 @Composable
 fun NetworksScreen(
@@ -127,8 +135,11 @@ fun NetworksScreen(
         )
     }
 
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isCompactMode = maxWidth < COMPACT_THRESHOLD
+
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
     ) {
         // Header
         Row(
@@ -213,7 +224,8 @@ fun NetworksScreen(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search networks...",
-            modifier = Modifier.fillMaxWidth(0.4f),
+            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+            compact = isCompactMode,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -229,6 +241,7 @@ fun NetworksScreen(
                 }
             },
             hasItems = customNetworks.isNotEmpty(),
+            isCompactMode = isCompactMode,
         )
 
         if (filteredNetworks.isEmpty()) {
@@ -256,10 +269,12 @@ fun NetworksScreen(
                         onCheckedChange = { viewModel.toggleChecked(network.id, it) },
                         onClick = { viewModel.setSelectedNetwork(network.id) },
                         onRemove = { viewModel.removeNetwork(network.id) },
+                        isCompactMode = isCompactMode,
                     )
                 }
             }
         }
+    }
     }
 }
 
@@ -268,64 +283,81 @@ private fun NetworkTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
     hasItems: Boolean,
+    isCompactMode: Boolean,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = allSelected,
-            onCheckedChange = onSelectAllChange,
-            enabled = hasItems,
-            modifier = Modifier.padding(end = 8.dp),
+    Column {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            CompactCheckbox(
+                checked = allSelected && hasItems,
+                onCheckedChange = onSelectAllChange,
+                enabled = hasItems,
+            )
+            if (isCompactMode) {
+                Text(
+                    text = "NETWORK",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Text(
+                    text = "NAME",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1.2f),
+                )
+                Text(
+                    text = "NETWORK ID",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(0.8f),
+                )
+                Text(
+                    text = "DRIVER",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(0.7f),
+                )
+                Text(
+                    text = "SCOPE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(0.5f),
+                )
+                Text(
+                    text = "SUBNET",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "CONTAINERS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(0.6f),
+                )
+            }
+            Spacer(modifier = Modifier.width(32.dp))
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+            thickness = 1.dp,
         )
-        Text(
-            text = "NAME",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1.2f),
-        )
-        Text(
-            text = "NETWORK ID",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.8f),
-        )
-        Text(
-            text = "DRIVER",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.7f),
-        )
-        Text(
-            text = "SCOPE",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.5f),
-        )
-        Text(
-            text = "SUBNET",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = "CONTAINERS",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(0.6f),
-        )
-        Spacer(modifier = Modifier.width(48.dp))
     }
 }
 
@@ -338,141 +370,212 @@ private fun NetworkRow(
     onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    isCompactMode: Boolean,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
-                ).clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            enabled = !isSystem,
-            modifier = Modifier.padding(end = 8.dp),
-        )
-        // Name
+    Column {
         Row(
-            modifier = Modifier.weight(1.2f),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
+                    .background(
+                        when {
+                            isChecked ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                            isSelected ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
+                            else -> MaterialTheme.colorScheme.surface
+                        },
+                    ).clickable(onClick = onClick)
+                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                Icons.Outlined.Hub,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint =
-                    if (isSystem) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+            CompactCheckbox(
+                checked = isChecked,
+                onCheckedChange = onCheckedChange,
+                enabled = !isSystem,
             )
-            Column {
+            if (isCompactMode) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Hub,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint =
+                                if (isSystem) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        )
+                        Text(
+                            text = network.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (isSystem) {
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                Text(
+                                    text = "System",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                )
+                            }
+                        }
+                        if (network.containerCount > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(3.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                            ) {
+                                Text(
+                                    text = "${network.containerCount}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = "${network.driver} · ${network.scope}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                    )
+                    if (network.subnet.isNotBlank()) {
+                        Text(
+                            text = network.subnet,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            } else {
+                // Name
                 Row(
+                    modifier = Modifier.weight(1.2f),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
+                    Icon(
+                        Icons.Outlined.Hub,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint =
+                            if (isSystem) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                    )
                     Text(
                         text = network.name,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     if (isSystem) {
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RoundedCornerShape(3.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Text(
                                 text = "System",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
                             )
                         }
                     }
                 }
-            }
-        }
 
-        // Network ID
-        Text(
-            text = network.shortId,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.8f),
-        )
-
-        // Driver
-        Text(
-            text = network.driver,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(0.7f),
-        )
-
-        // Scope
-        Text(
-            text = network.scope,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.5f),
-        )
-
-        // Subnet
-        Text(
-            text = network.subnet,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-
-        // Containers
-        Box(modifier = Modifier.weight(0.6f)) {
-            if (network.containerCount > 0) {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Text(
-                        text = "${network.containerCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
-            } else {
+                // Network ID
                 Text(
-                    text = "0",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = network.shortId,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.8f),
                 )
-            }
-        }
 
-        // Actions
-        Row(
-            modifier = Modifier.width(48.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
+                // Driver
+                Text(
+                    text = network.driver,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.7f),
+                )
+
+                // Scope
+                Text(
+                    text = network.scope,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.5f),
+                )
+
+                // Subnet
+                Text(
+                    text = network.subnet,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+
+                // Containers
+                Box(modifier = Modifier.weight(0.6f)) {
+                    if (network.containerCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(3.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                        ) {
+                            Text(
+                                text = "${network.containerCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            // Actions
             IconButton(
                 onClick = onRemove,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(24.dp),
                 enabled = !isSystem,
             ) {
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = "Delete",
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(14.dp),
                     tint =
                         if (!isSystem) {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -482,5 +585,9 @@ private fun NetworkRow(
                 )
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            thickness = 0.5.dp,
+        )
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,6 +39,8 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
+import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
+import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import kotlinx.coroutines.delay
@@ -150,6 +153,20 @@ fun main() {
 
     configureLogging()
 
+    // Set the macOS Dock icon for dev runs (`./gradlew run`). Packaged
+    // .app bundles read the `.icns` from the build's
+    // `nativeDistributions.macOS.iconFile` instead — this only affects
+    // the JVM Dock tile used by `compose.desktop.run`.
+    runCatching {
+        val osName = System.getProperty("os.name").orEmpty().lowercase()
+        if (osName.contains("mac") && java.awt.Taskbar.isTaskbarSupported()) {
+            val taskbar = java.awt.Taskbar.getTaskbar()
+            if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                taskbar.iconImage = renderAppIconAwt(1024)
+            }
+        }
+    }
+
     val log = LoggerFactory.getLogger("com.containerdashboard.Main")
     log.info("Container Dashboard starting…")
 
@@ -235,17 +252,24 @@ fun main() {
             state = windowState,
             icon = appIcon,
             visible = isWindowVisible,
+            undecorated = true,
         ) {
-            App(
-                navigateToRoute = pendingRoute,
-                onNavigated = { pendingRoute = null },
-                consoleContent = { containerId, isDark ->
-                    com.containerdashboard.terminal.JediTermConsole(
-                        containerId = containerId,
-                        darkTheme = isDark,
-                    )
-                },
+            val desktopChrome = rememberDesktopWindowChrome(
+                windowState = windowState,
+                onClose = { isWindowVisible = false },
             )
+            CompositionLocalProvider(LocalDesktopWindowChrome provides desktopChrome) {
+                App(
+                    navigateToRoute = pendingRoute,
+                    onNavigated = { pendingRoute = null },
+                    consoleContent = { containerId, isDark ->
+                        com.containerdashboard.terminal.JediTermConsole(
+                            containerId = containerId,
+                            darkTheme = isDark,
+                        )
+                    },
+                )
+            }
         }
 
         if (pendingAbout) {

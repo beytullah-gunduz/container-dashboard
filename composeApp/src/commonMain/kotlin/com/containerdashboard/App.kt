@@ -9,8 +9,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,8 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.data.engine.EngineActionStatus
+import com.containerdashboard.data.engine.EngineOperations
+import com.containerdashboard.ui.chrome.TopBarDragArea
+import com.containerdashboard.ui.chrome.WindowChromeLeading
+import com.containerdashboard.ui.chrome.WindowChromeTrailing
 import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.Sidebar
+import com.containerdashboard.ui.components.saveLogsToFile
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
 import com.containerdashboard.ui.navigation.Screen
@@ -64,6 +73,7 @@ fun App(
     val logsPaneState by viewModel.logsPaneState.collectAsState()
     val darkTheme by viewModel.darkTheme.collectAsState()
     val logsPaneLayout by viewModel.logsPaneLayout.collectAsState()
+    val engineName by viewModel.engineName.collectAsState()
 
     LaunchedEffect(navigateToRoute) {
         if (navigateToRoute != null) {
@@ -80,6 +90,7 @@ fun App(
             color = MaterialTheme.colorScheme.background,
         ) {
             AnimatedContent(
+                modifier = Modifier.fillMaxSize(),
                 targetState = isConnected,
                 transitionSpec = {
                     (fadeIn() + scaleIn(initialScale = 0.96f))
@@ -88,58 +99,61 @@ fun App(
                 label = "DockerConnectionTransition",
             ) { connected ->
                 if (!connected) {
-                    if (currentRoute == Screen.Settings.route) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            IconButton(
-                                onClick = { viewModel.navigate(Screen.Dashboard.route) },
-                                modifier = Modifier.padding(8.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                )
-                            }
-                            SettingsScreen(modifier = Modifier.weight(1f))
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Warning,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = "Container engine is not available",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = "Please start your container engine and the dashboard will connect automatically.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                                OutlinedButton(
-                                    onClick = { viewModel.navigate(Screen.Settings.route) },
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        WindowChromeBar(title = "Container Dashboard")
+                        if (currentRoute == Screen.Settings.route) {
+                            Column(modifier = Modifier.weight(1f).fillMaxSize()) {
+                                IconButton(
+                                    onClick = { viewModel.navigate(Screen.Dashboard.route) },
+                                    modifier = Modifier.padding(8.dp),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Settings,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Settings")
+                                }
+                                SettingsScreen(modifier = Modifier.weight(1f))
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Warning,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = "Container engine is not available",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        text = "Please start your container engine and the dashboard will connect automatically.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                    OutlinedButton(
+                                        onClick = { viewModel.navigate(Screen.Settings.route) },
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Settings,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Settings")
+                                    }
                                 }
                             }
                         }
@@ -149,11 +163,22 @@ fun App(
                         navigator = navigator,
                         paneLayout = logsPaneLayout,
                         listPaneWidth = 220.dp,
+                        listPaneHeader = { WindowChromeBar(title = "Container Dashboard") },
+                        detailPaneTopOverlay = {
+                            TopBarDragArea {
+                                Spacer(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp),
+                                )
+                            }
+                        },
                         listPane = {
                             Sidebar(
                                 currentRoute = currentRoute,
                                 onNavigate = { screen -> viewModel.navigate(screen.route) },
                                 isConnected = isConnected,
+                                engineName = engineName,
                             )
                         },
                         detailPane = {
@@ -169,6 +194,10 @@ fun App(
                                         ContainersScreen(
                                             onShowLogs = { container ->
                                                 viewModel.showContainerLogs(container)
+                                                navigator.showExtraPane()
+                                            },
+                                            onShowGroupLogs = { containers ->
+                                                viewModel.showGroupLogs(containers)
                                                 navigator.showExtraPane()
                                             },
                                             currentLogsContainerId = logsPaneState.container?.id,
@@ -192,6 +221,18 @@ fun App(
                                     navigator.hideExtraPane()
                                     viewModel.clearLogs()
                                 },
+                                onSaveLogs = {
+                                    viewModel.saveAllLogs { name, allLogs ->
+                                        saveLogsToFile("$name.log", allLogs)
+                                    }
+                                },
+                                onPauseContainer = { viewModel.pauseLogsContainer() },
+                                onUnpauseContainer = { viewModel.unpauseLogsContainer() },
+                                onRestartContainer = { viewModel.restartLogsContainer() },
+                                onRemoveContainer = {
+                                    viewModel.removeLogsContainer()
+                                    navigator.hideExtraPane()
+                                },
                                 consoleContent = {
                                     logsPaneState.container?.let { container ->
                                         consoleContent(container.id, darkTheme)
@@ -202,6 +243,39 @@ fun App(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun WindowChromeBar(title: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WindowChromeLeading()
+            Box(modifier = Modifier.weight(1f)) {
+                TopBarDragArea {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            WindowChromeTrailing()
         }
     }
 }

@@ -4,9 +4,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -34,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,10 +58,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
+
+// Threshold for switching between compact and expanded layouts.
+// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
+private val COMPACT_THRESHOLD = 700.dp
 
 @Composable
 fun ImagesScreen(
@@ -121,8 +130,11 @@ fun ImagesScreen(
 
     val totalSize = images.sumOf { it.size }
 
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isCompactMode = maxWidth < COMPACT_THRESHOLD
+
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
     ) {
         // Header
         Row(
@@ -201,7 +213,8 @@ fun ImagesScreen(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search images...",
-            modifier = Modifier.fillMaxWidth(0.4f),
+            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+            compact = isCompactMode,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -247,6 +260,7 @@ fun ImagesScreen(
                                     namedImages.forEach { viewModel.toggleChecked(it.id, selected) }
                                 },
                                 hasItems = namedImages.isNotEmpty(),
+                                isCompactMode = isCompactMode,
                             )
                         }
                     }
@@ -264,6 +278,7 @@ fun ImagesScreen(
                                 onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                 onClick = { viewModel.setSelectedImage(image.id) },
                                 onRemove = { viewModel.removeImage(image.id) },
+                                isCompactMode = isCompactMode,
                             )
                         }
                     }
@@ -296,6 +311,7 @@ fun ImagesScreen(
                                     unnamedImages.forEach { viewModel.toggleChecked(it.id, selected) }
                                 },
                                 hasItems = unnamedImages.isNotEmpty(),
+                                isCompactMode = isCompactMode,
                             )
                         }
                     }
@@ -313,12 +329,14 @@ fun ImagesScreen(
                                 onCheckedChange = { viewModel.toggleChecked(image.id, it) },
                                 onClick = { viewModel.setSelectedImage(image.id) },
                                 onRemove = { viewModel.removeImage(image.id) },
+                                isCompactMode = isCompactMode,
                             )
                         }
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -372,26 +390,36 @@ private fun ImageTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
     hasItems: Boolean,
+    isCompactMode: Boolean,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Checkbox(
+        CompactCheckbox(
             checked = allSelected && hasItems,
             onCheckedChange = onSelectAllChange,
             enabled = hasItems,
         )
-        SortableHeaderCell("REPOSITORY", ImageSortColumn.REPOSITORY, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
-        SortableHeaderCell("TAG", ImageSortColumn.TAG, sortColumn, sortDirection, onSort, Modifier.weight(1f))
-        SortableHeaderCell("IMAGE ID", ImageSortColumn.IMAGE_ID, sortColumn, sortDirection, onSort, Modifier.weight(1f))
-        SortableHeaderCell("SIZE", ImageSortColumn.SIZE, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
-        Spacer(modifier = Modifier.width(48.dp))
+        if (isCompactMode) {
+            SortableHeaderCell("REPOSITORY", ImageSortColumn.REPOSITORY, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+        } else {
+            SortableHeaderCell("REPOSITORY", ImageSortColumn.REPOSITORY, sortColumn, sortDirection, onSort, Modifier.weight(1.5f))
+            SortableHeaderCell("TAG", ImageSortColumn.TAG, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+            SortableHeaderCell("IMAGE ID", ImageSortColumn.IMAGE_ID, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+            SortableHeaderCell("SIZE", ImageSortColumn.SIZE, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
+        }
+        Spacer(modifier = Modifier.width(24.dp))
     }
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+        thickness = 1.dp,
+    )
 }
 
 @Composable
@@ -438,86 +466,140 @@ private fun ImageRow(
     onCheckedChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    isCompactMode: Boolean,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
-                ).clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-        )
-        // Repository
-        Text(
-            text = image.repository,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color =
-                if (image.repository == "<none>") {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            modifier = Modifier.weight(1.5f),
-        )
-
-        // Tag
-        Text(
-            text = image.tag,
-            style = MaterialTheme.typography.bodyMedium,
-            color =
-                if (image.tag == "<none>") {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            modifier = Modifier.weight(1f),
-        )
-
-        // Image ID
-        Text(
-            text = image.shortId,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-
-        // Size
-        Text(
-            text = image.formattedSize,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(0.7f),
-        )
-
-        // Actions
+    Column {
         Row(
-            modifier = Modifier.width(48.dp),
-            horizontalArrangement = Arrangement.End,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
+                    .background(
+                        when {
+                            isChecked ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                            isSelected ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
+                            else -> MaterialTheme.colorScheme.surface
+                        },
+                    ).clickable(onClick = onClick)
+                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            CompactCheckbox(
+                checked = isChecked,
+                onCheckedChange = onCheckedChange,
+            )
+            if (isCompactMode) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = image.repository,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color =
+                            if (image.repository == "<none>") {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = image.tag,
+                            style = MaterialTheme.typography.labelSmall,
+                            color =
+                                if (image.tag == "<none>") {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Text(
+                            text = image.shortId,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            maxLines = 1,
+                        )
+                    }
+                    Text(
+                        text = image.formattedSize,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            } else {
+                Text(
+                    text = image.repository,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color =
+                        if (image.repository == "<none>") {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1.5f),
+                )
+                Text(
+                    text = image.tag,
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (image.tag == "<none>") {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = image.shortId,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = image.formattedSize,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.7f),
+                )
+            }
             IconButton(
                 onClick = onRemove,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(24.dp),
             ) {
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = "Delete",
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            thickness = 0.5.dp,
+        )
     }
 }
 

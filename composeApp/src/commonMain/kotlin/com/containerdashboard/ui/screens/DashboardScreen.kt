@@ -1,6 +1,7 @@
 package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,10 @@ import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 
+// Threshold for switching between compact and expanded layouts.
+// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
+private val COMPACT_THRESHOLD = 700.dp
+
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
@@ -56,13 +61,19 @@ fun DashboardScreen(
     val error by viewModel.error.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
 
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isCompactMode = maxWidth < COMPACT_THRESHOLD
+        val outerPadding = if (isCompactMode) 16.dp else 24.dp
+        val sectionSpacing = if (isCompactMode) 16.dp else 24.dp
+        val cardSpacing = if (isCompactMode) 12.dp else 16.dp
+
     Column(
         modifier =
-            modifier
+            Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+                .padding(outerPadding),
+        verticalArrangement = Arrangement.spacedBy(sectionSpacing),
     ) {
         // Header
         Row(
@@ -119,52 +130,80 @@ fun DashboardScreen(
         val runningContainers = containers.count { it.isRunning }
         val totalImageSize = images.sumOf { it.size }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        val containersCard: @Composable (Modifier) -> Unit = { m ->
             StatsCard(
                 title = "Containers",
                 value = containers.size.toString(),
                 subtitle = "$runningContainers running",
                 icon = Icons.Outlined.ViewInAr,
                 iconTint = AppColors.AccentBlue,
-                modifier = Modifier.weight(1f),
+                modifier = m,
             )
+        }
+        val imagesCard: @Composable (Modifier) -> Unit = { m ->
             StatsCard(
                 title = "Images",
                 value = images.size.toString(),
                 subtitle = formatBytes(totalImageSize),
                 icon = Icons.Outlined.Layers,
                 iconTint = AppColors.Running,
-                modifier = Modifier.weight(1f),
+                modifier = m,
             )
+        }
+        val volumesCard: @Composable (Modifier) -> Unit = { m ->
             StatsCard(
                 title = "Volumes",
                 value = volumes.size.toString(),
                 subtitle = "${volumes.size} total",
                 icon = Icons.Outlined.Storage,
                 iconTint = AppColors.Warning,
-                modifier = Modifier.weight(1f),
+                modifier = m,
             )
+        }
+        val networksCard: @Composable (Modifier) -> Unit = { m ->
             StatsCard(
                 title = "Networks",
                 value = networks.size.toString(),
                 subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                 icon = Icons.Outlined.Hub,
                 iconTint = AppColors.AccentBlueDark,
-                modifier = Modifier.weight(1f),
+                modifier = m,
             )
         }
 
+        if (isCompactMode) {
+            Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+                ) {
+                    containersCard(Modifier.weight(1f))
+                    imagesCard(Modifier.weight(1f))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+                ) {
+                    volumesCard(Modifier.weight(1f))
+                    networksCard(Modifier.weight(1f))
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+            ) {
+                containersCard(Modifier.weight(1f))
+                imagesCard(Modifier.weight(1f))
+                volumesCard(Modifier.weight(1f))
+                networksCard(Modifier.weight(1f))
+            }
+        }
+
         // Container Status Section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Container Status Card
+        val containerStatusCard: @Composable (Modifier) -> Unit = { m ->
             Card(
-                modifier = Modifier.weight(1f),
+                modifier = m,
                 shape = RoundedCornerShape(12.dp),
                 colors =
                     CardDefaults.cardColors(
@@ -172,7 +211,7 @@ fun DashboardScreen(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
                 ) {
                     Text(
                         text = "Container Status",
@@ -207,10 +246,10 @@ fun DashboardScreen(
                     }
                 }
             }
-
-            // System Info Card
+        }
+        val systemInfoCard: @Composable (Modifier) -> Unit = { m ->
             Card(
-                modifier = Modifier.weight(1f),
+                modifier = m,
                 shape = RoundedCornerShape(12.dp),
                 colors =
                     CardDefaults.cardColors(
@@ -218,7 +257,7 @@ fun DashboardScreen(
                     ),
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
                 ) {
                     Text(
                         text = "System Information",
@@ -233,6 +272,21 @@ fun DashboardScreen(
                     SystemInfoRow("CPUs", systemInfo?.ncpu?.toString() ?: "-")
                     SystemInfoRow("Memory", systemInfo?.formattedMemory ?: "-")
                 }
+            }
+        }
+
+        if (isCompactMode) {
+            Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
+                containerStatusCard(Modifier.fillMaxWidth())
+                systemInfoCard(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+            ) {
+                containerStatusCard(Modifier.weight(1f))
+                systemInfoCard(Modifier.weight(1f))
             }
         }
 
@@ -269,11 +323,12 @@ fun DashboardScreen(
                     )
                 } else {
                     containers.take(5).forEach { container ->
-                        RecentContainerItem(container = container)
+                        RecentContainerItem(container = container, isCompactMode = isCompactMode)
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -303,49 +358,65 @@ private fun SystemInfoRow(
 }
 
 @Composable
-private fun RecentContainerItem(container: Container) {
+private fun RecentContainerItem(
+    container: Container,
+    isCompactMode: Boolean,
+) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Surface(
-                modifier = Modifier.size(8.dp),
-                shape = RoundedCornerShape(4.dp),
-                color =
-                    when {
-                        container.isRunning -> AppColors.Running
-                        container.isPaused -> AppColors.Paused
-                        else -> AppColors.Stopped
-                    },
-            ) {}
+        Surface(
+            modifier = Modifier.size(8.dp),
+            shape = RoundedCornerShape(4.dp),
+            color =
+                when {
+                    container.isRunning -> AppColors.Running
+                    container.isPaused -> AppColors.Paused
+                    else -> AppColors.Stopped
+                },
+        ) {}
 
-            Column {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = container.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                text = container.status,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            if (isCompactMode) {
                 Text(
-                    text = container.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = container.status,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = container.image,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
             }
         }
 
-        Text(
-            text = container.image,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!isCompactMode) {
+            Text(
+                text = container.image,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
     }
 }
 

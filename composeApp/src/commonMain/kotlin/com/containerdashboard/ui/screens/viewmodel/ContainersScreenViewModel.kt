@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.data.repository.DockerRepository
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +41,15 @@ class ContainersScreenViewModel : ViewModel() {
     private val _isDeletingAll = MutableStateFlow(false)
     val isDeletingAll: StateFlow<Boolean> = _isDeletingAll.asStateFlow()
 
+    private val _pendingDeleteIds = MutableStateFlow(setOf<String>())
+    val pendingDeleteIds: StateFlow<Set<String>> = _pendingDeleteIds.asStateFlow()
+
+    val columnWidths: Flow<ContainerColumnWidths> = PreferenceRepository.containerColumnWidths()
+
+    fun setColumnWidths(widths: ContainerColumnWidths) {
+        viewModelScope.launch { PreferenceRepository.setContainerColumnWidths(widths) }
+    }
+
     private fun containerAction(
         id: String,
         action: suspend DockerRepository.(String) -> Result<Unit>,
@@ -58,7 +69,14 @@ class ContainersScreenViewModel : ViewModel() {
 
     fun unpauseContainer(id: String) = containerAction(id) { unpauseContainer(it) }
 
-    fun removeContainer(id: String) = containerAction(id) { removeContainer(it, force = true) }
+    fun removeContainer(id: String) {
+        viewModelScope.launch {
+            _pendingDeleteIds.update { it + id }
+            repo.removeContainer(id, force = true).onFailure { _error.value = it.message }
+            repo.refreshContainers()
+            _pendingDeleteIds.update { it - id }
+        }
+    }
 
     private val _isStoppingSelected = MutableStateFlow(false)
     val isStoppingSelected: StateFlow<Boolean> = _isStoppingSelected.asStateFlow()
@@ -72,6 +90,7 @@ class ContainersScreenViewModel : ViewModel() {
                     errors.add(it.message ?: "Failed to stop container")
                 }
             }
+            repo.refreshContainers()
             _isStoppingSelected.value = false
             if (errors.isNotEmpty()) {
                 _error.value = "Failed to stop ${errors.size} container(s)"
@@ -83,15 +102,20 @@ class ContainersScreenViewModel : ViewModel() {
         viewModelScope.launch {
             _isDeletingSelected.value = true
             val idsToDelete = _selectedContainerIds.value.toList()
+            _pendingDeleteIds.update { it + idsToDelete }
+            val failedIds = mutableSetOf<String>()
             val errors = mutableListOf<String>()
 
             for (id in idsToDelete) {
                 repo.removeContainer(id, force = true).onFailure {
+                    failedIds.add(id)
                     errors.add(it.message ?: "Failed to delete container")
                 }
             }
 
-            _selectedContainerIds.value = emptySet()
+            repo.refreshContainers()
+            _pendingDeleteIds.update { it - idsToDelete.toSet() }
+            _selectedContainerIds.value = failedIds
             _isDeletingSelected.value = false
 
             if (errors.isNotEmpty()) {
@@ -103,15 +127,21 @@ class ContainersScreenViewModel : ViewModel() {
     fun deleteAllContainers(containers: List<Container>) {
         viewModelScope.launch {
             _isDeletingAll.value = true
+            val allIds = containers.map { it.id }
+            _pendingDeleteIds.update { it + allIds }
+            val failedIds = mutableSetOf<String>()
             val errors = mutableListOf<String>()
 
             for (container in containers) {
                 repo.removeContainer(container.id, force = true).onFailure {
+                    failedIds.add(container.id)
                     errors.add(it.message ?: "Failed to delete container ${container.displayName}")
                 }
             }
 
-            _selectedContainerIds.value = emptySet()
+            repo.refreshContainers()
+            _pendingDeleteIds.update { it - allIds.toSet() }
+            _selectedContainerIds.value = failedIds
             _isDeletingAll.value = false
 
             if (errors.isNotEmpty()) {

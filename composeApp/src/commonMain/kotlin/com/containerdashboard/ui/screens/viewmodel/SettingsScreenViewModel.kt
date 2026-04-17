@@ -2,19 +2,38 @@ package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.containerdashboard.data.engine.ColimaConfig
+import com.containerdashboard.data.engine.EngineActionStatus
+import com.containerdashboard.data.engine.EngineOperations
+import com.containerdashboard.data.engine.EngineType
+import com.containerdashboard.data.engine.colimaProfileFromHost
+import com.containerdashboard.data.engine.engineTypeFromHost
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsScreenViewModel : ViewModel() {
     private val repo get() = AppModule.dockerRepository
 
     fun engineHost(): Flow<String> = PreferenceRepository.engineHost()
+
+    val engineType: StateFlow<EngineType> =
+        PreferenceRepository.engineHost()
+            .map { engineTypeFromHost(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EngineType.UNKNOWN)
+
+    val colimaProfile: StateFlow<String?> =
+        PreferenceRepository.engineHost()
+            .map { colimaProfileFromHost(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun darkTheme(): Flow<Boolean> = PreferenceRepository.darkTheme()
 
@@ -23,6 +42,12 @@ class SettingsScreenViewModel : ViewModel() {
     fun confirmBeforeDelete(): Flow<Boolean> = PreferenceRepository.confirmBeforeDelete()
 
     fun trayRefreshRateSeconds(): Flow<Int> = PreferenceRepository.trayRefreshRateSeconds()
+
+    fun logsMaxLines(): Flow<Int> = PreferenceRepository.logsMaxLines()
+
+    fun setLogsMaxLines(value: Int) {
+        viewModelScope.launch { PreferenceRepository.setLogsMaxLines(value) }
+    }
 
     fun setEngineHost(value: String) {
         viewModelScope.launch { PreferenceRepository.setEngineHost(value) }
@@ -42,6 +67,43 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun setTrayRefreshRateSeconds(value: Int) {
         viewModelScope.launch { PreferenceRepository.setTrayRefreshRateSeconds(value) }
+    }
+
+    // -- Engine management --
+
+    val engineActionStatus: StateFlow<EngineActionStatus> = EngineOperations.actionStatus
+    val engineCommandOutput: StateFlow<String> = EngineOperations.commandOutput
+
+    private val _colimaConfig = MutableStateFlow<ColimaConfig?>(null)
+    val colimaConfig: StateFlow<ColimaConfig?> = _colimaConfig.asStateFlow()
+
+    fun loadColimaConfig() {
+        viewModelScope.launch {
+            val profile = colimaProfile.value ?: "default"
+            _colimaConfig.value = EngineOperations.getColimaConfig(profile)
+        }
+    }
+
+    fun startEngine(cpu: Int? = null, memory: Int? = null, disk: Int? = null) {
+        viewModelScope.launch {
+            val type = engineType.value
+            val profile = colimaProfile.value
+            EngineOperations.startEngine(type, profile, cpu, memory, disk)
+            val host = PreferenceRepository.engineHost().first()
+            AppModule.reconnect(host)
+        }
+    }
+
+    fun stopEngine() {
+        viewModelScope.launch {
+            val type = engineType.value
+            val profile = colimaProfile.value
+            EngineOperations.stopEngine(type, profile)
+        }
+    }
+
+    fun clearEngineState() {
+        EngineOperations.clearState()
     }
 
     // -- Connection test --

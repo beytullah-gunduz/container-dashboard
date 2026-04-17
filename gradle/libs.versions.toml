@@ -14,6 +14,7 @@ jediterm = "3.64"
 spotless = "7.0.2"
 slf4j = "2.0.16"
 logback = "1.5.15"
+jna = "5.14.0"
 
 [libraries]
 androidx-datastore-core = { module = "androidx.datastore:datastore-core", version = "1.2.0" }
@@ -58,6 +59,9 @@ jediterm-ui = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "je
 # SLF4J + Logback
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# JNA (macOS AppKit bridge for native window drag)
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 
 [bundles]
 android-datastore = ["androidx-datastore-core", "androidx-datastore-preferences"]

@@ -78,6 +78,8 @@ fun ThreePaneScaffold(
     paneLayout: LogsPaneLayout = LogsPaneLayout.AUTO,
     listPaneWidth: Dp = 220.dp,
     minExtraPaneSize: Dp = 250.dp,
+    listPaneHeader: @Composable () -> Unit = {},
+    detailPaneTopOverlay: @Composable () -> Unit = {},
     listPane: @Composable () -> Unit,
     detailPane: @Composable () -> Unit,
     extraPane: @Composable () -> Unit,
@@ -95,9 +97,15 @@ fun ThreePaneScaffold(
             }
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // List Pane (Sidebar)
-            Box(modifier = Modifier.width(listPaneWidth).fillMaxHeight()) {
-                listPane()
+            // List Pane (Sidebar) with its own header (e.g. window chrome)
+            // stacked on top of it, so the detail/extra panes can claim the
+            // full window height and the title bar occupies otherwise-unused
+            // space above the sidebar.
+            Column(modifier = Modifier.width(listPaneWidth).fillMaxHeight()) {
+                listPaneHeader()
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    listPane()
+                }
             }
 
             // Detail + Extra Pane area
@@ -107,6 +115,7 @@ fun ThreePaneScaffold(
                     availableWidth = availableContentWidth,
                     minExtraPaneSize = minExtraPaneSize,
                     detailPane = detailPane,
+                    detailPaneTopOverlay = detailPaneTopOverlay,
                     extraPane = extraPane,
                 )
             } else {
@@ -115,6 +124,7 @@ fun ThreePaneScaffold(
                     availableHeight = totalHeight,
                     minExtraPaneSize = minExtraPaneSize,
                     detailPane = detailPane,
+                    detailPaneTopOverlay = detailPaneTopOverlay,
                     extraPane = extraPane,
                 )
             }
@@ -128,6 +138,7 @@ private fun RowScope.RightLayout(
     availableWidth: Dp,
     minExtraPaneSize: Dp,
     detailPane: @Composable () -> Unit,
+    detailPaneTopOverlay: @Composable () -> Unit,
     extraPane: @Composable () -> Unit,
 ) {
     val minDetailWidth = 450.dp
@@ -137,6 +148,9 @@ private fun RowScope.RightLayout(
 
     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
         detailPane()
+        Box(modifier = Modifier.fillMaxWidth().align(Alignment.TopStart)) {
+            detailPaneTopOverlay()
+        }
     }
 
     AnimatedVisibility(
@@ -164,6 +178,7 @@ private fun RowScope.BottomLayout(
     availableHeight: Dp,
     minExtraPaneSize: Dp,
     detailPane: @Composable () -> Unit,
+    detailPaneTopOverlay: @Composable () -> Unit,
     extraPane: @Composable () -> Unit,
 ) {
     val minDetailHeight = 300.dp
@@ -175,6 +190,9 @@ private fun RowScope.BottomLayout(
     Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             detailPane()
+            Box(modifier = Modifier.fillMaxWidth().align(Alignment.TopStart)) {
+                detailPaneTopOverlay()
+            }
         }
 
         AnimatedVisibility(

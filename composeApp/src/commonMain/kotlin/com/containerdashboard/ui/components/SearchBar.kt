@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -31,33 +32,44 @@ fun SearchBar(
     onQueryChange: (String) -> Unit,
     placeholder: String = "Search...",
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
+    val height = if (compact) 30.dp else 40.dp
+    val iconSize = if (compact) 14.dp else 18.dp
+    val horizontalPadding = if (compact) 8.dp else 12.dp
+    val itemSpacing = if (compact) 6.dp else 8.dp
+    val textStyle = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium
+    val clearButtonSize = if (compact) 16.dp else 18.dp
+    val clearIconSize = if (compact) 12.dp else 16.dp
+
     Surface(
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = modifier.height(height),
+        shape = RoundedCornerShape(if (compact) 6.dp else 8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = horizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(iconSize),
             )
 
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
                         text = placeholder,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = textStyle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -68,7 +80,7 @@ fun SearchBar(
                     textStyle =
                         TextStyle(
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                            fontSize = textStyle.fontSize,
                         ),
                     singleLine = true,
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -78,13 +90,13 @@ fun SearchBar(
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChange("") },
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(clearButtonSize),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(clearIconSize),
                     )
                 }
             }

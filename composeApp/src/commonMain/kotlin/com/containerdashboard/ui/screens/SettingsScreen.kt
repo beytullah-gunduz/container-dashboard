@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.NetworkCheck
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
@@ -51,9 +53,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.DockerHostConfig
+import com.containerdashboard.data.engine.ColimaConfig
+import com.containerdashboard.data.engine.EngineActionStatus
+import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
+import com.containerdashboard.ui.theme.AppColors
 
 @Composable
 fun SettingsScreen(
@@ -67,8 +73,21 @@ fun SettingsScreen(
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
     val trayRefreshRate by viewModel.trayRefreshRateSeconds().collectAsState(initial = 5)
+    val logsMaxLines by viewModel.logsMaxLines().collectAsState(initial = 1000)
     val connectionTestResult by viewModel.connectionTestResult.collectAsState()
     val actionState by viewModel.actionState.collectAsState()
+    val engineType by viewModel.engineType.collectAsState()
+    val colimaProfile by viewModel.colimaProfile.collectAsState()
+    val colimaConfig by viewModel.colimaConfig.collectAsState()
+    val engineActionStatus by viewModel.engineActionStatus.collectAsState()
+    val engineCommandOutput by viewModel.engineCommandOutput.collectAsState()
+
+    // Load Colima config when engine type is Colima
+    androidx.compose.runtime.LaunchedEffect(engineType) {
+        if (engineType == EngineType.COLIMA) {
+            viewModel.loadColimaConfig()
+        }
+    }
 
     Column(
         modifier =
@@ -150,7 +169,54 @@ fun SettingsScreen(
                     Text("Save & Reconnect")
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Log Buffer Size",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = "Maximum lines kept in the log viewer ($logsMaxLines lines)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                val lineOptions = listOf(500, 1000, 2000, 5000)
+                SingleChoiceSegmentedButtonRow {
+                    lineOptions.forEachIndexed { index, count ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = lineOptions.size,
+                            ),
+                            onClick = { viewModel.setLogsMaxLines(count) },
+                            selected = logsMaxLines == count,
+                            label = { Text("$count") },
+                        )
+                    }
+                }
+            }
         }
+
+        // Engine Management Section
+        EngineManagementSection(
+            engineType = engineType,
+            colimaProfile = colimaProfile,
+            colimaConfig = colimaConfig,
+            actionStatus = engineActionStatus,
+            commandOutput = engineCommandOutput,
+            onStart = { cpu, mem, disk -> viewModel.startEngine(cpu, mem, disk) },
+            onStop = { viewModel.stopEngine() },
+            onClearState = { viewModel.clearEngineState() },
+        )
 
         // Appearance Section
         SettingsSection(title = "Appearance") {
@@ -326,6 +392,234 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EngineManagementSection(
+    engineType: EngineType,
+    colimaProfile: String?,
+    colimaConfig: ColimaConfig?,
+    actionStatus: EngineActionStatus,
+    commandOutput: String,
+    onStart: (cpu: Int?, memory: Int?, disk: Int?) -> Unit,
+    onStop: () -> Unit,
+    onClearState: () -> Unit,
+) {
+    val isColima = engineType == EngineType.COLIMA
+    val isRunning = actionStatus !is EngineActionStatus.Running
+
+    var cpu by remember(colimaConfig) { mutableStateOf(colimaConfig?.cpu?.toString() ?: "4") }
+    var memory by remember(colimaConfig) { mutableStateOf(colimaConfig?.memoryGB?.toString() ?: "8") }
+    var disk by remember(colimaConfig) { mutableStateOf(colimaConfig?.diskGB?.toString() ?: "60") }
+
+    val profileLabel = if (colimaProfile != null && colimaProfile != "default") {
+        "${engineType.displayName} ($colimaProfile)"
+    } else {
+        engineType.displayName
+    }
+
+    SettingsSection(title = "Engine Management") {
+        // Engine name + status
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = profileLabel,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val statusColor = when (actionStatus) {
+                    is EngineActionStatus.Running -> MaterialTheme.colorScheme.tertiary
+                    is EngineActionStatus.Done ->
+                        if (actionStatus.success) AppColors.Running else AppColors.Stopped
+                    else ->
+                        if (colimaConfig != null) AppColors.Running else AppColors.Stopped
+                }
+                val statusText = when (actionStatus) {
+                    is EngineActionStatus.Running -> actionStatus.message
+                    is EngineActionStatus.Done -> actionStatus.message
+                    else ->
+                        if (colimaConfig != null || !isColima) "Running" else "Stopped"
+                }
+                androidx.compose.material3.Surface(
+                    modifier = Modifier.size(8.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    color = statusColor,
+                ) {}
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Colima-specific resource config
+        if (isColima) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("CPU (cores)", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = cpu,
+                        onValueChange = { cpu = it.filter { c -> c.isDigit() } },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Memory (GB)", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = memory,
+                        onValueChange = { memory = it.filter { c -> c.isDigit() } },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Disk (GB)", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = disk,
+                        onValueChange = { disk = it.filter { c -> c.isDigit() } },
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            if (colimaConfig != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Current: ${colimaConfig.cpu} CPUs · ${colimaConfig.memoryGB} GB RAM · ${colimaConfig.diskGB} GB disk",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        } else {
+            Text(
+                text = "To configure CPU and memory, use ${engineType.displayName}'s own settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Command output log
+        if (commandOutput.isNotBlank()) {
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                val outputScrollState = rememberScrollState()
+                androidx.compose.runtime.LaunchedEffect(commandOutput) {
+                    outputScrollState.animateScrollTo(outputScrollState.maxValue)
+                }
+                Text(
+                    text = commandOutput.trimEnd(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .verticalScroll(outputScrollState)
+                        .padding(8.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Action buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            val isBusy = actionStatus is EngineActionStatus.Running
+
+            if (colimaConfig != null || !isColima) {
+                // Engine is running — show Stop
+                OutlinedButton(
+                    onClick = {
+                        onClearState()
+                        onStop()
+                    },
+                    enabled = !isBusy,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Stop")
+                }
+
+                if (isColima) {
+                    Button(
+                        onClick = {
+                            onClearState()
+                            onStop()
+                            onStart(
+                                cpu.toIntOrNull(),
+                                memory.toIntOrNull(),
+                                disk.toIntOrNull(),
+                            )
+                        },
+                        enabled = !isBusy,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Outlined.RestartAlt, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restart")
+                    }
+                }
+            } else {
+                // Engine is stopped — show Start
+                Button(
+                    onClick = {
+                        onClearState()
+                        onStart(
+                            if (isColima) cpu.toIntOrNull() else null,
+                            if (isColima) memory.toIntOrNull() else null,
+                            if (isColima) disk.toIntOrNull() else null,
+                        )
+                    },
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (isBusy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Start")
+                }
             }
         }
     }

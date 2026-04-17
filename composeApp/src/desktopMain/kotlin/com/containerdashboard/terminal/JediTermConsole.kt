@@ -29,6 +29,7 @@ import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.theme.AppColors
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
@@ -61,6 +62,7 @@ fun JediTermConsole(
                         ).also { it.start() }
                     }
                 connector = conn
+                ConsoleSessionRegistry.register(containerId)
             } catch (e: Exception) {
                 error = e.message ?: "Failed to connect"
             } finally {
@@ -74,6 +76,7 @@ fun JediTermConsole(
         onDispose {
             connector?.close()
             connector = null
+            ConsoleSessionRegistry.unregister(containerId)
         }
     }
 

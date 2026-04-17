@@ -38,6 +38,7 @@ fun Sidebar(
     currentRoute: String,
     onNavigate: (Screen) -> Unit,
     isConnected: Boolean = false,
+    engineName: String = "Container Engine",
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -48,47 +49,6 @@ fun Sidebar(
         Column(
             modifier = Modifier.fillMaxSize().padding(12.dp),
         ) {
-            // Logo/Brand Section
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Container icon
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    color = AppColors.AccentBlue,
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            "📦",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        "Container",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "Dashboard",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Navigation Items
             Screen.mainScreens.forEach { screen ->
                 SidebarItem(
@@ -114,7 +74,7 @@ fun Sidebar(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Connection status
-            ConnectionStatus(isConnected = isConnected)
+            ConnectionStatus(isConnected = isConnected, engineName = engineName)
         }
     }
 }
@@ -170,7 +130,7 @@ private fun SidebarItem(
 }
 
 @Composable
-private fun ConnectionStatus(isConnected: Boolean) {
+private fun ConnectionStatus(isConnected: Boolean, engineName: String) {
     Row(
         modifier =
             Modifier
@@ -194,7 +154,7 @@ private fun ConnectionStatus(isConnected: Boolean) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Container Engine",
+                text = engineName,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -35,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,10 +62,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
+import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
+
+// Threshold for switching between compact and expanded layouts.
+// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
+private val COMPACT_THRESHOLD = 700.dp
 
 @Composable
 fun VolumesScreen(
@@ -159,8 +165,11 @@ fun VolumesScreen(
         )
     }
 
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isCompactMode = maxWidth < COMPACT_THRESHOLD
+
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
     ) {
         // Header
         Row(
@@ -245,7 +254,8 @@ fun VolumesScreen(
             query = searchQuery,
             onQueryChange = { viewModel.setSearchQuery(it) },
             placeholder = "Search volumes...",
-            modifier = Modifier.fillMaxWidth(0.4f),
+            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+            compact = isCompactMode,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -283,6 +293,7 @@ fun VolumesScreen(
                     mountpointWeight = newMount
                 }
             },
+            isCompactMode = isCompactMode,
         )
 
         if (filteredVolumes.isEmpty()) {
@@ -312,10 +323,12 @@ fun VolumesScreen(
                         nameWeight = nameWeight,
                         driverWeight = driverWeight,
                         mountpointWeight = mountpointWeight,
+                        isCompactMode = isCompactMode,
                     )
                 }
             }
         }
+    }
     }
 }
 
@@ -332,40 +345,67 @@ private fun VolumeTableHeader(
     mountpointWeight: Float,
     onResizeName: (Float) -> Unit,
     onResizeDriver: (Float) -> Unit,
+    isCompactMode: Boolean,
 ) {
-    BoxWithConstraints(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-    ) {
-        val totalWeight = nameWeight + driverWeight + mountpointWeight
-        val pxPerWeight = constraints.maxWidth / totalWeight
+    Column {
+        if (isCompactMode) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                CompactCheckbox(
+                    checked = allSelected && hasItems,
+                    onCheckedChange = onSelectAllChange,
+                    enabled = hasItems,
+                )
+                VolumeSortableHeaderCell("VOLUME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(24.dp))
+            }
+        } else {
+            BoxWithConstraints(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            ) {
+                val totalWeight = nameWeight + driverWeight + mountpointWeight
+                val pxPerWeight = constraints.maxWidth / totalWeight
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = allSelected,
-                onCheckedChange = onSelectAllChange,
-                enabled = hasItems,
-                modifier = Modifier.padding(end = 8.dp),
-            )
-            VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
-            ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
-            VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(driverWeight))
-            ColumnResizeHandle { delta -> onResizeDriver(delta / pxPerWeight) }
-            VolumeSortableHeaderCell(
-                "MOUNTPOINT",
-                VolumeSortColumn.MOUNTPOINT,
-                sortColumn,
-                sortDirection,
-                onSort,
-                Modifier.weight(mountpointWeight),
-            )
-            Spacer(modifier = Modifier.width(48.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    CompactCheckbox(
+                        checked = allSelected && hasItems,
+                        onCheckedChange = onSelectAllChange,
+                        enabled = hasItems,
+                    )
+                    VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
+                    ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
+                    VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(driverWeight))
+                    ColumnResizeHandle { delta -> onResizeDriver(delta / pxPerWeight) }
+                    VolumeSortableHeaderCell(
+                        "MOUNTPOINT",
+                        VolumeSortColumn.MOUNTPOINT,
+                        sortColumn,
+                        sortDirection,
+                        onSort,
+                        Modifier.weight(mountpointWeight),
+                    )
+                    Spacer(modifier = Modifier.width(32.dp))
+                }
+            }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+            thickness = 1.dp,
+        )
     }
 }
 
@@ -443,79 +483,122 @@ private fun VolumeRow(
     nameWeight: Float,
     driverWeight: Float,
     mountpointWeight: Float,
+    isCompactMode: Boolean,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    },
-                ).clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = isChecked, onCheckedChange = onCheckedChange, modifier = Modifier.padding(end = 8.dp))
-        // Name
+    Column {
         Row(
-            modifier = Modifier.weight(nameWeight),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
+                    .background(
+                        when {
+                            isChecked ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                            isSelected ->
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
+                            else -> MaterialTheme.colorScheme.surface
+                        },
+                    ).clickable(onClick = onClick)
+                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                Icons.Outlined.Storage,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = volume.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+            CompactCheckbox(checked = isChecked, onCheckedChange = onCheckedChange)
+            if (isCompactMode) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Storage,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = volume.displayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        text = volume.driver,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = volume.mountpoint,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                // Name
+                Row(
+                    modifier = Modifier.weight(nameWeight),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Storage,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = volume.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
-        // Driver
-        Text(
-            text = volume.driver,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(driverWeight),
-        )
+                // Driver
+                Text(
+                    text = volume.driver,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(driverWeight),
+                )
 
-        // Mountpoint
-        Text(
-            text = volume.mountpoint,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(mountpointWeight),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+                // Mountpoint
+                Text(
+                    text = volume.mountpoint,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(mountpointWeight),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
-        // Actions
-        Row(
-            modifier = Modifier.width(48.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
+            // Actions
             IconButton(
                 onClick = onRemove,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(24.dp),
             ) {
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = "Delete",
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
+            thickness = 0.5.dp,
+        )
     }
 }

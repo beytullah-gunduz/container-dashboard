@@ -27,6 +27,8 @@ expect class DockerRepository(
     // Containers
     fun getContainers(all: Boolean = true): Flow<List<Container>>
 
+    suspend fun refreshContainers()
+
     suspend fun getContainer(id: String): Result<Container>
 
     suspend fun getContainerLogs(
@@ -34,6 +36,16 @@ expect class DockerRepository(
         tail: Int = 500,
         timestamps: Boolean = true,
     ): Result<String>
+
+    fun followContainerLogs(
+        id: String,
+        tail: Int = 500,
+    ): Flow<String>
+
+    fun followMultipleContainerLogs(
+        containers: List<Pair<String, String>>,
+        tail: Int = 200,
+    ): Flow<String>
 
     suspend fun startContainer(id: String): Result<Unit>
 

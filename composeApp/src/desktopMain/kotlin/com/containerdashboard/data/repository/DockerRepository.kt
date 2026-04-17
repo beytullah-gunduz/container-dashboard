@@ -21,13 +21,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -36,6 +40,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
@@ -46,6 +51,19 @@ import java.time.Duration
 import com.github.dockerjava.api.model.Container as DockerContainer
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
+
+private var cachedMaxLogLines: Int = 1000
+private var maxLogLinesLastRead: Long = 0
+
+private val maxLogLines: Int
+    get() {
+        val now = System.currentTimeMillis()
+        if (now - maxLogLinesLastRead > 5000) {
+            maxLogLinesLastRead = now
+            cachedMaxLogLines = PreferenceRepository.logsMaxLinesSync
+        }
+        return cachedMaxLogLines
+    }
 
 actual class DockerRepository actual constructor(
     private val dockerHost: String,
@@ -67,26 +85,34 @@ actual class DockerRepository actual constructor(
             .responseTimeout(Duration.ofSeconds(45))
             .build()
 
-    private var httpClient = createHttpClient()
-    private var dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
+    @Volatile private var httpClient = createHttpClient()
+    @Volatile private var dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
 
     val client: DockerClient get() = dockerClient
 
     private fun rebuildClient() {
-        httpClient.close()
+        val oldHttp = httpClient
         httpClient = createHttpClient()
         dockerClient = DockerClientImpl.getInstance(config, httpClient)
+        oldHttp.close()
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    /**
-     * Periodically checks whether the Docker daemon is reachable by pinging it.
-     * Emits `true` when Docker is available, `false` otherwise.
-     * Uses [distinctUntilChanged] so collectors only receive updates on actual status changes.
-     * Rebuilds the HTTP client after a failed attempt so a newly started daemon is picked up.
-     */
-    private var lastAvailable = false
+    @Volatile private var lastAvailable = false
+
+    private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (e.message?.contains("shut down") == true) {
+                rebuildClient()
+                block()
+            } else {
+                throw e
+            }
+        }
+    }
 
     actual fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
@@ -205,38 +231,55 @@ actual class DockerRepository actual constructor(
             }
         }
 
+    private val containerRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+
+    actual suspend fun refreshContainers() {
+        containerRefreshTrigger.emit(Unit)
+    }
+
     // Containers
     actual fun getContainers(all: Boolean): Flow<List<Container>> =
-        dockerEvents
-            .filter { it.type == EventType.CONTAINER }
-            .map {
-                try {
+        merge(
+            dockerEvents.filter { it.type == EventType.CONTAINER }.map { },
+            containerRefreshTrigger,
+            // Periodic poll as a fallback — Docker's event stream can
+            // silently drop events (connection race on Lazily-started
+            // SharedFlow, daemon socket restart, callbackFlow buffer
+            // overflow). Polling every 3s is cheap and guarantees the UI
+            // converges even when events are lost.
+            flow { while (true) { delay(3000); emit(Unit) } },
+        ).map {
+            try {
+                withRetryOnPoolShutdown {
                     dockerClient
                         .listContainersCmd()
                         .withShowAll(all)
                         .exec()
                         .map { it.toContainer() }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list containers: {}", e.message)
-                    emptyList()
                 }
-            }.onStart {
-                emit(
-                    try {
+            } catch (e: Exception) {
+                logger.warn("Failed to list containers: {}", e.message)
+                emptyList()
+            }
+        }.onStart {
+            emit(
+                try {
+                    withRetryOnPoolShutdown {
                         dockerClient
                             .listContainersCmd()
                             .withShowAll(all)
                             .exec()
                             .map { it.toContainer() }
-                    } catch (e: Exception) {
-                        logger.warn("Failed to list containers on start: {}", e.message)
-                        emptyList()
-                    },
-                )
-            }.catch { e ->
-                logger.error("Container flow error", e)
-                emit(emptyList())
-            }.flowOn(Dispatchers.IO)
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to list containers on start: {}", e.message)
+                    emptyList()
+                },
+            )
+        }.catch { e ->
+            logger.error("Container flow error", e)
+            emit(emptyList())
+        }.flowOn(Dispatchers.IO)
 
     actual suspend fun getContainer(id: String): Result<Container> =
         withContext(Dispatchers.IO) {
@@ -290,6 +333,119 @@ actual class DockerRepository actual constructor(
                 Result.failure(e)
             }
         }
+
+    actual fun followContainerLogs(
+        id: String,
+        tail: Int,
+    ): Flow<String> =
+        callbackFlow {
+            val lines = mutableListOf<String>()
+            val callback =
+                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                    override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
+                        frame?.let {
+                            val text = String(it.payload ?: ByteArray(0))
+                            val snapshot = synchronized(lines) {
+                                text.lineSequence().filter { l -> l.isNotEmpty() }.forEach { l ->
+                                    lines.add(l)
+                                }
+                                val cap = maxLogLines
+                                if (lines.size > cap) {
+                                    val excess = lines.size - cap
+                                    repeat(excess) { lines.removeFirst() }
+                                }
+                                lines.joinToString("\n")
+                            }
+                            trySend(snapshot)
+                        }
+                    }
+
+                    override fun onError(throwable: Throwable?) {
+                        logger.warn("Log follow stream error for {}: {}", id, throwable?.message)
+                        close()
+                    }
+
+                    override fun onComplete() {
+                        close()
+                    }
+                }
+
+            try {
+                dockerClient
+                    .logContainerCmd(id)
+                    .withStdOut(true)
+                    .withStdErr(true)
+                    .withTail(tail)
+                    .withFollowStream(true)
+                    .exec(callback)
+            } catch (e: Exception) {
+                logger.error("Failed to follow logs for container {}", id, e)
+                close(e)
+            }
+
+            awaitClose {
+                try {
+                    callback.close()
+                } catch (_: Exception) {}
+            }
+        }.conflate().sample(100).flowOn(Dispatchers.IO)
+
+    actual fun followMultipleContainerLogs(
+        containers: List<Pair<String, String>>,
+        tail: Int,
+    ): Flow<String> =
+        channelFlow {
+            val lines = mutableListOf<String>()
+            val lock = Any()
+
+            val jobs = containers.map { (containerId, label) ->
+                launch {
+                    callbackFlow {
+                        val callback =
+                            object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                                override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
+                                    frame?.let {
+                                        val text = String(it.payload ?: ByteArray(0))
+                                        trySend(text)
+                                    }
+                                }
+                                override fun onError(throwable: Throwable?) { close() }
+                                override fun onComplete() { close() }
+                            }
+                        try {
+                            dockerClient
+                                .logContainerCmd(containerId)
+                                .withStdOut(true)
+                                .withStdErr(true)
+                                .withTail(tail)
+                                .withFollowStream(true)
+                                .exec(callback)
+                        } catch (e: Exception) {
+                            close(e)
+                        }
+                        awaitClose { runCatching { callback.close() } }
+                    }.collect { text ->
+                        val newLines = text.lineSequence()
+                            .filter { it.isNotEmpty() }
+                            .map { "[$label] $it" }
+                            .toList()
+                        if (newLines.isNotEmpty()) {
+                            val snapshot = synchronized(lock) {
+                                lines.addAll(newLines)
+                                val cap = maxLogLines
+                                if (lines.size > cap) {
+                                    val excess = lines.size - cap
+                                    repeat(excess) { lines.removeFirst() }
+                                }
+                                lines.joinToString("\n")
+                            }
+                            send(snapshot)
+                        }
+                    }
+                }
+            }
+            jobs.forEach { it.join() }
+        }.conflate().sample(100).flowOn(Dispatchers.IO)
 
     actual suspend fun startContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
@@ -368,15 +524,18 @@ actual class DockerRepository actual constructor(
 
     // Images
     actual fun getImages(): Flow<List<DockerImage>> =
-        dockerEvents
-            .filter { it.type == EventType.IMAGE }
-            .map {
+        merge(
+            dockerEvents.filter { it.type == EventType.IMAGE }.map { },
+            flow { while (true) { delay(3000); emit(Unit) } },
+        ).map {
                 try {
-                    dockerClient
-                        .listImagesCmd()
-                        .withShowAll(true)
-                        .exec()
-                        .map { it.toDockerImage() }
+                    withRetryOnPoolShutdown {
+                        dockerClient
+                            .listImagesCmd()
+                            .withShowAll(true)
+                            .exec()
+                            .map { it.toDockerImage() }
+                    }
                 } catch (e: Exception) {
                     logger.warn("Failed to list images: {}", e.message)
                     emptyList()
@@ -384,11 +543,13 @@ actual class DockerRepository actual constructor(
             }.onStart {
                 emit(
                     try {
-                        dockerClient
-                            .listImagesCmd()
-                            .withShowAll(true)
-                            .exec()
-                            .map { it.toDockerImage() }
+                        withRetryOnPoolShutdown {
+                            dockerClient
+                                .listImagesCmd()
+                                .withShowAll(true)
+                                .exec()
+                                .map { it.toDockerImage() }
+                        }
                     } catch (e: Exception) {
                         logger.warn("Failed to list images on start: {}", e.message)
                         emptyList()
@@ -455,31 +616,12 @@ actual class DockerRepository actual constructor(
 
     // Volumes
     actual fun getVolumes(): Flow<List<Volume>> =
-        dockerEvents
-            .filter { it.type == EventType.VOLUME }
-            .map {
+        merge(
+            dockerEvents.filter { it.type == EventType.VOLUME }.map { },
+            flow { while (true) { delay(3000); emit(Unit) } },
+        ).map {
                 try {
-                    dockerClient
-                        .listVolumesCmd()
-                        .exec()
-                        .volumes
-                        ?.map { volume ->
-                            Volume(
-                                name = volume.name ?: "",
-                                driver = volume.driver ?: "local",
-                                mountpoint = volume.mountpoint ?: "",
-                                scope = "local",
-                                labels = volume.labels,
-                            )
-                        }
-                        ?: emptyList()
-                } catch (e: Exception) {
-                    logger.warn("Failed to list volumes: {}", e.message)
-                    emptyList()
-                }
-            }.onStart {
-                emit(
-                    try {
+                    withRetryOnPoolShutdown {
                         dockerClient
                             .listVolumesCmd()
                             .exec()
@@ -494,6 +636,30 @@ actual class DockerRepository actual constructor(
                                 )
                             }
                             ?: emptyList()
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Failed to list volumes: {}", e.message)
+                    emptyList()
+                }
+            }.onStart {
+                emit(
+                    try {
+                        withRetryOnPoolShutdown {
+                            dockerClient
+                                .listVolumesCmd()
+                                .exec()
+                                .volumes
+                                ?.map { volume ->
+                                    Volume(
+                                        name = volume.name ?: "",
+                                        driver = volume.driver ?: "local",
+                                        mountpoint = volume.mountpoint ?: "",
+                                        scope = "local",
+                                        labels = volume.labels,
+                                    )
+                                }
+                                ?: emptyList()
+                        }
                     } catch (e: Exception) {
                         logger.warn("Failed to list volumes on start: {}", e.message)
                         emptyList()
@@ -562,14 +728,17 @@ actual class DockerRepository actual constructor(
 
     // Networks
     actual fun getNetworks(): Flow<List<DockerNetwork>> =
-        dockerEvents
-            .filter { it.type == EventType.NETWORK }
-            .map {
+        merge(
+            dockerEvents.filter { it.type == EventType.NETWORK }.map { },
+            flow { while (true) { delay(3000); emit(Unit) } },
+        ).map {
                 try {
-                    dockerClient
-                        .listNetworksCmd()
-                        .exec()
-                        .map { it.toDockerNetwork() }
+                    withRetryOnPoolShutdown {
+                        dockerClient
+                            .listNetworksCmd()
+                            .exec()
+                            .map { it.toDockerNetwork() }
+                    }
                 } catch (e: Exception) {
                     logger.warn("Failed to list networks: {}", e.message)
                     emptyList()
@@ -577,10 +746,12 @@ actual class DockerRepository actual constructor(
             }.onStart {
                 emit(
                     try {
-                        dockerClient
-                            .listNetworksCmd()
-                            .exec()
-                            .map { it.toDockerNetwork() }
+                        withRetryOnPoolShutdown {
+                            dockerClient
+                                .listNetworksCmd()
+                                .exec()
+                                .map { it.toDockerNetwork() }
+                        }
                     } catch (e: Exception) {
                         logger.warn("Failed to list networks on start: {}", e.message)
                         emptyList()
