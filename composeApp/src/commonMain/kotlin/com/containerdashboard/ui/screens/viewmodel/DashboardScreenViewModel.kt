@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -35,6 +37,13 @@ class DashboardScreenViewModel : ViewModel() {
     val volumes: Flow<List<Volume>> = repo.getVolumes()
 
     val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
+
+    /** Emits `false` until the first containers list has been delivered. */
+    val hasLoaded: StateFlow<Boolean> =
+        containers
+            .map { true }
+            .onStart { emit(false) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

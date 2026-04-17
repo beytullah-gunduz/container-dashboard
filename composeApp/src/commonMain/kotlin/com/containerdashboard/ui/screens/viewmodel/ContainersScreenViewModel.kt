@@ -11,10 +11,13 @@ import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -22,6 +25,13 @@ class ContainersScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val containers: Flow<List<Container>> = repo.getContainers(all = true)
+
+    /** Emits `false` until the first list of containers has been delivered. */
+    val hasLoaded: StateFlow<Boolean> =
+        containers
+            .map { true }
+            .onStart { emit(false) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     @OptIn(FlowPreview::class)
     val statsById: Flow<Map<String, ContainerStats>> =
@@ -174,6 +184,11 @@ class ContainersScreenViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
+    }
+
+    /** Ask the repository to re-fetch containers now. */
+    fun refresh() {
+        viewModelScope.launch { repo.refreshContainers() }
     }
 }
 

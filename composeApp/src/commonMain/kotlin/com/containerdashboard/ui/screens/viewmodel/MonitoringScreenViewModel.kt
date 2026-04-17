@@ -1,6 +1,7 @@
 package com.containerdashboard.ui.screens.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
@@ -8,11 +9,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.stateIn
 
 data class UsageHistory(
     val cpuHistory: List<Double> = emptyList(),
@@ -48,6 +53,13 @@ class MonitoringScreenViewModel : ViewModel() {
                 )
             }
         }
+
+    /** Emits `false` until the first stats snapshot has been delivered. */
+    val hasLoaded: StateFlow<Boolean> =
+        containerStats
+            .map { true }
+            .onStart { emit(false) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

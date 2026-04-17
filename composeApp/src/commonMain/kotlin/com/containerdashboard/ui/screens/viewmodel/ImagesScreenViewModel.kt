@@ -7,8 +7,12 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,6 +32,13 @@ class ImagesScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val images: Flow<List<DockerImage>> = repo.getImages()
+
+    /** Emits `false` until the first list of images has been delivered. */
+    val hasLoaded: StateFlow<Boolean> =
+        images
+            .map { true }
+            .onStart { emit(false) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -103,6 +114,15 @@ class ImagesScreenViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * Trigger a best-effort refresh. The underlying shared flow updates
+     * whenever any container mutation happens; explicitly refreshing
+     * containers nudges that pipeline and re-runs any waiting fallbacks.
+     */
+    fun refresh() {
+        viewModelScope.launch { repo.refreshContainers() }
     }
 
     fun toggleSort(column: ImageSortColumn) {

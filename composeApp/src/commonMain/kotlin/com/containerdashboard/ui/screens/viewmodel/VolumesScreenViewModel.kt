@@ -7,8 +7,12 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -22,6 +26,13 @@ class VolumesScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
     val volumes: Flow<List<Volume>> = repo.getVolumes()
+
+    /** Emits `false` until the first list of volumes has been delivered. */
+    val hasLoaded: StateFlow<Boolean> =
+        volumes
+            .map { true }
+            .onStart { emit(false) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -132,5 +143,13 @@ class VolumesScreenViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * Nudge the shared data pipelines to re-fetch. Volumes piggyback on the
+     * same container-refresh trigger the repository uses.
+     */
+    fun refresh() {
+        viewModelScope.launch { repo.refreshContainers() }
     }
 }
