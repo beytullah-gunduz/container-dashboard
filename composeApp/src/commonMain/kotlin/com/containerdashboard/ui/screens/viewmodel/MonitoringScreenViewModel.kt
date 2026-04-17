@@ -5,12 +5,14 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.runningFold
+import kotlinx.coroutines.flow.sample
 
 data class UsageHistory(
     val cpuHistory: List<Double> = emptyList(),
@@ -26,11 +28,11 @@ class MonitoringScreenViewModel : ViewModel() {
 
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val containerStats: Flow<List<ContainerStats>> =
         _refreshRate
             .flatMapLatest { seconds ->
-                repo.getContainerStats(refreshRateMillis = (seconds * 1000).toLong())
+                repo.getContainerStats().sample((seconds * 1000).toLong())
             }
 
     val usageHistory: Flow<UsageHistory> =

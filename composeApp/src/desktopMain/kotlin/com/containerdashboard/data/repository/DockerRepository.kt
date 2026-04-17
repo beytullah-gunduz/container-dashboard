@@ -932,23 +932,37 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    // Stats — reacts to container changes, streams each container's stats via callbackFlow and combines them
+    // Stats — hot shared flow keyed on the stable running set.
+    //
+    // Key change vs prior implementation: distinctUntilChanged runs on
+    // List<Pair<id, displayName>> of *running* containers only, so the
+    // frequent status-text updates ("Up 3 minutes" → "Up 4 minutes")
+    // no longer trip flatMapLatest and tear down every per-container
+    // stats stream. The streams only restart when the running set
+    // genuinely changes.
+    //
+    // Shared so Containers + Monitoring screens observe one set of
+    // per-container HTTP stats streams; slower consumers downsample
+    // via .sample(...) on their side.
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    actual fun getContainerStats(refreshRateMillis: Long): Flow<List<ContainerStats>> =
+    private val containerStatsShared: SharedFlow<List<ContainerStats>> by lazy {
         getContainers(true)
+            .map { list -> list.filter { it.isRunning }.map { it.id to it.displayName } }
             .distinctUntilChanged()
-            .flatMapLatest { containers ->
-                val running = containers.filter { it.isRunning }
+            .flatMapLatest { running ->
                 if (running.isEmpty()) {
                     flowOf(emptyList())
                 } else {
                     combine(
-                        running.map { container ->
-                            singleContainerStats(container.id, container.displayName, refreshRateMillis)
+                        running.map { (id, name) ->
+                            singleContainerStats(id, name, 1_000L)
                         },
                     ) { stats -> stats.toList() }
                 }
-            }
+            }.shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    actual fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     private fun singleContainerStats(

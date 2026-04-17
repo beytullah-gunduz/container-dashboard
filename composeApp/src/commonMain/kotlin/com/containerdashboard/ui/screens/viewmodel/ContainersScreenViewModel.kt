@@ -8,11 +8,13 @@ import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -21,8 +23,9 @@ class ContainersScreenViewModel : ViewModel() {
 
     val containers: Flow<List<Container>> = repo.getContainers(all = true)
 
+    @OptIn(FlowPreview::class)
     val statsById: Flow<Map<String, ContainerStats>> =
-        repo.getContainerStats(refreshRateMillis = 3000L).map { statsList ->
+        repo.getContainerStats().sample(3_000L).map { statsList ->
             statsList.associateBy { it.containerId }
         }
 
