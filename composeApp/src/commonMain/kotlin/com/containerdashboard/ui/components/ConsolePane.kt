@@ -89,7 +89,7 @@ fun ContainerExtraPane(
     LaunchedEffect(selectedTab) {
         if (selectedTab == 1) consoleEverOpened = true
     }
-    val hasLogs = logsState.logs.isNotBlank()
+    val hasLogs = logsState.logs.isNotEmpty()
     val activeConsoleSessions by ConsoleSessionRegistry.activeSessions.collectAsState()
     val isConsoleAlive = container?.id?.let { it in activeConsoleSessions } == true
 
@@ -376,7 +376,7 @@ private fun LogsTabContent(
                 val displayedLogs =
                     remember(state.logs, filterText, selectedService) {
                         state.logs
-                            .lineSequence()
+                            .asSequence()
                             .filter { line ->
                                 (selectedService == null || line.startsWith("[$selectedService]")) &&
                                     (filterText.isBlank() || line.contains(filterText, ignoreCase = true))
@@ -561,7 +561,7 @@ private fun LogsTabContent(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                text = "${state.logs.lines().size} lines",
+                                text = "${state.logs.size} lines",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

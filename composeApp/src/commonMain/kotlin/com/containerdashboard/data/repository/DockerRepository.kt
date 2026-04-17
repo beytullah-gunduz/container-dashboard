@@ -40,12 +40,12 @@ expect class DockerRepository(
     fun followContainerLogs(
         id: String,
         tail: Int = 500,
-    ): Flow<String>
+    ): Flow<List<String>>
 
     fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int = 200,
-    ): Flow<String>
+    ): Flow<List<String>>
 
     suspend fun startContainer(id: String): Result<Unit>
 

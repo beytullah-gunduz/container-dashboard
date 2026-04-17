@@ -4,7 +4,7 @@ import com.containerdashboard.data.models.Container
 
 data class LogsPaneState(
     val containers: List<Container> = emptyList(),
-    val logs: String = "",
+    val logs: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val isFollowing: Boolean = false,
     val isSavingLogs: Boolean = false,

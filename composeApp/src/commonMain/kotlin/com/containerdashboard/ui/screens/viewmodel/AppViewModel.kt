@@ -73,7 +73,7 @@ class AppViewModel : ViewModel() {
                         logFollowJob?.cancel()
                         _logsPaneState.update {
                             it.copy(
-                                logs = it.logs + "\n--- Stream ended (containers stopped) ---\n",
+                                logs = it.logs + "--- Stream ended (containers stopped) ---",
                                 isFollowing = false,
                             )
                         }
@@ -165,14 +165,14 @@ class AppViewModel : ViewModel() {
                         _logsPaneState.update {
                             it.copy(error = e.message, isLoading = false, isFollowing = false)
                         }
-                    }.collect { fullLog ->
+                    }.collect { lines ->
                         _logsPaneState.update {
-                            it.copy(logs = fullLog, isLoading = false, isFollowing = true)
+                            it.copy(logs = lines, isLoading = false, isFollowing = true)
                         }
                     }
                 _logsPaneState.update {
                     it.copy(
-                        logs = it.logs + "\n--- Stream ended ---\n",
+                        logs = it.logs + "--- Stream ended ---",
                         isFollowing = false,
                     )
                 }
@@ -181,17 +181,17 @@ class AppViewModel : ViewModel() {
 
     private suspend fun fetchGroupLogs(containers: List<Container>) {
         try {
-            val merged = StringBuilder()
+            val merged = mutableListOf<String>()
             for (c in containers) {
                 val label = c.composeService ?: c.displayName
                 val result = repo.getContainerLogs(c.id)
                 result.onSuccess { logs ->
                     logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
-                        merged.append("[$label] $line\n")
+                        merged.add("[$label] $line")
                     }
                 }
             }
-            _logsPaneState.update { it.copy(logs = merged.toString(), isLoading = false) }
+            _logsPaneState.update { it.copy(logs = merged.toList(), isLoading = false) }
         } catch (e: Exception) {
             _logsPaneState.update { it.copy(error = e.message, isLoading = false) }
         }
@@ -284,7 +284,8 @@ class AppViewModel : ViewModel() {
             val result = repo.getContainerLogs(containerId)
             result.fold(
                 onSuccess = { logs ->
-                    _logsPaneState.update { it.copy(logs = logs, isLoading = false) }
+                    val lines = logs.lineSequence().filter { it.isNotEmpty() }.toList()
+                    _logsPaneState.update { it.copy(logs = lines, isLoading = false) }
                 },
                 onFailure = { e ->
                     _logsPaneState.update { it.copy(error = e.message, isLoading = false) }

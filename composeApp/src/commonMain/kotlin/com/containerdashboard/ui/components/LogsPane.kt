@@ -1,7 +1,6 @@
 package com.containerdashboard.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Close
@@ -217,28 +217,26 @@ fun LogsPane(
                         }
                     }
                     else -> {
-                        val verticalScrollState = rememberScrollState()
-                        val horizontalScrollState = rememberScrollState()
+                        val listState = rememberLazyListState()
 
-                        // Auto-scroll to bottom when logs change
+                        // Auto-scroll to bottom when logs change.
                         LaunchedEffect(state.logs) {
-                            verticalScrollState.animateScrollTo(verticalScrollState.maxValue)
+                            val last = state.logs.lastIndex
+                            if (last >= 0) listState.animateScrollToItem(last)
                         }
 
                         SelectionContainer {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .verticalScroll(verticalScrollState)
-                                        .horizontalScroll(horizontalScrollState)
-                                        .padding(12.dp),
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize().padding(12.dp),
                             ) {
-                                Text(
-                                    text = state.logs,
-                                    style = MaterialTheme.typography.monospaceMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
+                                items(state.logs) { line ->
+                                    Text(
+                                        text = line,
+                                        style = MaterialTheme.typography.monospaceMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
                             }
                         }
                     }
@@ -258,7 +256,7 @@ fun LogsPane(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "${state.logs.lines().size} lines",
+                        text = "${state.logs.size} lines",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -366,7 +366,7 @@ actual class DockerRepository actual constructor(
     actual fun followContainerLogs(
         id: String,
         tail: Int,
-    ): Flow<String> =
+    ): Flow<List<String>> =
         callbackFlow {
             val lines = mutableListOf<String>()
             val callback =
@@ -384,7 +384,7 @@ actual class DockerRepository actual constructor(
                                         val excess = lines.size - cap
                                         repeat(excess) { lines.removeFirst() }
                                     }
-                                    lines.joinToString("\n")
+                                    lines.toList()
                                 }
                             trySend(snapshot)
                         }
@@ -425,7 +425,7 @@ actual class DockerRepository actual constructor(
     actual fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int,
-    ): Flow<String> =
+    ): Flow<List<String>> =
         channelFlow {
             val lines = mutableListOf<String>()
             val lock = Any()
@@ -479,7 +479,7 @@ actual class DockerRepository actual constructor(
                                             val excess = lines.size - cap
                                             repeat(excess) { lines.removeFirst() }
                                         }
-                                        lines.joinToString("\n")
+                                        lines.toList()
                                     }
                                 send(snapshot)
                             }
