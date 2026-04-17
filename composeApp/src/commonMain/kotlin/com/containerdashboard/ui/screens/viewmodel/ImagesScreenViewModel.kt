@@ -116,13 +116,8 @@ class ImagesScreenViewModel : ViewModel() {
         _error.value = null
     }
 
-    /**
-     * Trigger a best-effort refresh. The underlying shared flow updates
-     * whenever any container mutation happens; explicitly refreshing
-     * containers nudges that pipeline and re-runs any waiting fallbacks.
-     */
     fun refresh() {
-        viewModelScope.launch { repo.refreshContainers() }
+        viewModelScope.launch { repo.refreshImages() }
     }
 
     fun toggleSort(column: ImageSortColumn) {

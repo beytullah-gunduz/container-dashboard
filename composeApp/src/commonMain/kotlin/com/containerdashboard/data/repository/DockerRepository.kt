@@ -30,6 +30,12 @@ expect class DockerRepository(
 
     suspend fun refreshContainers()
 
+    suspend fun refreshImages()
+
+    suspend fun refreshVolumes()
+
+    suspend fun refreshNetworks()
+
     suspend fun getContainer(id: String): Result<Container>
 
     suspend fun inspectContainer(id: String): Result<ContainerInspect>

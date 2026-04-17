@@ -240,9 +240,24 @@ actual class DockerRepository actual constructor(
         }
 
     private val containerRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+    private val imagesRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+    private val volumesRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+    private val networksRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
 
     actual suspend fun refreshContainers() {
         containerRefreshTrigger.emit(Unit)
+    }
+
+    actual suspend fun refreshImages() {
+        imagesRefreshTrigger.emit(Unit)
+    }
+
+    actual suspend fun refreshVolumes() {
+        volumesRefreshTrigger.emit(Unit)
+    }
+
+    actual suspend fun refreshNetworks() {
+        networksRefreshTrigger.emit(Unit)
     }
 
     // Containers — hot shared flow. One poll timer + one list call per 15 s,
@@ -632,6 +647,7 @@ actual class DockerRepository actual constructor(
     private val imagesShared: SharedFlow<List<DockerImage>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.IMAGE }.map { },
+            imagesRefreshTrigger,
             flow {
                 while (true) {
                     delay(15_000)
@@ -733,6 +749,7 @@ actual class DockerRepository actual constructor(
     private val volumesShared: SharedFlow<List<Volume>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.VOLUME }.map { },
+            volumesRefreshTrigger,
             flow {
                 while (true) {
                     delay(15_000)
@@ -854,6 +871,7 @@ actual class DockerRepository actual constructor(
     private val networksShared: SharedFlow<List<DockerNetwork>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.NETWORK }.map { },
+            networksRefreshTrigger,
             flow {
                 while (true) {
                     delay(15_000)

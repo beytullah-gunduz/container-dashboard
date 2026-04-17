@@ -122,11 +122,7 @@ class NetworksScreenViewModel : ViewModel() {
         _error.value = null
     }
 
-    /**
-     * Nudge the shared data pipelines to re-fetch. Networks piggyback on the
-     * same container-refresh trigger the repository uses.
-     */
     fun refresh() {
-        viewModelScope.launch { repo.refreshContainers() }
+        viewModelScope.launch { repo.refreshNetworks() }
     }
 }
