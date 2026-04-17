@@ -18,10 +18,47 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlin.math.max
 
+/**
+ * Snapshot in the per-metric history ring buffer. Disk and network values
+ * are aggregate (sum across running containers) byte-per-second rates.
+ */
 data class UsageHistory(
     val cpuHistory: List<Double> = emptyList(),
     val memoryHistory: List<Double> = emptyList(),
+    val diskReadHistory: List<Long> = emptyList(),
+    val diskWriteHistory: List<Long> = emptyList(),
+    val networkRxHistory: List<Long> = emptyList(),
+    val networkTxHistory: List<Long> = emptyList(),
+)
+
+/**
+ * Per-container stats with derived rates (bytes/sec) computed against
+ * the prior cumulative sample. The first sample for a given container
+ * yields a rate of zero.
+ */
+data class DerivedContainerStats(
+    val containerId: String,
+    val containerName: String,
+    val cpuPercent: Double,
+    val memoryPercent: Double,
+    val memoryUsage: Long,
+    val memoryLimit: Long,
+    val diskReadBytesPerSec: Long,
+    val diskWriteBytesPerSec: Long,
+    val networkRxBytesPerSec: Long,
+    val networkTxBytesPerSec: Long,
+)
+
+private data class PreviousSample(
+    val stats: ContainerStats,
+    val timestampMillis: Long,
+)
+
+private data class DerivedState(
+    val derived: List<DerivedContainerStats>,
+    val previous: Map<String, PreviousSample>,
 )
 
 class MonitoringScreenViewModel : ViewModel() {
@@ -34,29 +71,80 @@ class MonitoringScreenViewModel : ViewModel() {
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val containerStats: Flow<List<ContainerStats>> =
+    private val rawStats: Flow<List<ContainerStats>> =
         _refreshRate
             .flatMapLatest { seconds ->
                 repo.getContainerStats().sample((seconds * 1000).toLong())
             }
 
+    /**
+     * Per-container derived stats. Uses a rolling fold keyed by container id
+     * to compute bytes/sec rates from cumulative docker-java counters.
+     */
+    val derivedStats: Flow<List<DerivedContainerStats>> =
+        rawStats
+            .runningFold(DerivedState(emptyList(), emptyMap())) { acc, stats ->
+                val now = currentTimeMillis()
+                val newPrevious = mutableMapOf<String, PreviousSample>()
+                val derived =
+                    stats.map { current ->
+                        val prev = acc.previous[current.containerId]
+                        val elapsedSec =
+                            if (prev != null) {
+                                max((now - prev.timestampMillis) / 1000.0, 0.001)
+                            } else {
+                                0.0
+                            }
+                        val diskR = rate(prev?.stats?.diskReadBytes, current.diskReadBytes, elapsedSec)
+                        val diskW = rate(prev?.stats?.diskWriteBytes, current.diskWriteBytes, elapsedSec)
+                        val netRx = rate(prev?.stats?.networkRxBytes, current.networkRxBytes, elapsedSec)
+                        val netTx = rate(prev?.stats?.networkTxBytes, current.networkTxBytes, elapsedSec)
+                        newPrevious[current.containerId] = PreviousSample(current, now)
+                        DerivedContainerStats(
+                            containerId = current.containerId,
+                            containerName = current.containerName,
+                            cpuPercent = current.cpuPercent,
+                            memoryPercent = current.memoryPercent,
+                            memoryUsage = current.memoryUsage,
+                            memoryLimit = current.memoryLimit,
+                            diskReadBytesPerSec = diskR,
+                            diskWriteBytesPerSec = diskW,
+                            networkRxBytesPerSec = netRx,
+                            networkTxBytesPerSec = netTx,
+                        )
+                    }
+                DerivedState(derived, newPrevious)
+            }.map { it.derived }
+
+    /**
+     * Aggregate history across all containers. CPU is averaged, memory is
+     * average percent, disk/network are summed bytes/sec.
+     */
     val usageHistory: Flow<UsageHistory> =
-        containerStats.runningFold(UsageHistory()) { acc, stats ->
+        derivedStats.runningFold(UsageHistory()) { acc, stats ->
             if (stats.isEmpty()) {
                 acc
             } else {
                 val avgCpu = stats.sumOf { it.cpuPercent } / stats.size
                 val avgMem = stats.sumOf { it.memoryPercent } / stats.size
+                val totalDiskRead = stats.sumOf { it.diskReadBytesPerSec }
+                val totalDiskWrite = stats.sumOf { it.diskWriteBytesPerSec }
+                val totalNetRx = stats.sumOf { it.networkRxBytesPerSec }
+                val totalNetTx = stats.sumOf { it.networkTxBytesPerSec }
                 UsageHistory(
                     cpuHistory = (acc.cpuHistory + avgCpu).takeLast(maxHistorySize),
                     memoryHistory = (acc.memoryHistory + avgMem).takeLast(maxHistorySize),
+                    diskReadHistory = (acc.diskReadHistory + totalDiskRead).takeLast(maxHistorySize),
+                    diskWriteHistory = (acc.diskWriteHistory + totalDiskWrite).takeLast(maxHistorySize),
+                    networkRxHistory = (acc.networkRxHistory + totalNetRx).takeLast(maxHistorySize),
+                    networkTxHistory = (acc.networkTxHistory + totalNetTx).takeLast(maxHistorySize),
                 )
             }
         }
 
     /** Emits `false` until the first stats snapshot has been delivered. */
     val hasLoaded: StateFlow<Boolean> =
-        containerStats
+        rawStats
             .map { true }
             .onStart { emit(false) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -71,4 +159,17 @@ class MonitoringScreenViewModel : ViewModel() {
     fun clearError() {
         _error.value = null
     }
+
+    private fun rate(
+        previous: Long?,
+        current: Long,
+        elapsedSec: Double,
+    ): Long {
+        if (previous == null || elapsedSec <= 0.0) return 0L
+        val delta = current - previous
+        if (delta <= 0L) return 0L
+        return (delta / elapsedSec).toLong()
+    }
+
+    private fun currentTimeMillis(): Long = System.currentTimeMillis()
 }

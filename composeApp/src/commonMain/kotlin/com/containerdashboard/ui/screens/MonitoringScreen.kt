@@ -2,6 +2,7 @@ package com.containerdashboard.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,10 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Card
@@ -36,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +58,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.screens.viewmodel.DerivedContainerStats
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
@@ -59,12 +68,20 @@ import com.containerdashboard.ui.theme.AppColors
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
 private val COMPACT_THRESHOLD = 700.dp
 
+// Threshold below which the per-container table collapses into
+// two-row-per-container layout so disk/network columns stay legible.
+private val NARROW_TABLE_THRESHOLD = 900.dp
+
+private enum class MonitoringSort { NAME, CPU, MEM, DISK_R, DISK_W, NET_RX, NET_TX }
+
+private enum class MonitoringSortDirection { ASC, DESC }
+
 @Composable
 fun MonitoringScreen(
     modifier: Modifier = Modifier,
     viewModel: MonitoringScreenViewModel = viewModel { MonitoringScreenViewModel() },
 ) {
-    val statsOrNull by viewModel.containerStats.collectAsState(null)
+    val statsOrNull by viewModel.derivedStats.collectAsState(null)
     val stats = statsOrNull.orEmpty()
     val hasLoaded by viewModel.hasLoaded.collectAsState()
     val isLoading = !hasLoaded && statsOrNull == null
@@ -74,8 +91,51 @@ fun MonitoringScreen(
 
     val scrollState = rememberScrollState()
 
+    var searchQuery by remember { mutableStateOf("") }
+    var sortColumn by remember { mutableStateOf(MonitoringSort.NAME) }
+    var sortDirection by remember { mutableStateOf(MonitoringSortDirection.ASC) }
+
+    val onSortChange: (MonitoringSort) -> Unit = { column ->
+        if (sortColumn == column) {
+            sortDirection =
+                if (sortDirection == MonitoringSortDirection.ASC) MonitoringSortDirection.DESC else MonitoringSortDirection.ASC
+        } else {
+            sortColumn = column
+            // Sort by name ascending by default; metrics descending so
+            // the busiest container is at the top on first click.
+            sortDirection = if (column == MonitoringSort.NAME) MonitoringSortDirection.ASC else MonitoringSortDirection.DESC
+        }
+    }
+
+    val filteredStats =
+        remember(stats, searchQuery, sortColumn, sortDirection) {
+            val query = searchQuery.trim()
+            val filtered =
+                if (query.isEmpty()) {
+                    stats
+                } else {
+                    stats.filter {
+                        it.containerName.contains(query, ignoreCase = true) ||
+                            it.containerId.contains(query, ignoreCase = true)
+                    }
+                }
+            val comparator: Comparator<DerivedContainerStats> =
+                when (sortColumn) {
+                    MonitoringSort.NAME -> compareBy { it.containerName.lowercase() }
+                    MonitoringSort.CPU -> compareBy { it.cpuPercent }
+                    MonitoringSort.MEM -> compareBy { it.memoryPercent }
+                    MonitoringSort.DISK_R -> compareBy { it.diskReadBytesPerSec }
+                    MonitoringSort.DISK_W -> compareBy { it.diskWriteBytesPerSec }
+                    MonitoringSort.NET_RX -> compareBy { it.networkRxBytesPerSec }
+                    MonitoringSort.NET_TX -> compareBy { it.networkTxBytesPerSec }
+                }
+            val sorted = filtered.sortedWith(comparator)
+            if (sortDirection == MonitoringSortDirection.DESC) sorted.reversed() else sorted
+        }
+
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
+        val isNarrowTable = maxWidth < NARROW_TABLE_THRESHOLD
         val outerPadding = if (isCompactMode) 16.dp else 24.dp
         val sectionSpacing = if (isCompactMode) 16.dp else 24.dp
 
@@ -161,18 +221,63 @@ fun MonitoringScreen(
                         modifier = m,
                     )
                 }
+                val diskGraph: @Composable (Modifier) -> Unit = { m ->
+                    IoHistoryGraph(
+                        title = "Disk IO",
+                        icon = Icons.Outlined.Storage,
+                        iconTint = AppColors.AccentBlue,
+                        seriesA = history.diskReadHistory,
+                        seriesB = history.diskWriteHistory,
+                        seriesALabel = "Read",
+                        seriesBLabel = "Write",
+                        seriesAColor = AppColors.AccentBlue,
+                        seriesBColor = AppColors.Running,
+                        maxHistorySize = 60,
+                        currentA = stats.sumOf { it.diskReadBytesPerSec },
+                        currentB = stats.sumOf { it.diskWriteBytesPerSec },
+                        modifier = m,
+                    )
+                }
+                val netGraph: @Composable (Modifier) -> Unit = { m ->
+                    IoHistoryGraph(
+                        title = "Network IO",
+                        icon = Icons.Outlined.NetworkCheck,
+                        iconTint = AppColors.AccentBlueLight,
+                        seriesA = history.networkRxHistory,
+                        seriesB = history.networkTxHistory,
+                        seriesALabel = "Rx",
+                        seriesBLabel = "Tx",
+                        seriesAColor = AppColors.AccentBlueLight,
+                        seriesBColor = AppColors.Warning,
+                        maxHistorySize = 60,
+                        currentA = stats.sumOf { it.networkRxBytesPerSec },
+                        currentB = stats.sumOf { it.networkTxBytesPerSec },
+                        modifier = m,
+                    )
+                }
                 if (isCompactMode) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         cpuGraph(Modifier.fillMaxWidth())
                         memGraph(Modifier.fillMaxWidth())
+                        diskGraph(Modifier.fillMaxWidth())
+                        netGraph(Modifier.fillMaxWidth())
                     }
                 } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        cpuGraph(Modifier.weight(1f))
-                        memGraph(Modifier.weight(1f))
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            cpuGraph(Modifier.weight(1f))
+                            memGraph(Modifier.weight(1f))
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            diskGraph(Modifier.weight(1f))
+                            netGraph(Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -202,9 +307,6 @@ fun MonitoringScreen(
             }
 
             if (isLoading) {
-                // First data has not arrived yet — show an inline "Collecting data" EmptyState
-                // with a small spinner underneath so the live feed feels progressive rather
-                // than blank.
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -243,7 +345,7 @@ fun MonitoringScreen(
                     EmptyState(
                         icon = Icons.Outlined.MonitorHeart,
                         title = "No running containers",
-                        body = "Start some containers to see CPU and memory usage.",
+                        body = "Start some containers to see CPU, memory, disk, and network usage.",
                     )
                 }
             } else {
@@ -324,7 +426,9 @@ fun MonitoringScreen(
                                 containerName = stat.containerName,
                                 value = stat.memoryPercent,
                                 maxValue = 100.0,
-                                label = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
+                                label =
+                                    "${ContainerStats.formatBytes(stat.memoryUsage)} / " +
+                                        ContainerStats.formatBytes(stat.memoryLimit),
                                 barColor = getMemoryColor(stat.memoryPercent),
                             )
                         }
@@ -344,71 +448,238 @@ fun MonitoringScreen(
                         modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text(
-                            text = "Detailed Stats",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-
-                        // Table Header
                         Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            if (isCompactMode) {
-                                Text(
-                                    text = "CONTAINER",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Text(
-                                    text = "CONTAINER",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1.5f),
-                                )
-                                Text(
-                                    text = "CPU %",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(0.7f),
-                                )
-                                Text(
-                                    text = "MEMORY USAGE",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1.2f),
-                                )
-                                Text(
-                                    text = "MEMORY %",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(0.7f),
-                                )
-                            }
+                            Text(
+                                text = "Per-Container Resources",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            SearchBar(
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                placeholder = "Filter containers",
+                                compact = true,
+                                modifier = Modifier.fillMaxWidth(fraction = if (isCompactMode) 0.6f else 0.4f),
+                            )
+                        }
+
+                        if (isNarrowTable) {
+                            NarrowTableHeader(
+                                sortColumn = sortColumn,
+                                sortDirection = sortDirection,
+                                onSortChange = onSortChange,
+                            )
+                        } else {
+                            WideTableHeader(
+                                sortColumn = sortColumn,
+                                sortDirection = sortDirection,
+                                onSortChange = onSortChange,
+                            )
                         }
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
                             thickness = 1.dp,
                         )
 
-                        stats.forEach { stat ->
-                            StatsTableRow(stat = stat, isCompactMode = isCompactMode)
+                        if (filteredStats.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "No containers match the filter",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            filteredStats.forEach { stat ->
+                                StatsTableRow(stat = stat, isNarrow = isNarrowTable)
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WideTableHeader(
+    sortColumn: MonitoringSort,
+    sortDirection: MonitoringSortDirection,
+    onSortChange: (MonitoringSort) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SortableHeader("CONTAINER", MonitoringSort.NAME, sortColumn, sortDirection, onSortChange, Modifier.weight(1.4f))
+        SortableHeader("CPU %", MonitoringSort.CPU, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
+        SortableHeader("MEM %", MonitoringSort.MEM, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
+        HeaderLabel("MEM", Modifier.weight(1.0f))
+        SortableHeader("DISK R", MonitoringSort.DISK_R, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("DISK W", MonitoringSort.DISK_W, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("NET \u2193", MonitoringSort.NET_RX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("NET \u2191", MonitoringSort.NET_TX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+    }
+}
+
+@Composable
+private fun NarrowTableHeader(
+    sortColumn: MonitoringSort,
+    sortDirection: MonitoringSortDirection,
+    onSortChange: (MonitoringSort) -> Unit,
+) {
+    // Condensed two-column sort header: left = name/CPU/Mem choices,
+    // right = disk/network choices. Users click the chip matching
+    // the dimension they want to sort by; the arrow marks the active one.
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SortChip("Name", MonitoringSort.NAME, sortColumn, sortDirection, onSortChange)
+            SortChip("CPU", MonitoringSort.CPU, sortColumn, sortDirection, onSortChange)
+            SortChip("Mem", MonitoringSort.MEM, sortColumn, sortDirection, onSortChange)
+        }
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SortChip("Disk R", MonitoringSort.DISK_R, sortColumn, sortDirection, onSortChange)
+            SortChip("Disk W", MonitoringSort.DISK_W, sortColumn, sortDirection, onSortChange)
+            SortChip("Net \u2193", MonitoringSort.NET_RX, sortColumn, sortDirection, onSortChange)
+            SortChip("Net \u2191", MonitoringSort.NET_TX, sortColumn, sortDirection, onSortChange)
+        }
+    }
+}
+
+@Composable
+private fun SortableHeader(
+    label: String,
+    column: MonitoringSort,
+    activeColumn: MonitoringSort,
+    direction: MonitoringSortDirection,
+    onClick: (MonitoringSort) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isActive = activeColumn == column
+    Row(
+        modifier = modifier.clickable { onClick(column) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color =
+                if (isActive) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+        if (isActive) {
+            Icon(
+                imageVector =
+                    if (direction == MonitoringSortDirection.ASC) {
+                        Icons.Default.ArrowUpward
+                    } else {
+                        Icons.Default.ArrowDownward
+                    },
+                contentDescription = null,
+                modifier = Modifier.size(10.dp),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeaderLabel(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.SemiBold,
+        modifier = modifier,
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun SortChip(
+    label: String,
+    column: MonitoringSort,
+    activeColumn: MonitoringSort,
+    direction: MonitoringSortDirection,
+    onClick: (MonitoringSort) -> Unit,
+) {
+    val isActive = activeColumn == column
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color =
+            if (isActive) {
+                AppColors.AccentBlue.copy(alpha = 0.2f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+        modifier = Modifier.clickable { onClick(column) },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color =
+                    if (isActive) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            if (isActive) {
+                Icon(
+                    imageVector =
+                        if (direction == MonitoringSortDirection.ASC) {
+                            Icons.Default.ArrowUpward
+                        } else {
+                            Icons.Default.ArrowDownward
+                        },
+                    contentDescription = null,
+                    modifier = Modifier.size(10.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }
@@ -470,28 +741,29 @@ private fun ContainerBarRow(
 
 @Composable
 private fun StatsTableRow(
-    stat: ContainerStats,
-    isCompactMode: Boolean,
+    stat: DerivedContainerStats,
+    isNarrow: Boolean,
 ) {
     Column {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
                     .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 12.dp, vertical = if (isCompactMode) 8.dp else 0.dp),
+                    .padding(horizontal = 12.dp, vertical = if (isNarrow) 8.dp else 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (isCompactMode) {
+            if (isNarrow) {
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
+                    // Row 1: name, id, CPU, MEM
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
                             Icons.Outlined.ViewInAr,
@@ -505,20 +777,8 @@ private fun StatsTableRow(
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
+                            modifier = Modifier.weight(1f),
                         )
-                        Text(
-                            text = stat.containerId.take(12),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 1,
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
                         Text(
                             text = "CPU",
                             style = MaterialTheme.typography.labelSmall,
@@ -529,9 +789,7 @@ private fun StatsTableRow(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = getCpuColor(stat.cpuPercent),
-                            maxLines = 1,
                         )
-                        Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = "MEM",
                             style = MaterialTheme.typography.labelSmall,
@@ -542,22 +800,40 @@ private fun StatsTableRow(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = getMemoryColor(stat.memoryPercent),
-                            maxLines = 1,
                         )
                     }
-                    Text(
-                        text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Row 2: disk R/W, net Rx/Tx
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp),
+                    ) {
+                        IoLabel(
+                            "DISK R",
+                            ContainerStats.formatBytesPerSecond(stat.diskReadBytesPerSec),
+                            AppColors.AccentBlue,
+                        )
+                        IoLabel(
+                            "DISK W",
+                            ContainerStats.formatBytesPerSecond(stat.diskWriteBytesPerSec),
+                            AppColors.Running,
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        IoLabel(
+                            "NET \u2193",
+                            ContainerStats.formatBytesPerSecond(stat.networkRxBytesPerSec),
+                            AppColors.AccentBlueLight,
+                        )
+                        IoLabel(
+                            "NET \u2191",
+                            ContainerStats.formatBytesPerSecond(stat.networkTxBytesPerSec),
+                            AppColors.Warning,
+                        )
+                    }
                 }
             } else {
-                // Container name (name + short id, single line)
                 Row(
-                    modifier = Modifier.weight(1.5f),
+                    modifier = Modifier.weight(1.4f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
@@ -568,15 +844,13 @@ private fun StatsTableRow(
                         tint = AppColors.Running,
                     )
                     Text(
-                        text = "${stat.containerName} · ${stat.containerId.take(12)}",
+                        text = "${stat.containerName} \u00B7 ${stat.containerId.take(12)}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-
-                // CPU %
                 Text(
                     text = "%.1f%%".format(stat.cpuPercent),
                     style = MaterialTheme.typography.bodySmall,
@@ -585,18 +859,6 @@ private fun StatsTableRow(
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),
                 )
-
-                // Memory usage
-                Text(
-                    text = "${stat.formattedMemoryUsage} / ${stat.formattedMemoryLimit}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1.2f),
-                )
-
-                // Memory %
                 Text(
                     text = "%.1f%%".format(stat.memoryPercent),
                     style = MaterialTheme.typography.bodySmall,
@@ -605,11 +867,77 @@ private fun StatsTableRow(
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),
                 )
+                Text(
+                    text = ContainerStats.formatBytes(stat.memoryUsage),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1.0f),
+                )
+                Text(
+                    text = ContainerStats.formatBytesPerSecond(stat.diskReadBytesPerSec),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.9f),
+                )
+                Text(
+                    text = ContainerStats.formatBytesPerSecond(stat.diskWriteBytesPerSec),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.9f),
+                )
+                Text(
+                    text = ContainerStats.formatBytesPerSecond(stat.networkRxBytesPerSec),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.9f),
+                )
+                Text(
+                    text = ContainerStats.formatBytesPerSecond(stat.networkTxBytesPerSec),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.weight(0.9f),
+                )
             }
         }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
             thickness = 0.5.dp,
+        )
+    }
+}
+
+@Composable
+private fun IoLabel(
+    label: String,
+    value: String,
+    accent: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.SemiBold,
+            color = accent,
+            maxLines = 1,
         )
     }
 }
@@ -738,6 +1066,192 @@ private fun UsageHistoryGraph(
                 }
             }
         }
+    }
+}
+
+/**
+ * Dual-series IO history graph. Both series share a dynamic max value
+ * derived from the window, so the graph auto-scales as throughput changes.
+ * Series A (e.g. read/rx) and series B (e.g. write/tx) are drawn as thin
+ * stacked columns sharing each time slot.
+ */
+@Composable
+private fun IoHistoryGraph(
+    title: String,
+    icon: ImageVector,
+    iconTint: Color,
+    seriesA: List<Long>,
+    seriesB: List<Long>,
+    seriesALabel: String,
+    seriesBLabel: String,
+    seriesAColor: Color,
+    seriesBColor: Color,
+    maxHistorySize: Int,
+    currentA: Long,
+    currentB: Long,
+    modifier: Modifier = Modifier,
+) {
+    val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val maxInWindow =
+        (seriesA.maxOrNull() ?: 0L)
+            .coerceAtLeast(seriesB.maxOrNull() ?: 0L)
+            .coerceAtLeast(1L)
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = iconTint,
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    LegendChip(seriesALabel, ContainerStats.formatBytesPerSecond(currentA), seriesAColor)
+                    LegendChip(seriesBLabel, ContainerStats.formatBytesPerSecond(currentB), seriesBColor)
+                }
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
+            ) {
+                Box(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {
+                    Text(
+                        text = ContainerStats.formatBytesPerSecond(maxInWindow),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.TopStart),
+                    )
+                    Text(
+                        text = ContainerStats.formatBytesPerSecond(maxInWindow / 2),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.CenterStart),
+                    )
+                    Text(
+                        text = "0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = labelColor.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.BottomStart),
+                    )
+                }
+
+                Canvas(modifier = Modifier.fillMaxSize().padding(start = 72.dp)) {
+                    val chartWidth = size.width
+                    val chartHeight = size.height
+                    val slotWidth = chartWidth / maxHistorySize
+                    val seriesCount = 2
+                    val seriesBarWidth = (slotWidth / seriesCount).coerceAtLeast(1f)
+                    val gap = 0.5f
+
+                    // Grid lines at 25%, 50%, 75%
+                    for (i in 1..3) {
+                        val y = chartHeight * (1 - i / 4f)
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(0f, y),
+                            end = Offset(chartWidth, y),
+                            strokeWidth = 1f,
+                        )
+                    }
+
+                    val startOffsetA = (maxHistorySize - seriesA.size) * slotWidth
+                    seriesA.forEachIndexed { index, value ->
+                        val x = startOffsetA + index * slotWidth
+                        val fraction = (value.toDouble() / maxInWindow).coerceIn(0.0, 1.0).toFloat()
+                        val barHeight = chartHeight * fraction
+                        drawRoundRect(
+                            color = seriesAColor,
+                            topLeft = Offset(x + gap, chartHeight - barHeight),
+                            size = Size((seriesBarWidth - gap * 2).coerceAtLeast(1f), barHeight),
+                            cornerRadius =
+                                androidx.compose.ui.geometry
+                                    .CornerRadius(2f, 2f),
+                        )
+                    }
+                    val startOffsetB = (maxHistorySize - seriesB.size) * slotWidth
+                    seriesB.forEachIndexed { index, value ->
+                        val x = startOffsetB + index * slotWidth + seriesBarWidth
+                        val fraction = (value.toDouble() / maxInWindow).coerceIn(0.0, 1.0).toFloat()
+                        val barHeight = chartHeight * fraction
+                        drawRoundRect(
+                            color = seriesBColor,
+                            topLeft = Offset(x + gap, chartHeight - barHeight),
+                            size = Size((seriesBarWidth - gap * 2).coerceAtLeast(1f), barHeight),
+                            cornerRadius =
+                                androidx.compose.ui.geometry
+                                    .CornerRadius(2f, 2f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendChip(
+    label: String,
+    value: String,
+    color: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(color),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.SemiBold,
+            color = color,
+        )
     }
 }
 

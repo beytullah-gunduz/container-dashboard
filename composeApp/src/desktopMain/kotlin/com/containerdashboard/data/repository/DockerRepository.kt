@@ -999,12 +999,18 @@ actual class DockerRepository actual constructor(
                     dockerClient.statsCmd(id).withNoStream(true).exec(callback)
                     callback.awaitCompletion()
                     result?.let {
+                        val (diskR, diskW) = extractDiskIo(it)
+                        val (netRx, netTx) = extractNetworkIo(it)
                         ContainerStats(
                             containerId = id,
                             containerName = name,
                             cpuPercent = calculateCpuPercent(it),
                             memoryUsage = it.memoryStats?.usage ?: 0L,
                             memoryLimit = it.memoryStats?.limit ?: 0L,
+                            diskReadBytes = diskR,
+                            diskWriteBytes = diskW,
+                            networkRxBytes = netRx,
+                            networkTxBytes = netTx,
                         )
                     }
                 } catch (e: Exception) {
@@ -1060,6 +1066,8 @@ actual class DockerRepository actual constructor(
                             val cpuPercent = calculateCpuPercent(it)
                             val memUsage = it.memoryStats?.usage ?: 0L
                             val memLimit = it.memoryStats?.limit ?: 0L
+                            val (diskR, diskW) = extractDiskIo(it)
+                            val (netRx, netTx) = extractNetworkIo(it)
                             trySend(
                                 ContainerStats(
                                     containerId = containerId,
@@ -1067,6 +1075,10 @@ actual class DockerRepository actual constructor(
                                     cpuPercent = cpuPercent,
                                     memoryUsage = memUsage,
                                     memoryLimit = memLimit,
+                                    diskReadBytes = diskR,
+                                    diskWriteBytes = diskW,
+                                    networkRxBytes = netRx,
+                                    networkTxBytes = netTx,
                                 ),
                             )
                         }
@@ -1097,6 +1109,40 @@ actual class DockerRepository actual constructor(
         }.catch { e ->
             logger.debug("Stats flow error for container {}: {}", containerId, e.message)
         }.sample(refreshRateMillis)
+
+    // Sum cumulative disk IO from blkioStats.ioServiceBytesRecursive entries by op.
+    // Many backends (notably cgroup v2 / rootless Docker) report an empty list —
+    // we return (0, 0) in that case rather than failing.
+    private fun extractDiskIo(stats: com.github.dockerjava.api.model.Statistics): Pair<Long, Long> {
+        val entries = stats.blkioStats?.ioServiceBytesRecursive ?: return 0L to 0L
+        if (entries.isEmpty()) return 0L to 0L
+        var read = 0L
+        var write = 0L
+        for (entry in entries) {
+            val op = entry?.op?.lowercase() ?: continue
+            val value = entry.value ?: continue
+            when (op) {
+                "read" -> read += value
+                "write" -> write += value
+            }
+        }
+        return read to write
+    }
+
+    // Sum cumulative rx/tx bytes across every network interface reported.
+    // Returns (0, 0) when the networks map is missing or empty.
+    private fun extractNetworkIo(stats: com.github.dockerjava.api.model.Statistics): Pair<Long, Long> {
+        val networks = stats.networks ?: return 0L to 0L
+        if (networks.isEmpty()) return 0L to 0L
+        var rx = 0L
+        var tx = 0L
+        for (net in networks.values) {
+            if (net == null) continue
+            rx += net.rxBytes ?: 0L
+            tx += net.txBytes ?: 0L
+        }
+        return rx to tx
+    }
 
     private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
         val cpuStats = stats.cpuStats ?: return 0.0
