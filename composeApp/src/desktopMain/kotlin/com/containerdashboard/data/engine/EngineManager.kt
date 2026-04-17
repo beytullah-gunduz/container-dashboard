@@ -21,8 +21,15 @@ data class ColimaStatus(
 
 sealed interface EngineActionState {
     data object Idle : EngineActionState
-    data class Running(val message: String) : EngineActionState
-    data class Done(val success: Boolean, val message: String) : EngineActionState
+
+    data class Running(
+        val message: String,
+    ) : EngineActionState
+
+    data class Done(
+        val success: Boolean,
+        val message: String,
+    ) : EngineActionState
 }
 
 object EngineManager {
@@ -51,9 +58,10 @@ object EngineManager {
                 if (profile != "default") {
                     cmd.addAll(listOf("--profile", profile))
                 }
-                val proc = ProcessBuilder(cmd)
-                    .redirectErrorStream(true)
-                    .start()
+                val proc =
+                    ProcessBuilder(cmd)
+                        .redirectErrorStream(true)
+                        .start()
                 val text = proc.inputStream.bufferedReader().readText()
                 val exitCode = proc.waitFor()
                 if (exitCode != 0) return@withContext null
@@ -78,11 +86,12 @@ object EngineManager {
                 val cmd = buildCommand(type, "start", profile, cpu, memory, disk)
                 appendOutput("$ ${cmd.joinToString(" ")}")
                 val success = runProcess(cmd)
-                _actionState.value = if (success) {
-                    EngineActionState.Done(true, "${type.displayName} started")
-                } else {
-                    EngineActionState.Done(false, "Failed to start ${type.displayName}")
-                }
+                _actionState.value =
+                    if (success) {
+                        EngineActionState.Done(true, "${type.displayName} started")
+                    } else {
+                        EngineActionState.Done(false, "Failed to start ${type.displayName}")
+                    }
                 success
             } catch (e: Exception) {
                 logger.error("Failed to start engine", e)
@@ -104,11 +113,12 @@ object EngineManager {
                 val cmd = buildCommand(type, "stop", profile)
                 appendOutput("$ ${cmd.joinToString(" ")}")
                 val success = runProcess(cmd)
-                _actionState.value = if (success) {
-                    EngineActionState.Done(true, "${type.displayName} stopped")
-                } else {
-                    EngineActionState.Done(false, "Failed to stop ${type.displayName}")
-                }
+                _actionState.value =
+                    if (success) {
+                        EngineActionState.Done(true, "${type.displayName} stopped")
+                    } else {
+                        EngineActionState.Done(false, "Failed to stop ${type.displayName}")
+                    }
                 success
             } catch (e: Exception) {
                 logger.error("Failed to stop engine", e)
@@ -126,8 +136,8 @@ object EngineManager {
         cpu: Int? = null,
         memory: Int? = null,
         disk: Int? = null,
-    ): List<String> {
-        return when (type) {
+    ): List<String> =
+        when (type) {
             EngineType.COLIMA -> {
                 val cmd = mutableListOf("colima", action)
                 if (!profile.isNullOrEmpty() && profile != "default") {
@@ -140,34 +150,38 @@ object EngineManager {
                 }
                 cmd
             }
-            EngineType.DOCKER_DESKTOP -> when (action) {
-                "start" -> listOf("open", "-a", "Docker")
-                "stop" -> listOf("osascript", "-e", "quit app \"Docker\"")
-                else -> listOf("echo", "unsupported")
-            }
-            EngineType.ORBSTACK -> when (action) {
-                "start" -> listOf("open", "-a", "OrbStack")
-                "stop" -> listOf("osascript", "-e", "quit app \"OrbStack\"")
-                else -> listOf("echo", "unsupported")
-            }
-            EngineType.LIMA -> when (action) {
-                "start" -> listOf("limactl", "start")
-                "stop" -> listOf("limactl", "stop")
-                else -> listOf("echo", "unsupported")
-            }
-            EngineType.RANCHER_DESKTOP -> when (action) {
-                "start" -> listOf("open", "-a", "Rancher Desktop")
-                "stop" -> listOf("osascript", "-e", "quit app \"Rancher Desktop\"")
-                else -> listOf("echo", "unsupported")
-            }
+            EngineType.DOCKER_DESKTOP ->
+                when (action) {
+                    "start" -> listOf("open", "-a", "Docker")
+                    "stop" -> listOf("osascript", "-e", "quit app \"Docker\"")
+                    else -> listOf("echo", "unsupported")
+                }
+            EngineType.ORBSTACK ->
+                when (action) {
+                    "start" -> listOf("open", "-a", "OrbStack")
+                    "stop" -> listOf("osascript", "-e", "quit app \"OrbStack\"")
+                    else -> listOf("echo", "unsupported")
+                }
+            EngineType.LIMA ->
+                when (action) {
+                    "start" -> listOf("limactl", "start")
+                    "stop" -> listOf("limactl", "stop")
+                    else -> listOf("echo", "unsupported")
+                }
+            EngineType.RANCHER_DESKTOP ->
+                when (action) {
+                    "start" -> listOf("open", "-a", "Rancher Desktop")
+                    "stop" -> listOf("osascript", "-e", "quit app \"Rancher Desktop\"")
+                    else -> listOf("echo", "unsupported")
+                }
             EngineType.UNKNOWN -> listOf("echo", "Unknown engine")
         }
-    }
 
     private fun runProcess(cmd: List<String>): Boolean {
-        val proc = ProcessBuilder(cmd)
-            .redirectErrorStream(true)
-            .start()
+        val proc =
+            ProcessBuilder(cmd)
+                .redirectErrorStream(true)
+                .start()
 
         proc.inputStream.bufferedReader().forEachLine { line ->
             appendOutput(line)

@@ -124,11 +124,12 @@ private fun trayStatsFlow(refreshRateSeconds: Int): Flow<TrayStats> =
                 val repo = AppModule.dockerRepository
                 val containers = repo.listContainersOnce(all = true)
                 val running = containers.filter { it.isRunning }
-                val stats = if (running.isNotEmpty()) {
-                    repo.getContainerStatsOnce(running.map { it.id to it.displayName })
-                } else {
-                    emptyList()
-                }
+                val stats =
+                    if (running.isNotEmpty()) {
+                        repo.getContainerStatsOnce(running.map { it.id to it.displayName })
+                    } else {
+                        emptyList()
+                    }
                 val totalCpu = stats.sumOf { it.cpuPercent }
                 val totalMemUsage = stats.sumOf { it.memoryUsage }
                 val totalMemLimit = stats.maxOfOrNull { it.memoryLimit } ?: 0L
@@ -187,7 +188,8 @@ fun main() {
                 position = WindowPosition(Alignment.Center),
             )
 
-        val refreshRate by PreferenceRepository.trayRefreshRateSeconds()
+        val refreshRate by PreferenceRepository
+            .trayRefreshRateSeconds()
             .collectAsState(initial = 5)
 
         var trayStats by remember { mutableStateOf(TrayStats()) }
@@ -200,12 +202,13 @@ fun main() {
         val alertIcon = remember { AppIconPainter(alertMode = true) }
         val currentIcon = if (trayStats.isAlert) alertIcon else appIcon
 
-        val statsTooltip = buildString {
-            append("Container Dashboard")
-            append(" — ${trayStats.runningContainers} running")
-            append(" | CPU: ${"%.1f".format(trayStats.totalCpuPercent)}%")
-            append(" | Mem: ${"%.1f".format(trayStats.memoryPercent)}%")
-        }
+        val statsTooltip =
+            buildString {
+                append("Container Dashboard")
+                append(" — ${trayStats.runningContainers} running")
+                append(" | CPU: ${"%.1f".format(trayStats.totalCpuPercent)}%")
+                append(" | Mem: ${"%.1f".format(trayStats.memoryPercent)}%")
+            }
 
         Tray(
             icon = currentIcon,
@@ -217,8 +220,10 @@ fun main() {
                     onClick = { isWindowVisible = !isWindowVisible },
                 )
                 Separator()
+                val runningCount = trayStats.runningContainers
+                val plural = if (runningCount != 1) "s" else ""
                 Item(
-                    text = "\uD83D\uDCE6 ${trayStats.runningContainers} running container${if (trayStats.runningContainers != 1) "s" else ""}",
+                    text = "\uD83D\uDCE6 $runningCount running container$plural",
                     enabled = false,
                     onClick = {},
                 )
@@ -227,8 +232,11 @@ fun main() {
                     enabled = false,
                     onClick = {},
                 )
+                val memUsage = ContainerStats.formatBytes(trayStats.totalMemoryUsage)
+                val memLimit = ContainerStats.formatBytes(trayStats.totalMemoryLimit)
+                val memPct = "%.1f".format(trayStats.memoryPercent)
                 Item(
-                    text = "\uD83D\uDCBE Mem: ${ContainerStats.formatBytes(trayStats.totalMemoryUsage)} / ${ContainerStats.formatBytes(trayStats.totalMemoryLimit)} (${"%.1f".format(trayStats.memoryPercent)}%)",
+                    text = "\uD83D\uDCBE Mem: $memUsage / $memLimit ($memPct%)",
                     enabled = false,
                     onClick = {},
                 )
@@ -254,10 +262,11 @@ fun main() {
             visible = isWindowVisible,
             undecorated = true,
         ) {
-            val desktopChrome = rememberDesktopWindowChrome(
-                windowState = windowState,
-                onClose = { isWindowVisible = false },
-            )
+            val desktopChrome =
+                rememberDesktopWindowChrome(
+                    windowState = windowState,
+                    onClose = { isWindowVisible = false },
+                )
             CompositionLocalProvider(LocalDesktopWindowChrome provides desktopChrome) {
                 App(
                     navigateToRoute = pendingRoute,

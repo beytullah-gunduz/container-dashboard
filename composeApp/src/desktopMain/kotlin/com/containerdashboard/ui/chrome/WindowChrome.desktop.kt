@@ -85,32 +85,33 @@ fun FrameWindowScope.rememberDesktopWindowChrome(
         if (currentDesktopOs == DesktopOs.MAC) {
             { content ->
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            var lastPressUptime = 0L
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    if (event.type == PointerEventType.Press &&
-                                        event.changes.none { it.isConsumed }
-                                    ) {
-                                        val now = event.changes.first().uptimeMillis
-                                        val isDoubleClick = now - lastPressUptime in 1..DOUBLE_CLICK_MS
-                                        if (isDoubleClick) {
-                                            onToggleMaximize()
-                                            event.changes.forEach { it.consume() }
-                                            lastPressUptime = 0L
-                                        } else {
-                                            lastPressUptime = now
-                                            if (NativeWindowDrag.startDrag()) {
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .pointerInput(Unit) {
+                                var lastPressUptime = 0L
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Main)
+                                        if (event.type == PointerEventType.Press &&
+                                            event.changes.none { it.isConsumed }
+                                        ) {
+                                            val now = event.changes.first().uptimeMillis
+                                            val isDoubleClick = now - lastPressUptime in 1..DOUBLE_CLICK_MS
+                                            if (isDoubleClick) {
+                                                onToggleMaximize()
                                                 event.changes.forEach { it.consume() }
+                                                lastPressUptime = 0L
+                                            } else {
+                                                lastPressUptime = now
+                                                if (NativeWindowDrag.startDrag()) {
+                                                    event.changes.forEach { it.consume() }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        },
+                            },
                 ) {
                     content()
                 }
@@ -180,9 +181,10 @@ private fun TrafficLights(
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     Row(
-        modifier = modifier
-            .padding(start = 12.dp, end = 8.dp)
-            .hoverable(interaction),
+        modifier =
+            modifier
+                .padding(start = 12.dp, end = 8.dp)
+                .hoverable(interaction),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -201,18 +203,20 @@ private fun TrafficLight(
 ) {
     val displayColor = if (enabled) color else color.copy(alpha = 0.3f)
     Box(
-        modifier = Modifier
-            .size(12.dp)
-            .clip(CircleShape)
-            .background(displayColor)
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        modifier =
+            Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(displayColor)
+                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (showGlyph && enabled) {
             Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                modifier =
+                    Modifier
+                        .size(6.dp)
+                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
             )
         }
     }
@@ -247,11 +251,12 @@ private fun TitleBarButton(
     IconButton(
         onClick = onClick,
         modifier = Modifier.size(width = 40.dp, height = 32.dp),
-        colors = if (isClose) {
-            IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-        } else {
-            IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-        },
+        colors =
+            if (isClose) {
+                IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+            } else {
+                IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
     ) {
         content()
     }

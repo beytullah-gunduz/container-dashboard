@@ -38,16 +38,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.containerdashboard.data.engine.EngineActionStatus
-import com.containerdashboard.data.engine.EngineOperations
 import com.containerdashboard.ui.chrome.TopBarDragArea
 import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
 import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.Sidebar
-import com.containerdashboard.ui.components.saveLogsToFile
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
+import com.containerdashboard.ui.components.saveLogsToFile
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.AppLogsScreen
 import com.containerdashboard.ui.screens.ContainersScreen
@@ -167,9 +165,10 @@ fun App(
                         detailPaneTopOverlay = {
                             TopBarDragArea {
                                 Spacer(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(32.dp),
                                 )
                             }
                         },
@@ -255,9 +254,10 @@ private fun WindowChromeBar(title: String) {
         tonalElevation = 2.dp,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(32.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             WindowChromeLeading()

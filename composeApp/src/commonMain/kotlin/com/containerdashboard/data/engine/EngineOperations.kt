@@ -10,8 +10,15 @@ data class ColimaConfig(
 
 sealed interface EngineActionStatus {
     data object Idle : EngineActionStatus
-    data class Running(val message: String) : EngineActionStatus
-    data class Done(val success: Boolean, val message: String) : EngineActionStatus
+
+    data class Running(
+        val message: String,
+    ) : EngineActionStatus
+
+    data class Done(
+        val success: Boolean,
+        val message: String,
+    ) : EngineActionStatus
 }
 
 expect object EngineOperations {

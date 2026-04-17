@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -111,9 +108,10 @@ fun JediTermConsole(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.7f)),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.7f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(
@@ -143,8 +141,8 @@ private fun createTerminalWidget(
     val settings =
         object : DefaultSettingsProvider() {
             @Suppress("OVERRIDE_DEPRECATION")
-            override fun getDefaultStyle(): com.jediterm.terminal.TextStyle {
-                return if (darkTheme) {
+            override fun getDefaultStyle(): com.jediterm.terminal.TextStyle =
+                if (darkTheme) {
                     com.jediterm.terminal.TextStyle(
                         com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0xD4, 0xD4, 0xD4)),
                         com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0x1A, 0x1A, 0x1A)),
@@ -155,7 +153,6 @@ private fun createTerminalWidget(
                         com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0xF5, 0xF5, 0xF5)),
                     )
                 }
-            }
 
             @Suppress("DEPRECATION")
             override fun useAntialiasing(): Boolean = true

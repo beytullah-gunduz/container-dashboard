@@ -54,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.logging.AppLogEntry
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -250,7 +251,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
         targetValue =
             when (entry.level) {
                 "ERROR" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
-                "WARN" -> Color(0xFFFFF3E0).copy(alpha = 0.10f)
+                "WARN" -> AppTheme.extended.warningSurfaceLight
                 else -> Color.Transparent
             },
     )

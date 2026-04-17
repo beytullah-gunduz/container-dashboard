@@ -35,12 +35,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.monospaceMedium
 
 @Composable
 fun LogsPane(
@@ -237,12 +236,7 @@ fun LogsPane(
                             ) {
                                 Text(
                                     text = state.logs,
-                                    style =
-                                        MaterialTheme.typography.bodySmall.copy(
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 12.sp,
-                                            lineHeight = 18.sp,
-                                        ),
+                                    style = MaterialTheme.typography.monospaceMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }

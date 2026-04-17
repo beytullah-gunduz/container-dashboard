@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -35,7 +33,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -133,210 +130,210 @@ fun ImagesScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
         ) {
-            Column {
-                Text(
-                    text = "Images",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "${images.size} images, ${formatBytes(totalSize)} total",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (checkedImageIds.isNotEmpty()) {
-                    Button(
-                        onClick = { viewModel.deleteSelectedImages() },
-                        enabled = !isDeletingSelected,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    ) {
-                        if (isDeletingSelected) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        text = "Images",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "${images.size} images, ${formatBytes(totalSize)} total",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (checkedImageIds.isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.deleteSelectedImages() },
+                            enabled = !isDeletingSelected,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        ) {
+                            if (isDeletingSelected) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError,
+                                )
+                            } else {
+                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete ${checkedImageIds.size} selected")
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete ${checkedImageIds.size} selected")
-                    }
-                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Clear")
+                        OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear")
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        // Error message
-        error?.let { errorMessage ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // Error message
+            error?.let { errorMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
                 ) {
-                    Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { viewModel.clearError() }) {
-                        Icon(Icons.Default.Close, null)
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(Icons.Default.Close, null)
+                        }
+                    }
+                }
+            }
+
+            // Search
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search images...",
+                modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+                compact = isCompactMode,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (filteredImages.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No images found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    // Named images section
+                    if (namedImages.isNotEmpty()) {
+                        item(key = "named-header") {
+                            ImageSectionHeader(
+                                title = "Images",
+                                count = namedImages.size,
+                                expanded = namedImagesVisible,
+                                onToggle = { namedImagesVisible = !namedImagesVisible },
+                            )
+                        }
+
+                        item(key = "named-table-header") {
+                            AnimatedVisibility(
+                                visible = namedImagesVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ImageTableHeader(
+                                    sortColumn = sortColumn,
+                                    sortDirection = sortDirection,
+                                    onSort = { viewModel.toggleSort(it) },
+                                    allSelected = namedImages.isNotEmpty() && namedImages.all { it.id in checkedImageIds },
+                                    onSelectAllChange = { selected ->
+                                        namedImages.forEach { viewModel.toggleChecked(it.id, selected) }
+                                    },
+                                    hasItems = namedImages.isNotEmpty(),
+                                    isCompactMode = isCompactMode,
+                                )
+                            }
+                        }
+
+                        items(namedImages, key = { "named-${it.id}" }) { image ->
+                            AnimatedVisibility(
+                                visible = namedImagesVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ImageRow(
+                                    image = image,
+                                    isSelected = selectedImage == image.id,
+                                    isChecked = image.id in checkedImageIds,
+                                    onCheckedChange = { viewModel.toggleChecked(image.id, it) },
+                                    onClick = { viewModel.setSelectedImage(image.id) },
+                                    onRemove = { viewModel.removeImage(image.id) },
+                                    isCompactMode = isCompactMode,
+                                )
+                            }
+                        }
+                    }
+
+                    // Unnamed images section
+                    if (unnamedImages.isNotEmpty()) {
+                        item(key = "unnamed-header") {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ImageSectionHeader(
+                                title = "Dangling Images",
+                                count = unnamedImages.size,
+                                expanded = unnamedImagesVisible,
+                                onToggle = { unnamedImagesVisible = !unnamedImagesVisible },
+                            )
+                        }
+
+                        item(key = "unnamed-table-header") {
+                            AnimatedVisibility(
+                                visible = unnamedImagesVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ImageTableHeader(
+                                    sortColumn = sortColumn,
+                                    sortDirection = sortDirection,
+                                    onSort = { viewModel.toggleSort(it) },
+                                    allSelected = unnamedImages.isNotEmpty() && unnamedImages.all { it.id in checkedImageIds },
+                                    onSelectAllChange = { selected ->
+                                        unnamedImages.forEach { viewModel.toggleChecked(it.id, selected) }
+                                    },
+                                    hasItems = unnamedImages.isNotEmpty(),
+                                    isCompactMode = isCompactMode,
+                                )
+                            }
+                        }
+
+                        items(unnamedImages, key = { "unnamed-${it.id}" }) { image ->
+                            AnimatedVisibility(
+                                visible = unnamedImagesVisible,
+                                enter = expandVertically(),
+                                exit = shrinkVertically(),
+                            ) {
+                                ImageRow(
+                                    image = image,
+                                    isSelected = selectedImage == image.id,
+                                    isChecked = image.id in checkedImageIds,
+                                    onCheckedChange = { viewModel.toggleChecked(image.id, it) },
+                                    onClick = { viewModel.setSelectedImage(image.id) },
+                                    onRemove = { viewModel.removeImage(image.id) },
+                                    isCompactMode = isCompactMode,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-
-        // Search
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search images...",
-            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
-            compact = isCompactMode,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (filteredImages.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No images found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-                // Named images section
-                if (namedImages.isNotEmpty()) {
-                    item(key = "named-header") {
-                        ImageSectionHeader(
-                            title = "Images",
-                            count = namedImages.size,
-                            expanded = namedImagesVisible,
-                            onToggle = { namedImagesVisible = !namedImagesVisible },
-                        )
-                    }
-
-                    item(key = "named-table-header") {
-                        AnimatedVisibility(
-                            visible = namedImagesVisible,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            ImageTableHeader(
-                                sortColumn = sortColumn,
-                                sortDirection = sortDirection,
-                                onSort = { viewModel.toggleSort(it) },
-                                allSelected = namedImages.isNotEmpty() && namedImages.all { it.id in checkedImageIds },
-                                onSelectAllChange = { selected ->
-                                    namedImages.forEach { viewModel.toggleChecked(it.id, selected) }
-                                },
-                                hasItems = namedImages.isNotEmpty(),
-                                isCompactMode = isCompactMode,
-                            )
-                        }
-                    }
-
-                    items(namedImages, key = { "named-${it.id}" }) { image ->
-                        AnimatedVisibility(
-                            visible = namedImagesVisible,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            ImageRow(
-                                image = image,
-                                isSelected = selectedImage == image.id,
-                                isChecked = image.id in checkedImageIds,
-                                onCheckedChange = { viewModel.toggleChecked(image.id, it) },
-                                onClick = { viewModel.setSelectedImage(image.id) },
-                                onRemove = { viewModel.removeImage(image.id) },
-                                isCompactMode = isCompactMode,
-                            )
-                        }
-                    }
-                }
-
-                // Unnamed images section
-                if (unnamedImages.isNotEmpty()) {
-                    item(key = "unnamed-header") {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ImageSectionHeader(
-                            title = "Dangling Images",
-                            count = unnamedImages.size,
-                            expanded = unnamedImagesVisible,
-                            onToggle = { unnamedImagesVisible = !unnamedImagesVisible },
-                        )
-                    }
-
-                    item(key = "unnamed-table-header") {
-                        AnimatedVisibility(
-                            visible = unnamedImagesVisible,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            ImageTableHeader(
-                                sortColumn = sortColumn,
-                                sortDirection = sortDirection,
-                                onSort = { viewModel.toggleSort(it) },
-                                allSelected = unnamedImages.isNotEmpty() && unnamedImages.all { it.id in checkedImageIds },
-                                onSelectAllChange = { selected ->
-                                    unnamedImages.forEach { viewModel.toggleChecked(it.id, selected) }
-                                },
-                                hasItems = unnamedImages.isNotEmpty(),
-                                isCompactMode = isCompactMode,
-                            )
-                        }
-                    }
-
-                    items(unnamedImages, key = { "unnamed-${it.id}" }) { image ->
-                        AnimatedVisibility(
-                            visible = unnamedImagesVisible,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            ImageRow(
-                                image = image,
-                                isSelected = selectedImage == image.id,
-                                isChecked = image.id in checkedImageIds,
-                                onCheckedChange = { viewModel.toggleChecked(image.id, it) },
-                                onClick = { viewModel.setSelectedImage(image.id) },
-                                onRemove = { viewModel.removeImage(image.id) },
-                                isCompactMode = isCompactMode,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
     }
 }
 

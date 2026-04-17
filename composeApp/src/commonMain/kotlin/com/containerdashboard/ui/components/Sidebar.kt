@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -130,7 +129,10 @@ private fun SidebarItem(
 }
 
 @Composable
-private fun ConnectionStatus(isConnected: Boolean, engineName: String) {
+private fun ConnectionStatus(
+    isConnected: Boolean,
+    engineName: String,
+) {
     Row(
         modifier =
             Modifier

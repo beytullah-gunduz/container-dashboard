@@ -13,9 +13,10 @@ data class LogsPaneState(
     val container: Container? get() = containers.singleOrNull()
     val isGroupMode: Boolean get() = containers.size > 1
     val displayName: String
-        get() = when {
-            isGroupMode -> containers.firstOrNull()?.composeProject ?: "Group"
-            containers.size == 1 -> containers.first().displayName
-            else -> ""
-        }
+        get() =
+            when {
+                isGroupMode -> containers.firstOrNull()?.composeProject ?: "Group"
+                containers.size == 1 -> containers.first().displayName
+                else -> ""
+            }
 }

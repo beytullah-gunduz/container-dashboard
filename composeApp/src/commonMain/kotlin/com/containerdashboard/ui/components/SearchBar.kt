@@ -25,6 +25,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.theme.IconSize
+import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 @Composable
 fun SearchBar(
@@ -35,16 +38,16 @@ fun SearchBar(
     compact: Boolean = false,
 ) {
     val height = if (compact) 30.dp else 40.dp
-    val iconSize = if (compact) 14.dp else 18.dp
-    val horizontalPadding = if (compact) 8.dp else 12.dp
-    val itemSpacing = if (compact) 6.dp else 8.dp
+    val iconSize = if (compact) 14.dp else IconSize.md
+    val horizontalPadding = if (compact) Spacing.sm else Spacing.md
+    val itemSpacing = if (compact) 6.dp else Spacing.sm
     val textStyle = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium
-    val clearButtonSize = if (compact) 16.dp else 18.dp
-    val clearIconSize = if (compact) 12.dp else 16.dp
+    val clearButtonSize = if (compact) 16.dp else IconSize.md
+    val clearIconSize = if (compact) 12.dp else IconSize.sm
 
     Surface(
         modifier = modifier.height(height),
-        shape = RoundedCornerShape(if (compact) 6.dp else 8.dp),
+        shape = RoundedCornerShape(if (compact) 6.dp else Radius.md),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
         Row(

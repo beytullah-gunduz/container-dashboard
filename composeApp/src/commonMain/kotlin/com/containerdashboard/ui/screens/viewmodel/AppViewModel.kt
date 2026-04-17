@@ -37,7 +37,8 @@ class AppViewModel : ViewModel() {
     val currentRoute: StateFlow<String> = _currentRoute.asStateFlow()
 
     val engineName: StateFlow<String> =
-        PreferenceRepository.engineHost()
+        PreferenceRepository
+            .engineHost()
             .map { engineTypeFromHost(it).displayName }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Container Engine")
 
@@ -54,9 +55,10 @@ class AppViewModel : ViewModel() {
                 val tracked = _logsPaneState.value.containers
                 if (tracked.isEmpty()) return@collect
 
-                val updated = tracked.map { old ->
-                    liveContainers.find { it.id == old.id } ?: old
-                }
+                val updated =
+                    tracked.map { old ->
+                        liveContainers.find { it.id == old.id } ?: old
+                    }
                 val allGone = tracked.all { old -> liveContainers.none { it.id == old.id } }
 
                 if (allGone) {
@@ -144,33 +146,35 @@ class AppViewModel : ViewModel() {
     }
 
     private fun startFollowing(containers: List<Container>) {
-        logFollowJob = viewModelScope.launch {
-            val flow = if (containers.size == 1) {
-                repo.followContainerLogs(containers.first().id)
-            } else {
-                val pairs = containers.map { c ->
-                    c.id to (c.composeService ?: c.displayName)
-                }
-                repo.followMultipleContainerLogs(pairs)
-            }
-            flow
-                .catch { e ->
-                    _logsPaneState.update {
-                        it.copy(error = e.message, isLoading = false, isFollowing = false)
+        logFollowJob =
+            viewModelScope.launch {
+                val flow =
+                    if (containers.size == 1) {
+                        repo.followContainerLogs(containers.first().id)
+                    } else {
+                        val pairs =
+                            containers.map { c ->
+                                c.id to (c.composeService ?: c.displayName)
+                            }
+                        repo.followMultipleContainerLogs(pairs)
                     }
-                }
-                .collect { fullLog ->
-                    _logsPaneState.update {
-                        it.copy(logs = fullLog, isLoading = false, isFollowing = true)
+                flow
+                    .catch { e ->
+                        _logsPaneState.update {
+                            it.copy(error = e.message, isLoading = false, isFollowing = false)
+                        }
+                    }.collect { fullLog ->
+                        _logsPaneState.update {
+                            it.copy(logs = fullLog, isLoading = false, isFollowing = true)
+                        }
                     }
+                _logsPaneState.update {
+                    it.copy(
+                        logs = it.logs + "\n--- Stream ended ---\n",
+                        isFollowing = false,
+                    )
                 }
-            _logsPaneState.update {
-                it.copy(
-                    logs = it.logs + "\n--- Stream ended ---\n",
-                    isFollowing = false,
-                )
             }
-        }
     }
 
     private suspend fun fetchGroupLogs(containers: List<Container>) {
@@ -197,7 +201,10 @@ class AppViewModel : ViewModel() {
     }
 
     fun pauseLogsContainer() {
-        val id = _logsPaneState.value.containers.firstOrNull()?.id ?: return
+        val id =
+            _logsPaneState.value.containers
+                .firstOrNull()
+                ?.id ?: return
         viewModelScope.launch {
             repo.pauseContainer(id)
             repo.refreshContainers()
@@ -205,7 +212,10 @@ class AppViewModel : ViewModel() {
     }
 
     fun unpauseLogsContainer() {
-        val id = _logsPaneState.value.containers.firstOrNull()?.id ?: return
+        val id =
+            _logsPaneState.value.containers
+                .firstOrNull()
+                ?.id ?: return
         viewModelScope.launch {
             repo.unpauseContainer(id)
             repo.refreshContainers()
@@ -213,7 +223,10 @@ class AppViewModel : ViewModel() {
     }
 
     fun restartLogsContainer() {
-        val id = _logsPaneState.value.containers.firstOrNull()?.id ?: return
+        val id =
+            _logsPaneState.value.containers
+                .firstOrNull()
+                ?.id ?: return
         viewModelScope.launch {
             repo.restartContainer(id)
             repo.refreshContainers()
@@ -229,13 +242,15 @@ class AppViewModel : ViewModel() {
             try {
                 if (containers.size == 1) {
                     val c = containers.first()
-                    repo.getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
+                    repo
+                        .getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
                         .onSuccess { onLogsReady(c.displayName, it) }
                 } else {
                     val merged = StringBuilder()
                     for (c in containers) {
                         val label = c.composeService ?: c.displayName
-                        repo.getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
+                        repo
+                            .getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
                             .onSuccess { logs ->
                                 logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
                                     merged.append("[$label] $line\n")
@@ -245,7 +260,8 @@ class AppViewModel : ViewModel() {
                     val name = _logsPaneState.value.displayName
                     onLogsReady(name, merged.toString())
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+            }
             _logsPaneState.update { it.copy(isSavingLogs = false) }
         }
     }

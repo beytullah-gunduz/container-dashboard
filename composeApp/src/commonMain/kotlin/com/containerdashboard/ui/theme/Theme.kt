@@ -6,7 +6,13 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 
 // Application color palette
 object AppColors {
@@ -36,7 +42,56 @@ object AppColors {
     val TextPrimary = Color(0xFFE0E0E0)
     val TextSecondary = Color(0xFF9E9E9E)
     val TextMuted = Color(0xFF757575)
+
+    // Extended semantic surfaces (dark theme values)
+    val DividerStrong = Color(0xFF404040)
+
+    val WarningSurface = Color(0xFFFFA726)
+    val WarningSurfaceLight = Color(0x1AFFF3E0)
+    val SuccessSurface = Color(0xFF4CAF50)
+    val InfoSurface = Color(0xFF2196F3)
 }
+
+data class ExtendedColors(
+    val dividerStrong: Color,
+    val warningSurface: Color,
+    val warningSurfaceLight: Color,
+    val successSurface: Color,
+    val infoSurface: Color,
+)
+
+private val DarkExtendedColors =
+    ExtendedColors(
+        dividerStrong = Color(0xFF404040),
+        warningSurface = Color(0xFFFFA726),
+        warningSurfaceLight = Color(0x1AFFF3E0),
+        successSurface = Color(0xFF4CAF50),
+        infoSurface = Color(0xFF2196F3),
+    )
+
+private val LightExtendedColors =
+    ExtendedColors(
+        dividerStrong = Color(0xFFBDBDBD),
+        warningSurface = Color(0xFFF57C00),
+        warningSurfaceLight = Color(0x14FFF3E0),
+        successSurface = Color(0xFF388E3C),
+        infoSurface = Color(0xFF1976D2),
+    )
+
+val LocalAppColors = staticCompositionLocalOf<ExtendedColors> { DarkExtendedColors }
+
+object AppTheme {
+    val extended: ExtendedColors
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalAppColors.current
+}
+
+val Typography.monospaceMedium: TextStyle
+    get() = bodySmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+
+val Typography.monospaceSmall: TextStyle
+    get() = labelSmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
 
 private val DarkColorScheme =
     darkColorScheme(
@@ -80,10 +135,13 @@ fun ContainerDashboardTheme(
     content: @Composable () -> Unit,
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val extended = if (darkTheme) DarkExtendedColors else LightExtendedColors
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography(),
-        content = content,
-    )
+    CompositionLocalProvider(LocalAppColors provides extended) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography(),
+            content = content,
+        )
+    }
 }

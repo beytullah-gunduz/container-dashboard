@@ -41,7 +41,11 @@ fun renderAppIconAwt(size: Int): BufferedImage {
         return Polygon(xs, ys, points.size)
     }
 
-    fun fillAndStroke(polygon: Polygon, fill: Color, strokeWidth: Float) {
+    fun fillAndStroke(
+        polygon: Polygon,
+        fill: Color,
+        strokeWidth: Float,
+    ) {
         g.color = fill
         g.fill(polygon)
         g.color = strokeColor

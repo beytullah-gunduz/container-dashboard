@@ -10,11 +10,12 @@ import kotlinx.coroutines.flow.stateIn
 
 private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-private fun EngineActionState.toCommon(): EngineActionStatus = when (this) {
-    is EngineActionState.Idle -> EngineActionStatus.Idle
-    is EngineActionState.Running -> EngineActionStatus.Running(message)
-    is EngineActionState.Done -> EngineActionStatus.Done(success, message)
-}
+private fun EngineActionState.toCommon(): EngineActionStatus =
+    when (this) {
+        is EngineActionState.Idle -> EngineActionStatus.Idle
+        is EngineActionState.Running -> EngineActionStatus.Running(message)
+        is EngineActionState.Done -> EngineActionStatus.Done(success, message)
+    }
 
 actual object EngineOperations {
     actual val actionStatus: StateFlow<EngineActionStatus> =

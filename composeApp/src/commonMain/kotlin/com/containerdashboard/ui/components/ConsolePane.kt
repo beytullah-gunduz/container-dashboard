@@ -1,6 +1,9 @@
 package com.containerdashboard.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,31 +12,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.VerticalAlignBottom
-import androidx.compose.material.icons.outlined.WrapText
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.VerticalAlignBottom
+import androidx.compose.material.icons.outlined.WrapText
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -46,7 +48,6 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,15 +59,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.monospaceMedium
 import kotlinx.coroutines.launch
 
 @Composable
@@ -117,7 +117,9 @@ fun ContainerExtraPane(
                     if (logsState.isGroupMode) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(3.dp),
+                            shape =
+                                androidx.compose.foundation.shape
+                                    .RoundedCornerShape(3.dp),
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         ) {
                             Text(
@@ -237,12 +239,13 @@ fun ContainerExtraPane(
                                 )
                                 if (isConsoleAlive) {
                                     Box(
-                                        modifier = Modifier
-                                            .size(7.dp)
-                                            .align(Alignment.TopEnd)
-                                            .offset(x = 3.dp, y = (-2).dp)
-                                            .clip(CircleShape)
-                                            .background(AppColors.Running),
+                                        modifier =
+                                            Modifier
+                                                .size(7.dp)
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 3.dp, y = (-2).dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.Running),
                                     )
                                 }
                             }
@@ -361,18 +364,20 @@ private fun LogsTabContent(
                 var selectedService by remember { mutableStateOf<String?>(null) }
                 var serviceDropdownExpanded by remember { mutableStateOf(false) }
 
-                val serviceNames = remember(state.containers) {
-                    state.containers.map { it.composeService ?: it.displayName }.distinct()
-                }
+                val serviceNames =
+                    remember(state.containers) {
+                        state.containers.map { it.composeService ?: it.displayName }.distinct()
+                    }
 
-                val displayedLogs = remember(state.logs, filterText, selectedService) {
-                    state.logs.lineSequence()
-                        .filter { line ->
-                            (selectedService == null || line.startsWith("[$selectedService]")) &&
-                                (filterText.isBlank() || line.contains(filterText, ignoreCase = true))
-                        }
-                        .joinToString("\n")
-                }
+                val displayedLogs =
+                    remember(state.logs, filterText, selectedService) {
+                        state.logs
+                            .lineSequence()
+                            .filter { line ->
+                                (selectedService == null || line.startsWith("[$selectedService]")) &&
+                                    (filterText.isBlank() || line.contains(filterText, ignoreCase = true))
+                            }.joinToString("\n")
+                    }
 
                 LaunchedEffect(selectedService, filterText) {
                     verticalScrollState.scrollTo(verticalScrollState.maxValue)
@@ -381,35 +386,37 @@ private fun LogsTabContent(
                 Column(modifier = Modifier.fillMaxSize()) {
                     // Filter bar
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .height(28.dp)
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(6.dp),
-                            )
-                            .padding(horizontal = 8.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .height(28.dp)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(6.dp),
+                                ).padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Service dropdown (group mode only)
                         if (state.isGroupMode) {
                             Box {
                                 Row(
-                                    modifier = Modifier
-                                        .clickable { serviceDropdownExpanded = true }
-                                        .padding(end = 4.dp),
+                                    modifier =
+                                        Modifier
+                                            .clickable { serviceDropdownExpanded = true }
+                                            .padding(end = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
                                         text = selectedService ?: "All",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (selectedService != null) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                        color =
+                                            if (selectedService != null) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
                                     )
                                     Icon(
@@ -428,11 +435,12 @@ private fun LogsTabContent(
                                             Text(
                                                 "All",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = if (selectedService == null) {
-                                                    androidx.compose.ui.text.font.FontWeight.Bold
-                                                } else {
-                                                    androidx.compose.ui.text.font.FontWeight.Normal
-                                                },
+                                                fontWeight =
+                                                    if (selectedService == null) {
+                                                        androidx.compose.ui.text.font.FontWeight.Bold
+                                                    } else {
+                                                        androidx.compose.ui.text.font.FontWeight.Normal
+                                                    },
                                             )
                                         },
                                         onClick = {
@@ -446,11 +454,12 @@ private fun LogsTabContent(
                                                 Text(
                                                     name,
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = if (selectedService == name) {
-                                                        androidx.compose.ui.text.font.FontWeight.Bold
-                                                    } else {
-                                                        androidx.compose.ui.text.font.FontWeight.Normal
-                                                    },
+                                                    fontWeight =
+                                                        if (selectedService == name) {
+                                                            androidx.compose.ui.text.font.FontWeight.Bold
+                                                        } else {
+                                                            androidx.compose.ui.text.font.FontWeight.Normal
+                                                        },
                                                 )
                                             },
                                             onClick = {
@@ -462,10 +471,11 @@ private fun LogsTabContent(
                                 }
                             }
                             Box(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .height(16.dp)
-                                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                modifier =
+                                    Modifier
+                                        .width(1.dp)
+                                        .height(16.dp)
+                                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                         }
@@ -482,10 +492,11 @@ private fun LogsTabContent(
                             onValueChange = { filterText = it },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            textStyle = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            ),
+                            textStyle =
+                                MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
                             decorationBox = { innerTextField ->
                                 Box(contentAlignment = Alignment.CenterStart) {
                                     if (filterText.isEmpty()) {
@@ -528,11 +539,8 @@ private fun LogsTabContent(
                                         } else {
                                             Modifier
                                         },
-                                    )
-                                    .padding(12.dp),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
+                                    ).padding(12.dp),
+                            style = MaterialTheme.typography.monospaceMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             softWrap = wordWrap,
                         )
@@ -563,11 +571,12 @@ private fun LogsTabContent(
                                     Icons.Outlined.WrapText,
                                     contentDescription = if (wordWrap) "Disable word wrap" else "Enable word wrap",
                                     modifier = Modifier.size(14.dp),
-                                    tint = if (wordWrap) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
+                                    tint =
+                                        if (wordWrap) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                 )
                             }
                             IconButton(
@@ -592,9 +601,10 @@ private fun LogsTabContent(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .background(AppColors.Running, androidx.compose.foundation.shape.CircleShape),
+                                    modifier =
+                                        Modifier
+                                            .size(6.dp)
+                                            .background(AppColors.Running, androidx.compose.foundation.shape.CircleShape),
                                 )
                                 Text(
                                     text = "Live",

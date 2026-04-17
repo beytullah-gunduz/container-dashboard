@@ -193,10 +193,11 @@ fun SettingsScreen(
                 SingleChoiceSegmentedButtonRow {
                     lineOptions.forEachIndexed { index, count ->
                         SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = lineOptions.size,
-                            ),
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = lineOptions.size,
+                                ),
                             onClick = { viewModel.setLogsMaxLines(count) },
                             selected = logsMaxLines == count,
                             label = { Text("$count") },
@@ -269,10 +270,11 @@ fun SettingsScreen(
                 SingleChoiceSegmentedButtonRow {
                     refreshOptions.forEachIndexed { index, seconds ->
                         SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = refreshOptions.size,
-                            ),
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = refreshOptions.size,
+                                ),
                             onClick = { viewModel.setTrayRefreshRateSeconds(seconds) },
                             selected = trayRefreshRate == seconds,
                             label = { Text("${seconds}s") },
@@ -415,11 +417,12 @@ private fun EngineManagementSection(
     var memory by remember(colimaConfig) { mutableStateOf(colimaConfig?.memoryGB?.toString() ?: "8") }
     var disk by remember(colimaConfig) { mutableStateOf(colimaConfig?.diskGB?.toString() ?: "60") }
 
-    val profileLabel = if (colimaProfile != null && colimaProfile != "default") {
-        "${engineType.displayName} ($colimaProfile)"
-    } else {
-        engineType.displayName
-    }
+    val profileLabel =
+        if (colimaProfile != null && colimaProfile != "default") {
+            "${engineType.displayName} ($colimaProfile)"
+        } else {
+            engineType.displayName
+        }
 
     SettingsSection(title = "Engine Management") {
         // Engine name + status
@@ -437,19 +440,21 @@ private fun EngineManagementSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                val statusColor = when (actionStatus) {
-                    is EngineActionStatus.Running -> MaterialTheme.colorScheme.tertiary
-                    is EngineActionStatus.Done ->
-                        if (actionStatus.success) AppColors.Running else AppColors.Stopped
-                    else ->
-                        if (colimaConfig != null) AppColors.Running else AppColors.Stopped
-                }
-                val statusText = when (actionStatus) {
-                    is EngineActionStatus.Running -> actionStatus.message
-                    is EngineActionStatus.Done -> actionStatus.message
-                    else ->
-                        if (colimaConfig != null || !isColima) "Running" else "Stopped"
-                }
+                val statusColor =
+                    when (actionStatus) {
+                        is EngineActionStatus.Running -> MaterialTheme.colorScheme.tertiary
+                        is EngineActionStatus.Done ->
+                            if (actionStatus.success) AppColors.Running else AppColors.Stopped
+                        else ->
+                            if (colimaConfig != null) AppColors.Running else AppColors.Stopped
+                    }
+                val statusText =
+                    when (actionStatus) {
+                        is EngineActionStatus.Running -> actionStatus.message
+                        is EngineActionStatus.Done -> actionStatus.message
+                        else ->
+                            if (colimaConfig != null || !isColima) "Running" else "Stopped"
+                    }
                 androidx.compose.material3.Surface(
                     modifier = Modifier.size(8.dp),
                     shape = RoundedCornerShape(4.dp),
@@ -540,11 +545,12 @@ private fun EngineManagementSection(
                     text = commandOutput.trimEnd(),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .verticalScroll(outputScrollState)
-                        .padding(8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .verticalScroll(outputScrollState)
+                            .padding(8.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -566,9 +572,10 @@ private fun EngineManagementSection(
                         onStop()
                     },
                     enabled = !isBusy,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))

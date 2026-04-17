@@ -42,12 +42,12 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Pause
@@ -58,19 +58,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -313,14 +312,16 @@ fun ContainersScreen(
                     // Clear selection button (leftmost, animates last)
                     AnimatedVisibility(
                         visible = hasSelection,
-                        enter = expandHorizontally(
-                            animationSpec = tween(durationMillis = 200, delayMillis = 100),
-                            expandFrom = Alignment.Start,
-                        ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 100)),
-                        exit = shrinkHorizontally(
-                            animationSpec = tween(durationMillis = 150),
-                            shrinkTowards = Alignment.Start,
-                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        enter =
+                            expandHorizontally(
+                                animationSpec = tween(durationMillis = 200, delayMillis = 100),
+                                expandFrom = Alignment.Start,
+                            ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 100)),
+                        exit =
+                            shrinkHorizontally(
+                                animationSpec = tween(durationMillis = 150),
+                                shrinkTowards = Alignment.Start,
+                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
                     ) {
                         if (iconOnly) {
                             IconButton(onClick = { viewModel.clearSelection() }) {
@@ -342,14 +343,16 @@ fun ContainersScreen(
                     // Stop button for running containers (middle, animates second)
                     AnimatedVisibility(
                         visible = hasSelection && runningSelectedCount > 0,
-                        enter = expandHorizontally(
-                            animationSpec = tween(durationMillis = 200, delayMillis = 50),
-                            expandFrom = Alignment.Start,
-                        ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 50)),
-                        exit = shrinkHorizontally(
-                            animationSpec = tween(durationMillis = 150),
-                            shrinkTowards = Alignment.Start,
-                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        enter =
+                            expandHorizontally(
+                                animationSpec = tween(durationMillis = 200, delayMillis = 50),
+                                expandFrom = Alignment.Start,
+                            ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 50)),
+                        exit =
+                            shrinkHorizontally(
+                                animationSpec = tween(durationMillis = 150),
+                                shrinkTowards = Alignment.Start,
+                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
                     ) {
                         if (iconOnly) {
                             IconButton(
@@ -408,14 +411,16 @@ fun ContainersScreen(
                     // Delete button (rightmost selection button, animates first)
                     AnimatedVisibility(
                         visible = hasSelection,
-                        enter = expandHorizontally(
-                            animationSpec = tween(durationMillis = 200),
-                            expandFrom = Alignment.Start,
-                        ) + fadeIn(animationSpec = tween(durationMillis = 200)),
-                        exit = shrinkHorizontally(
-                            animationSpec = tween(durationMillis = 150),
-                            shrinkTowards = Alignment.Start,
-                        ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        enter =
+                            expandHorizontally(
+                                animationSpec = tween(durationMillis = 200),
+                                expandFrom = Alignment.Start,
+                            ) + fadeIn(animationSpec = tween(durationMillis = 200)),
+                        exit =
+                            shrinkHorizontally(
+                                animationSpec = tween(durationMillis = 150),
+                                shrinkTowards = Alignment.Start,
+                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
                     ) {
                         if (iconOnly) {
                             IconButton(
@@ -778,11 +783,12 @@ fun ContainersScreen(
                             },
                         ) { item ->
                             Column(
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = tween(600),
-                                    fadeOutSpec = tween(800),
-                                    placementSpec = tween(500),
-                                ),
+                                modifier =
+                                    Modifier.animateItem(
+                                        fadeInSpec = tween(600),
+                                        fadeOutSpec = tween(800),
+                                        placementSpec = tween(500),
+                                    ),
                             ) {
                                 AnimatedVisibility(
                                     visible = runningVisible,
@@ -792,63 +798,63 @@ fun ContainersScreen(
                                     when (item) {
                                         is ContainerListItem.ComposeGroupHeader -> {
                                             ComposeProjectCard(
-                                            item = item,
-                                            sectionPrefix = "running",
-                                            isCompactMode = isCompactMode,
-                                            selectedContainerIds = selectedContainerIds,
-                                            pendingDeleteIds = pendingDeleteIds,
-                                            columnWidths = columnWidths,
-                                            currentLogsContainerId = currentLogsContainerId,
-                                            actionInProgress = actionInProgress,
-                                            statsById = statsById,
-                                            onToggle = { toggleRunningGroup(item.projectName) },
-                                            onSelectAll = { selectAll ->
-                                                if (selectAll) {
-                                                    viewModel.selectAllContainers(
-                                                        (selectedContainerIds + item.containers.map { it.id }).toList(),
-                                                    )
-                                                } else {
-                                                    item.containers.forEach {
-                                                        viewModel.toggleContainerSelection(it.id, false)
+                                                item = item,
+                                                sectionPrefix = "running",
+                                                isCompactMode = isCompactMode,
+                                                selectedContainerIds = selectedContainerIds,
+                                                pendingDeleteIds = pendingDeleteIds,
+                                                columnWidths = columnWidths,
+                                                currentLogsContainerId = currentLogsContainerId,
+                                                actionInProgress = actionInProgress,
+                                                statsById = statsById,
+                                                onToggle = { toggleRunningGroup(item.projectName) },
+                                                onSelectAll = { selectAll ->
+                                                    if (selectAll) {
+                                                        viewModel.selectAllContainers(
+                                                            (selectedContainerIds + item.containers.map { it.id }).toList(),
+                                                        )
+                                                    } else {
+                                                        item.containers.forEach {
+                                                            viewModel.toggleContainerSelection(it.id, false)
+                                                        }
                                                     }
-                                                }
-                                            },
-                                            onCheckedChange = { id, checked ->
-                                                viewModel.toggleContainerSelection(id, checked)
-                                            },
-                                            onStart = { viewModel.startContainer(it) },
-                                            onStop = { viewModel.stopContainer(it) },
-                                            onPause = { viewModel.pauseContainer(it) },
-                                            onUnpause = { viewModel.unpauseContainer(it) },
-                                            onRemove = { viewModel.removeContainer(it) },
-                                            onViewLogs = { onShowLogs(it) },
-                                            onViewGroupLogs = { onShowGroupLogs(it) },
-                                            onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
-                                            onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
-                                            onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
-                                        )
+                                                },
+                                                onCheckedChange = { id, checked ->
+                                                    viewModel.toggleContainerSelection(id, checked)
+                                                },
+                                                onStart = { viewModel.startContainer(it) },
+                                                onStop = { viewModel.stopContainer(it) },
+                                                onPause = { viewModel.pauseContainer(it) },
+                                                onUnpause = { viewModel.unpauseContainer(it) },
+                                                onRemove = { viewModel.removeContainer(it) },
+                                                onViewLogs = { onShowLogs(it) },
+                                                onViewGroupLogs = { onShowGroupLogs(it) },
+                                                onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
+                                                onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
+                                                onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
+                                            )
+                                        }
+                                        is ContainerListItem.ContainerItem -> {
+                                            ContainerRowByMode(
+                                                isCompactMode = isCompactMode,
+                                                container = item.container,
+                                                isChecked = item.container.id in selectedContainerIds,
+                                                isViewingLogs = currentLogsContainerId == item.container.id,
+                                                onCheckedChange = { checked ->
+                                                    viewModel.toggleContainerSelection(item.container.id, checked)
+                                                },
+                                                isActionInProgress = actionInProgress == item.container.id,
+                                                isPendingDelete = item.container.id in pendingDeleteIds,
+                                                columnWidths = columnWidths,
+                                                onStart = { viewModel.startContainer(item.container.id) },
+                                                onStop = { viewModel.stopContainer(item.container.id) },
+                                                onPause = { viewModel.pauseContainer(item.container.id) },
+                                                onUnpause = { viewModel.unpauseContainer(item.container.id) },
+                                                onRemove = { viewModel.removeContainer(item.container.id) },
+                                                onViewLogs = { onShowLogs(item.container) },
+                                            )
+                                        }
                                     }
-                                    is ContainerListItem.ContainerItem -> {
-                                        ContainerRowByMode(
-                                            isCompactMode = isCompactMode,
-                                            container = item.container,
-                                            isChecked = item.container.id in selectedContainerIds,
-                                            isViewingLogs = currentLogsContainerId == item.container.id,
-                                            onCheckedChange = { checked ->
-                                                viewModel.toggleContainerSelection(item.container.id, checked)
-                                            },
-                                            isActionInProgress = actionInProgress == item.container.id,
-                                            isPendingDelete = item.container.id in pendingDeleteIds,
-                                            columnWidths = columnWidths,
-                                            onStart = { viewModel.startContainer(item.container.id) },
-                                            onStop = { viewModel.stopContainer(item.container.id) },
-                                            onPause = { viewModel.pauseContainer(item.container.id) },
-                                            onUnpause = { viewModel.unpauseContainer(item.container.id) },
-                                            onRemove = { viewModel.removeContainer(item.container.id) },
-                                            onViewLogs = { onShowLogs(item.container) },
-                                        )
-                                    }
-                                }
                                 }
                             }
                         }
@@ -932,11 +938,12 @@ fun ContainersScreen(
                             },
                         ) { item ->
                             Column(
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = tween(600),
-                                    fadeOutSpec = tween(800),
-                                    placementSpec = tween(500),
-                                ),
+                                modifier =
+                                    Modifier.animateItem(
+                                        fadeInSpec = tween(600),
+                                        fadeOutSpec = tween(800),
+                                        placementSpec = tween(500),
+                                    ),
                             ) {
                                 AnimatedVisibility(
                                     visible = otherVisible,
@@ -945,64 +952,64 @@ fun ContainersScreen(
                                 ) {
                                     when (item) {
                                         is ContainerListItem.ComposeGroupHeader -> {
-                                        ComposeProjectCard(
-                                            item = item,
-                                            sectionPrefix = "other",
-                                            isCompactMode = isCompactMode,
-                                            selectedContainerIds = selectedContainerIds,
-                                            pendingDeleteIds = pendingDeleteIds,
-                                            columnWidths = columnWidths,
-                                            currentLogsContainerId = currentLogsContainerId,
-                                            actionInProgress = actionInProgress,
-                                            statsById = statsById,
-                                            onToggle = { toggleOtherGroup(item.projectName) },
-                                            onSelectAll = { selectAll ->
-                                                if (selectAll) {
-                                                    viewModel.selectAllContainers(
-                                                        (selectedContainerIds + item.containers.map { it.id }).toList(),
-                                                    )
-                                                } else {
-                                                    item.containers.forEach {
-                                                        viewModel.toggleContainerSelection(it.id, false)
+                                            ComposeProjectCard(
+                                                item = item,
+                                                sectionPrefix = "other",
+                                                isCompactMode = isCompactMode,
+                                                selectedContainerIds = selectedContainerIds,
+                                                pendingDeleteIds = pendingDeleteIds,
+                                                columnWidths = columnWidths,
+                                                currentLogsContainerId = currentLogsContainerId,
+                                                actionInProgress = actionInProgress,
+                                                statsById = statsById,
+                                                onToggle = { toggleOtherGroup(item.projectName) },
+                                                onSelectAll = { selectAll ->
+                                                    if (selectAll) {
+                                                        viewModel.selectAllContainers(
+                                                            (selectedContainerIds + item.containers.map { it.id }).toList(),
+                                                        )
+                                                    } else {
+                                                        item.containers.forEach {
+                                                            viewModel.toggleContainerSelection(it.id, false)
+                                                        }
                                                     }
-                                                }
-                                            },
-                                            onCheckedChange = { id, checked ->
-                                                viewModel.toggleContainerSelection(id, checked)
-                                            },
-                                            onStart = { viewModel.startContainer(it) },
-                                            onStop = { viewModel.stopContainer(it) },
-                                            onPause = { viewModel.pauseContainer(it) },
-                                            onUnpause = { viewModel.unpauseContainer(it) },
-                                            onRemove = { viewModel.removeContainer(it) },
-                                            onViewLogs = { onShowLogs(it) },
-                                            onViewGroupLogs = { onShowGroupLogs(it) },
-                                            onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
-                                            onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
-                                            onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
-                                        )
+                                                },
+                                                onCheckedChange = { id, checked ->
+                                                    viewModel.toggleContainerSelection(id, checked)
+                                                },
+                                                onStart = { viewModel.startContainer(it) },
+                                                onStop = { viewModel.stopContainer(it) },
+                                                onPause = { viewModel.pauseContainer(it) },
+                                                onUnpause = { viewModel.unpauseContainer(it) },
+                                                onRemove = { viewModel.removeContainer(it) },
+                                                onViewLogs = { onShowLogs(it) },
+                                                onViewGroupLogs = { onShowGroupLogs(it) },
+                                                onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
+                                                onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
+                                                onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
+                                            )
+                                        }
+                                        is ContainerListItem.ContainerItem -> {
+                                            ContainerRowByMode(
+                                                isCompactMode = isCompactMode,
+                                                container = item.container,
+                                                isChecked = item.container.id in selectedContainerIds,
+                                                isViewingLogs = currentLogsContainerId == item.container.id,
+                                                onCheckedChange = { checked ->
+                                                    viewModel.toggleContainerSelection(item.container.id, checked)
+                                                },
+                                                isActionInProgress = actionInProgress == item.container.id,
+                                                isPendingDelete = item.container.id in pendingDeleteIds,
+                                                columnWidths = columnWidths,
+                                                onStart = { viewModel.startContainer(item.container.id) },
+                                                onStop = { viewModel.stopContainer(item.container.id) },
+                                                onPause = { viewModel.pauseContainer(item.container.id) },
+                                                onUnpause = { viewModel.unpauseContainer(item.container.id) },
+                                                onRemove = { viewModel.removeContainer(item.container.id) },
+                                                onViewLogs = { onShowLogs(item.container) },
+                                            )
+                                        }
                                     }
-                                    is ContainerListItem.ContainerItem -> {
-                                        ContainerRowByMode(
-                                            isCompactMode = isCompactMode,
-                                            container = item.container,
-                                            isChecked = item.container.id in selectedContainerIds,
-                                            isViewingLogs = currentLogsContainerId == item.container.id,
-                                            onCheckedChange = { checked ->
-                                                viewModel.toggleContainerSelection(item.container.id, checked)
-                                            },
-                                            isActionInProgress = actionInProgress == item.container.id,
-                                            isPendingDelete = item.container.id in pendingDeleteIds,
-                                            columnWidths = columnWidths,
-                                            onStart = { viewModel.startContainer(item.container.id) },
-                                            onStop = { viewModel.stopContainer(item.container.id) },
-                                            onPause = { viewModel.pauseContainer(item.container.id) },
-                                            onUnpause = { viewModel.unpauseContainer(item.container.id) },
-                                            onRemove = { viewModel.removeContainer(item.container.id) },
-                                            onViewLogs = { onShowLogs(item.container) },
-                                        )
-                                    }
-                                }
                                 }
                             }
                         }
@@ -1671,68 +1678,68 @@ private fun ExpandedTableHeader(
     onColumnWidthsChangeFinished: () -> Unit,
 ) {
     Column {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(32.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CompactCheckbox(
-            checked = allSelected && hasItems,
-            onCheckedChange = onSelectAllChange,
-            enabled = hasItems,
-        )
-        Spacer(modifier = Modifier.width(10.dp))
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CompactCheckbox(
+                checked = allSelected && hasItems,
+                onCheckedChange = onSelectAllChange,
+                enabled = hasItems,
+            )
+            Spacer(modifier = Modifier.width(10.dp))
 
-        SortableHeaderCell(
-            text = "NAME",
-            column = SortColumn.NAME,
-            currentSortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSortChange = onSortChange,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        SortableHeaderCell(
-            text = "IMAGE",
-            column = SortColumn.IMAGE,
-            currentSortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSortChange = onSortChange,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        SortableHeaderCell(
-            text = "STATUS",
-            column = SortColumn.STATUS,
-            currentSortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSortChange = onSortChange,
-            modifier = Modifier.width(columnWidths.status.dp),
-        )
-        ColumnResizeHandle(
-            onResize = { deltaDp ->
-                onColumnWidthsChange(
-                    columnWidths.copy(
-                        status = (columnWidths.status + deltaDp).coerceAtLeast(ContainerColumnWidths.MIN),
-                    ),
-                )
-            },
-            onResizeFinished = onColumnWidthsChangeFinished,
-        )
-        SortableHeaderCell(
-            text = "PORTS",
-            column = SortColumn.PORTS,
-            currentSortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSortChange = onSortChange,
-            modifier = Modifier.width(200.dp),
-        )
-        Spacer(modifier = Modifier.width(108.dp))
-    }
+            SortableHeaderCell(
+                text = "NAME",
+                column = SortColumn.NAME,
+                currentSortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSortChange = onSortChange,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            SortableHeaderCell(
+                text = "IMAGE",
+                column = SortColumn.IMAGE,
+                currentSortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSortChange = onSortChange,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            SortableHeaderCell(
+                text = "STATUS",
+                column = SortColumn.STATUS,
+                currentSortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSortChange = onSortChange,
+                modifier = Modifier.width(columnWidths.status.dp),
+            )
+            ColumnResizeHandle(
+                onResize = { deltaDp ->
+                    onColumnWidthsChange(
+                        columnWidths.copy(
+                            status = (columnWidths.status + deltaDp).coerceAtLeast(ContainerColumnWidths.MIN),
+                        ),
+                    )
+                },
+                onResizeFinished = onColumnWidthsChangeFinished,
+            )
+            SortableHeaderCell(
+                text = "PORTS",
+                column = SortColumn.PORTS,
+                currentSortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSortChange = onSortChange,
+                modifier = Modifier.width(200.dp),
+            )
+            Spacer(modifier = Modifier.width(108.dp))
+        }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
             thickness = 1.dp,
@@ -1751,34 +1758,36 @@ private fun ColumnResizeHandle(
     val currentOnResize by rememberUpdatedState(onResize)
     val currentOnFinished by rememberUpdatedState(onResizeFinished)
     Box(
-        modifier = Modifier
-            .width(12.dp)
-            .height(24.dp)
-            .hoverable(interactionSource)
-            .pointerHoverIcon(PointerIcon.Crosshair)
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragEnd = { currentOnFinished() },
-                    onDragCancel = { currentOnFinished() },
-                ) { change, dragAmount ->
-                    change.consume()
-                    val deltaDp = with(density) { dragAmount.toDp().value }
-                    currentOnResize(deltaDp)
-                }
-            },
+        modifier =
+            Modifier
+                .width(12.dp)
+                .height(24.dp)
+                .hoverable(interactionSource)
+                .pointerHoverIcon(PointerIcon.Crosshair)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = { currentOnFinished() },
+                        onDragCancel = { currentOnFinished() },
+                    ) { change, dragAmount ->
+                        change.consume()
+                        val deltaDp = with(density) { dragAmount.toDp().value }
+                        currentOnResize(deltaDp)
+                    }
+                },
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .width(if (isHovered) 4.dp else 2.dp)
-                .height(20.dp)
-                .background(
-                    if (isHovered) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                    },
-                ),
+            modifier =
+                Modifier
+                    .width(if (isHovered) 4.dp else 2.dp)
+                    .height(20.dp)
+                    .background(
+                        if (isHovered) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                        },
+                    ),
         )
     }
 }

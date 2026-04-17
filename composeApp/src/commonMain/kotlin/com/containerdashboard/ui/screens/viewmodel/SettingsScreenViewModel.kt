@@ -26,12 +26,14 @@ class SettingsScreenViewModel : ViewModel() {
     fun engineHost(): Flow<String> = PreferenceRepository.engineHost()
 
     val engineType: StateFlow<EngineType> =
-        PreferenceRepository.engineHost()
+        PreferenceRepository
+            .engineHost()
             .map { engineTypeFromHost(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EngineType.UNKNOWN)
 
     val colimaProfile: StateFlow<String?> =
-        PreferenceRepository.engineHost()
+        PreferenceRepository
+            .engineHost()
             .map { colimaProfileFromHost(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -84,7 +86,11 @@ class SettingsScreenViewModel : ViewModel() {
         }
     }
 
-    fun startEngine(cpu: Int? = null, memory: Int? = null, disk: Int? = null) {
+    fun startEngine(
+        cpu: Int? = null,
+        memory: Int? = null,
+        disk: Int? = null,
+    ) {
         viewModelScope.launch {
             val type = engineType.value
             val profile = colimaProfile.value

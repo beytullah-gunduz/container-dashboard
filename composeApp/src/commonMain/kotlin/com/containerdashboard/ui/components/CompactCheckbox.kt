@@ -40,16 +40,16 @@ internal fun CompactCheckbox(
             else -> Color.Transparent
         }
     Box(
-        modifier = Modifier
-            .size(14.dp)
-            .clip(RoundedCornerShape(3.dp))
-            .background(fillColor)
-            .border(
-                width = 1.2.dp,
-                color = if (checked && enabled) MaterialTheme.colorScheme.primary else outlineColor,
-                shape = RoundedCornerShape(3.dp),
-            )
-            .clickable(enabled = enabled) { onCheckedChange(!checked) },
+        modifier =
+            Modifier
+                .size(14.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(fillColor)
+                .border(
+                    width = 1.2.dp,
+                    color = if (checked && enabled) MaterialTheme.colorScheme.primary else outlineColor,
+                    shape = RoundedCornerShape(3.dp),
+                ).clickable(enabled = enabled) { onCheckedChange(!checked) },
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {

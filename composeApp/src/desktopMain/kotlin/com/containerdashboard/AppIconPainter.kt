@@ -12,7 +12,9 @@ import androidx.compose.ui.graphics.painter.Painter
  * Custom painter for the app icon - a package/container box (📦)
  * When [alertMode] is true, the box turns red to indicate high resource usage.
  */
-class AppIconPainter(private val alertMode: Boolean = false) : Painter() {
+class AppIconPainter(
+    private val alertMode: Boolean = false,
+) : Painter() {
     override val intrinsicSize = Size(512f, 512f)
 
     override fun DrawScope.onDraw() {
@@ -28,16 +30,16 @@ class AppIconPainter(private val alertMode: Boolean = false) : Painter() {
         val strokeColor: Color
 
         if (alertMode) {
-            boxColor = Color(0xFFE53935)   // Red
-            boxDark = Color(0xFFC62828)    // Darker red
-            boxLight = Color(0xFFEF5350)   // Lighter red
-            tapeColor = Color(0xFFFFCDD2)  // Light red tape
+            boxColor = Color(0xFFE53935) // Red
+            boxDark = Color(0xFFC62828) // Darker red
+            boxLight = Color(0xFFEF5350) // Lighter red
+            tapeColor = Color(0xFFFFCDD2) // Light red tape
             strokeColor = Color(0xFF8B0000) // Dark red outline
         } else {
-            boxColor = Color(0xFFD4A574)   // Cardboard brown
-            boxDark = Color(0xFFB8956A)    // Darker brown for depth
-            boxLight = Color(0xFFE8C9A0)   // Lighter brown for highlights
-            tapeColor = Color(0xFFF5E6D3)  // Tape color
+            boxColor = Color(0xFFD4A574) // Cardboard brown
+            boxDark = Color(0xFFB8956A) // Darker brown for depth
+            boxLight = Color(0xFFE8C9A0) // Lighter brown for highlights
+            tapeColor = Color(0xFFF5E6D3) // Tape color
             strokeColor = Color(0xFF8B7355) // Outline
         }
 

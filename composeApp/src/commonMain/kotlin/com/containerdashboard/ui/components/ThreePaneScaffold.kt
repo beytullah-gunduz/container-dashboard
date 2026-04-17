@@ -31,13 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import java.awt.Cursor
 
 enum class LogsPaneLayout {
@@ -228,9 +229,9 @@ private fun ResizableDivider(
 
     val dividerColor =
         when {
-            isDragging -> Color(0xFF0DB7ED)
-            isHovered -> Color(0xFF0DB7ED).copy(alpha = 0.7f)
-            else -> Color(0xFF404040)
+            isDragging -> AppColors.AccentBlue
+            isHovered -> AppColors.AccentBlue.copy(alpha = 0.7f)
+            else -> AppTheme.extended.dividerStrong
         }
 
     val cursor =

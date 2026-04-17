@@ -67,268 +67,268 @@ fun DashboardScreen(
         val sectionSpacing = if (isCompactMode) 16.dp else 24.dp
         val cardSpacing = if (isCompactMode) 12.dp else 16.dp
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(outerPadding),
-        verticalArrangement = Arrangement.spacedBy(sectionSpacing),
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(outerPadding),
+            verticalArrangement = Arrangement.spacedBy(sectionSpacing),
         ) {
-            Column {
-                Text(
-                    text = "Dashboard",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isConnected) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        // Error message
-        error?.let { errorMessage ->
-            Card(
+            // Header
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Error,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
+                Column {
+                    Text(
+                        text = "Dashboard",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f),
+                        text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isConnected) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    IconButton(onClick = { viewModel.clearError() }) {
-                        Icon(Icons.Default.Close, null)
+                }
+            }
+
+            // Error message
+            error?.let { errorMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(Icons.Default.Close, null)
+                        }
                     }
                 }
             }
-        }
 
-        // Stats Cards Row
-        val runningContainers = containers.count { it.isRunning }
-        val totalImageSize = images.sumOf { it.size }
+            // Stats Cards Row
+            val runningContainers = containers.count { it.isRunning }
+            val totalImageSize = images.sumOf { it.size }
 
-        val containersCard: @Composable (Modifier) -> Unit = { m ->
-            StatsCard(
-                title = "Containers",
-                value = containers.size.toString(),
-                subtitle = "$runningContainers running",
-                icon = Icons.Outlined.ViewInAr,
-                iconTint = AppColors.AccentBlue,
-                modifier = m,
-            )
-        }
-        val imagesCard: @Composable (Modifier) -> Unit = { m ->
-            StatsCard(
-                title = "Images",
-                value = images.size.toString(),
-                subtitle = formatBytes(totalImageSize),
-                icon = Icons.Outlined.Layers,
-                iconTint = AppColors.Running,
-                modifier = m,
-            )
-        }
-        val volumesCard: @Composable (Modifier) -> Unit = { m ->
-            StatsCard(
-                title = "Volumes",
-                value = volumes.size.toString(),
-                subtitle = "${volumes.size} total",
-                icon = Icons.Outlined.Storage,
-                iconTint = AppColors.Warning,
-                modifier = m,
-            )
-        }
-        val networksCard: @Composable (Modifier) -> Unit = { m ->
-            StatsCard(
-                title = "Networks",
-                value = networks.size.toString(),
-                subtitle = "${networks.count { it.driver == "bridge" }} bridge",
-                icon = Icons.Outlined.Hub,
-                iconTint = AppColors.AccentBlueDark,
-                modifier = m,
-            )
-        }
+            val containersCard: @Composable (Modifier) -> Unit = { m ->
+                StatsCard(
+                    title = "Containers",
+                    value = containers.size.toString(),
+                    subtitle = "$runningContainers running",
+                    icon = Icons.Outlined.ViewInAr,
+                    iconTint = AppColors.AccentBlue,
+                    modifier = m,
+                )
+            }
+            val imagesCard: @Composable (Modifier) -> Unit = { m ->
+                StatsCard(
+                    title = "Images",
+                    value = images.size.toString(),
+                    subtitle = formatBytes(totalImageSize),
+                    icon = Icons.Outlined.Layers,
+                    iconTint = AppColors.Running,
+                    modifier = m,
+                )
+            }
+            val volumesCard: @Composable (Modifier) -> Unit = { m ->
+                StatsCard(
+                    title = "Volumes",
+                    value = volumes.size.toString(),
+                    subtitle = "${volumes.size} total",
+                    icon = Icons.Outlined.Storage,
+                    iconTint = AppColors.Warning,
+                    modifier = m,
+                )
+            }
+            val networksCard: @Composable (Modifier) -> Unit = { m ->
+                StatsCard(
+                    title = "Networks",
+                    value = networks.size.toString(),
+                    subtitle = "${networks.count { it.driver == "bridge" }} bridge",
+                    icon = Icons.Outlined.Hub,
+                    iconTint = AppColors.AccentBlueDark,
+                    modifier = m,
+                )
+            }
 
-        if (isCompactMode) {
-            Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
+            if (isCompactMode) {
+                Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+                    ) {
+                        containersCard(Modifier.weight(1f))
+                        imagesCard(Modifier.weight(1f))
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+                    ) {
+                        volumesCard(Modifier.weight(1f))
+                        networksCard(Modifier.weight(1f))
+                    }
+                }
+            } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(cardSpacing),
                 ) {
                     containersCard(Modifier.weight(1f))
                     imagesCard(Modifier.weight(1f))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(cardSpacing),
-                ) {
                     volumesCard(Modifier.weight(1f))
                     networksCard(Modifier.weight(1f))
                 }
             }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
-            ) {
-                containersCard(Modifier.weight(1f))
-                imagesCard(Modifier.weight(1f))
-                volumesCard(Modifier.weight(1f))
-                networksCard(Modifier.weight(1f))
-            }
-        }
 
-        // Container Status Section
-        val containerStatusCard: @Composable (Modifier) -> Unit = { m ->
-            Card(
-                modifier = m,
-                shape = RoundedCornerShape(12.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
+            // Container Status Section
+            val containerStatusCard: @Composable (Modifier) -> Unit = { m ->
+                Card(
+                    modifier = m,
+                    shape = RoundedCornerShape(12.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        ),
                 ) {
-                    Text(
-                        text = "Container Status",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val running = containers.count { it.isRunning }
-                    val paused = containers.count { it.isPaused }
-                    val stopped = containers.count { it.isStopped }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    Column(
+                        modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
                     ) {
-                        MiniStatsCard(
-                            label = "Running",
-                            value = running.toString(),
-                            valueColor = AppColors.Running,
+                        Text(
+                            text = "Container Status",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                        MiniStatsCard(
-                            label = "Paused",
-                            value = paused.toString(),
-                            valueColor = AppColors.Paused,
-                        )
-                        MiniStatsCard(
-                            label = "Stopped",
-                            value = stopped.toString(),
-                            valueColor = AppColors.Stopped,
-                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val running = containers.count { it.isRunning }
+                        val paused = containers.count { it.isPaused }
+                        val stopped = containers.count { it.isStopped }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            MiniStatsCard(
+                                label = "Running",
+                                value = running.toString(),
+                                valueColor = AppColors.Running,
+                            )
+                            MiniStatsCard(
+                                label = "Paused",
+                                value = paused.toString(),
+                                valueColor = AppColors.Paused,
+                            )
+                            MiniStatsCard(
+                                label = "Stopped",
+                                value = stopped.toString(),
+                                valueColor = AppColors.Stopped,
+                            )
+                        }
                     }
                 }
             }
-        }
-        val systemInfoCard: @Composable (Modifier) -> Unit = { m ->
-            Card(
-                modifier = m,
-                shape = RoundedCornerShape(12.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
+            val systemInfoCard: @Composable (Modifier) -> Unit = { m ->
+                Card(
+                    modifier = m,
+                    shape = RoundedCornerShape(12.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        ),
                 ) {
-                    Text(
-                        text = "System Information",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(
+                        modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
+                    ) {
+                        Text(
+                            text = "System Information",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    SystemInfoRow("Engine Version", version?.version ?: "-")
-                    SystemInfoRow("API Version", version?.apiVersion ?: "-")
-                    SystemInfoRow("OS/Arch", "${systemInfo?.osType ?: "-"}/${systemInfo?.architecture ?: "-"}")
-                    SystemInfoRow("CPUs", systemInfo?.ncpu?.toString() ?: "-")
-                    SystemInfoRow("Memory", systemInfo?.formattedMemory ?: "-")
+                        SystemInfoRow("Engine Version", version?.version ?: "-")
+                        SystemInfoRow("API Version", version?.apiVersion ?: "-")
+                        SystemInfoRow("OS/Arch", "${systemInfo?.osType ?: "-"}/${systemInfo?.architecture ?: "-"}")
+                        SystemInfoRow("CPUs", systemInfo?.ncpu?.toString() ?: "-")
+                        SystemInfoRow("Memory", systemInfo?.formattedMemory ?: "-")
+                    }
                 }
             }
-        }
 
-        if (isCompactMode) {
-            Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
-                containerStatusCard(Modifier.fillMaxWidth())
-                systemInfoCard(Modifier.fillMaxWidth())
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
-            ) {
-                containerStatusCard(Modifier.weight(1f))
-                systemInfoCard(Modifier.weight(1f))
-            }
-        }
-
-        // Recent Activity
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                ),
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-            ) {
+            if (isCompactMode) {
+                Column(verticalArrangement = Arrangement.spacedBy(cardSpacing)) {
+                    containerStatusCard(Modifier.fillMaxWidth())
+                    systemInfoCard(Modifier.fillMaxWidth())
+                }
+            } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(cardSpacing),
                 ) {
-                    Text(
-                        text = "Recent Containers",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    containerStatusCard(Modifier.weight(1f))
+                    systemInfoCard(Modifier.weight(1f))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-                if (containers.isEmpty()) {
-                    Text(
-                        text = "No containers found",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    containers.take(5).forEach { container ->
-                        RecentContainerItem(container = container, isCompactMode = isCompactMode)
+            // Recent Activity
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Recent Containers",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (containers.isEmpty()) {
+                        Text(
+                            text = "No containers found",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        containers.take(5).forEach { container ->
+                            RecentContainerItem(container = container, isCompactMode = isCompactMode)
+                        }
                     }
                 }
             }
         }
-    }
     }
 }
 

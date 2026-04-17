@@ -33,7 +33,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -168,167 +167,167 @@ fun VolumesScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
         ) {
-            Column {
-                Text(
-                    text = "Volumes",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "${volumes.size} volumes",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (checkedVolumeNames.isNotEmpty()) {
-                    Button(
-                        onClick = { viewModel.deleteSelectedVolumes() },
-                        enabled = !isDeletingSelected,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    ) {
-                        if (isDeletingSelected) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete ${checkedVolumeNames.size} selected")
-                    }
-                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Clear")
-                    }
-                }
-                Button(onClick = { viewModel.setShowCreateDialog(true) }) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create volume")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Error message
-        error?.let { errorMessage ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { viewModel.clearError() }) {
-                        Icon(Icons.Default.Close, null)
-                    }
-                }
-            }
-        }
-
-        // Search
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search volumes...",
-            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
-            compact = isCompactMode,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Table Header
-        VolumeTableHeader(
-            allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
-            onSelectAllChange = { selectAll ->
-                if (selectAll) {
-                    viewModel.checkAll(filteredVolumes.map { it.name })
-                } else {
-                    viewModel.clearChecked()
-                }
-            },
-            hasItems = filteredVolumes.isNotEmpty(),
-            sortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSort = { viewModel.toggleSort(it) },
-            nameWeight = nameWeight,
-            driverWeight = driverWeight,
-            mountpointWeight = mountpointWeight,
-            onResizeName = { delta ->
-                val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
-                val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
-                if (newName >= 0.5f && newDriver >= 0.3f) {
-                    nameWeight = newName
-                    driverWeight = newDriver
-                }
-            },
-            onResizeDriver = { delta ->
-                val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
-                val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
-                if (newDriver >= 0.3f && newMount >= 0.5f) {
-                    driverWeight = newDriver
-                    mountpointWeight = newMount
-                }
-            },
-            isCompactMode = isCompactMode,
-        )
-
-        if (filteredVolumes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No volumes found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            // Volume List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                items(filteredVolumes, key = { it.name }) { volume ->
-                    VolumeRow(
-                        volume = volume,
-                        isSelected = selectedVolume == volume.name,
-                        isChecked = volume.name in checkedVolumeNames,
-                        onCheckedChange = { viewModel.toggleChecked(volume.name, it) },
-                        onClick = { viewModel.setSelectedVolume(volume.name) },
-                        onRemove = { viewModel.removeVolume(volume.name) },
-                        nameWeight = nameWeight,
-                        driverWeight = driverWeight,
-                        mountpointWeight = mountpointWeight,
-                        isCompactMode = isCompactMode,
+                Column {
+                    Text(
+                        text = "Volumes",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "${volumes.size} volumes",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (checkedVolumeNames.isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.deleteSelectedVolumes() },
+                            enabled = !isDeletingSelected,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        ) {
+                            if (isDeletingSelected) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError,
+                                )
+                            } else {
+                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete ${checkedVolumeNames.size} selected")
+                        }
+                        OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear")
+                        }
+                    }
+                    Button(onClick = { viewModel.setShowCreateDialog(true) }) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create volume")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Error message
+            error?.let { errorMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(Icons.Default.Close, null)
+                        }
+                    }
+                }
+            }
+
+            // Search
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search volumes...",
+                modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+                compact = isCompactMode,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Table Header
+            VolumeTableHeader(
+                allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
+                onSelectAllChange = { selectAll ->
+                    if (selectAll) {
+                        viewModel.checkAll(filteredVolumes.map { it.name })
+                    } else {
+                        viewModel.clearChecked()
+                    }
+                },
+                hasItems = filteredVolumes.isNotEmpty(),
+                sortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSort = { viewModel.toggleSort(it) },
+                nameWeight = nameWeight,
+                driverWeight = driverWeight,
+                mountpointWeight = mountpointWeight,
+                onResizeName = { delta ->
+                    val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
+                    val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
+                    if (newName >= 0.5f && newDriver >= 0.3f) {
+                        nameWeight = newName
+                        driverWeight = newDriver
+                    }
+                },
+                onResizeDriver = { delta ->
+                    val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
+                    val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
+                    if (newDriver >= 0.3f && newMount >= 0.5f) {
+                        driverWeight = newDriver
+                        mountpointWeight = newMount
+                    }
+                },
+                isCompactMode = isCompactMode,
+            )
+
+            if (filteredVolumes.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No volumes found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                // Volume List
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    items(filteredVolumes, key = { it.name }) { volume ->
+                        VolumeRow(
+                            volume = volume,
+                            isSelected = selectedVolume == volume.name,
+                            isChecked = volume.name in checkedVolumeNames,
+                            onCheckedChange = { viewModel.toggleChecked(volume.name, it) },
+                            onClick = { viewModel.setSelectedVolume(volume.name) },
+                            onRemove = { viewModel.removeVolume(volume.name) },
+                            nameWeight = nameWeight,
+                            driverWeight = driverWeight,
+                            mountpointWeight = mountpointWeight,
+                            isCompactMode = isCompactMode,
+                        )
+                    }
+                }
             }
         }
-    }
     }
 }
 
@@ -388,7 +387,14 @@ private fun VolumeTableHeader(
                     )
                     VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
                     ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
-                    VolumeSortableHeaderCell("DRIVER", VolumeSortColumn.DRIVER, sortColumn, sortDirection, onSort, Modifier.weight(driverWeight))
+                    VolumeSortableHeaderCell(
+                        "DRIVER",
+                        VolumeSortColumn.DRIVER,
+                        sortColumn,
+                        sortDirection,
+                        onSort,
+                        Modifier.weight(driverWeight),
+                    )
                     ColumnResizeHandle { delta -> onResizeDriver(delta / pxPerWeight) }
                     VolumeSortableHeaderCell(
                         "MOUNTPOINT",

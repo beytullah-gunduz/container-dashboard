@@ -1,6 +1,8 @@
 package com.containerdashboard.data.engine
 
-enum class EngineType(val displayName: String) {
+enum class EngineType(
+    val displayName: String,
+) {
     COLIMA("Colima"),
     DOCKER_DESKTOP("Docker Desktop"),
     ORBSTACK("OrbStack"),

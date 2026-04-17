@@ -29,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -49,7 +48,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -138,143 +136,143 @@ fun NetworksScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
         ) {
-            Column {
-                Text(
-                    text = "Networks",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "${networks.size} networks, ${networks.count { it.name !in systemNetworks }} custom",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (checkedNetworkIds.isNotEmpty()) {
-                    Button(
-                        onClick = { viewModel.deleteSelectedNetworks() },
-                        enabled = !isDeletingSelected,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    ) {
-                        if (isDeletingSelected) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onError,
-                            )
-                        } else {
-                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete ${checkedNetworkIds.size} selected")
-                    }
-                    OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                        Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Clear")
-                    }
-                }
-                Button(onClick = { viewModel.setShowCreateDialog(true) }) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create network")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Error message
-        error?.let { errorMessage ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
-                    Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { viewModel.clearError() }) {
-                        Icon(Icons.Default.Close, null)
-                    }
-                }
-            }
-        }
-
-        // Search
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { viewModel.setSearchQuery(it) },
-            placeholder = "Search networks...",
-            modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
-            compact = isCompactMode,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Table Header
-        NetworkTableHeader(
-            allSelected = customNetworks.isNotEmpty() && customNetworks.all { it.id in checkedNetworkIds },
-            onSelectAllChange = { selectAll ->
-                if (selectAll) {
-                    viewModel.checkAll(customNetworks.map { it.id })
-                } else {
-                    viewModel.clearChecked()
-                }
-            },
-            hasItems = customNetworks.isNotEmpty(),
-            isCompactMode = isCompactMode,
-        )
-
-        if (filteredNetworks.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No networks found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            // Network List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                items(filteredNetworks, key = { it.id }) { network ->
-                    NetworkRow(
-                        network = network,
-                        isSelected = selectedNetwork == network.id,
-                        isSystem = network.name in systemNetworks,
-                        isChecked = network.id in checkedNetworkIds,
-                        onCheckedChange = { viewModel.toggleChecked(network.id, it) },
-                        onClick = { viewModel.setSelectedNetwork(network.id) },
-                        onRemove = { viewModel.removeNetwork(network.id) },
-                        isCompactMode = isCompactMode,
+                Column {
+                    Text(
+                        text = "Networks",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "${networks.size} networks, ${networks.count { it.name !in systemNetworks }} custom",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (checkedNetworkIds.isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.deleteSelectedNetworks() },
+                            enabled = !isDeletingSelected,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        ) {
+                            if (isDeletingSelected) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onError,
+                                )
+                            } else {
+                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete ${checkedNetworkIds.size} selected")
+                        }
+                        OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear")
+                        }
+                    }
+                    Button(onClick = { viewModel.setShowCreateDialog(true) }) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create network")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Error message
+            error?.let { errorMessage ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(Icons.Default.Close, null)
+                        }
+                    }
+                }
+            }
+
+            // Search
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
+                placeholder = "Search networks...",
+                modifier = if (isCompactMode) Modifier.fillMaxWidth() else Modifier.fillMaxWidth(0.4f),
+                compact = isCompactMode,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Table Header
+            NetworkTableHeader(
+                allSelected = customNetworks.isNotEmpty() && customNetworks.all { it.id in checkedNetworkIds },
+                onSelectAllChange = { selectAll ->
+                    if (selectAll) {
+                        viewModel.checkAll(customNetworks.map { it.id })
+                    } else {
+                        viewModel.clearChecked()
+                    }
+                },
+                hasItems = customNetworks.isNotEmpty(),
+                isCompactMode = isCompactMode,
+            )
+
+            if (filteredNetworks.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No networks found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                // Network List
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    items(filteredNetworks, key = { it.id }) { network ->
+                        NetworkRow(
+                            network = network,
+                            isSelected = selectedNetwork == network.id,
+                            isSystem = network.name in systemNetworks,
+                            isChecked = network.id in checkedNetworkIds,
+                            onCheckedChange = { viewModel.toggleChecked(network.id, it) },
+                            onClick = { viewModel.setSelectedNetwork(network.id) },
+                            onRemove = { viewModel.removeNetwork(network.id) },
+                            isCompactMode = isCompactMode,
+                        )
+                    }
+                }
             }
         }
-    }
     }
 }
 

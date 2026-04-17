@@ -1,10 +1,10 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Polygon
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -159,7 +159,11 @@ fun renderContainerIcon(size: Int): BufferedImage {
         return Polygon(xs, ys, points.size)
     }
 
-    fun fillAndStroke(polygon: Polygon, fill: Color, strokeWidth: Float) {
+    fun fillAndStroke(
+        polygon: Polygon,
+        fill: Color,
+        strokeWidth: Float,
+    ) {
         g.color = fill
         g.fill(polygon)
         g.color = strokeColor

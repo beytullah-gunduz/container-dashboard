@@ -32,8 +32,13 @@ object NativeWindowDrag {
     private val logger = LoggerFactory.getLogger(NativeWindowDrag::class.java)
 
     private val isMacOs: Boolean =
-        System.getProperty("os.name").orEmpty().lowercase().contains("mac")
+        System
+            .getProperty("os.name")
+            .orEmpty()
+            .lowercase()
+            .contains("mac")
 
+    @Suppress("ktlint:standard:function-naming")
     private interface ObjC : Library {
         fun objc_getClass(name: String): Pointer?
 
