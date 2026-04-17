@@ -103,8 +103,9 @@ import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
-import com.containerdashboard.ui.components.InspectDialog
+import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.LogsPaneLayout
+import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
@@ -114,7 +115,6 @@ import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.util.copyToClipboard
-import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts
 private val COMPACT_THRESHOLD = 700.dp
@@ -1469,16 +1469,13 @@ private fun ContainerRowByMode(
         )
 
         if (inspectOpen) {
-            InspectDialog(
-                title = "Container: ${container.displayName}",
-                jsonText = runCatching { inspectJson.encodeToString(container) }.getOrElse { it.message ?: "" },
+            ResourceDetailsDialog(
+                target = DetailsTarget.ContainerTarget(container.id, container.displayName),
                 onDismiss = { inspectOpen = false },
             )
         }
     }
 }
-
-private val inspectJson = kotlinx.serialization.json.Json { prettyPrint = true }
 
 // ============== SORTABLE HEADER ==============
 

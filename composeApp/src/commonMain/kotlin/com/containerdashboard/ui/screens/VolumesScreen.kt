@@ -70,14 +70,14 @@ import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
-import com.containerdashboard.ui.components.InspectDialog
+import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import com.containerdashboard.ui.util.copyToClipboard
-import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -691,15 +691,10 @@ private fun VolumeRow(
         )
 
         if (inspectOpen) {
-            InspectDialog(
-                title = "Volume: ${volume.displayName}",
-                jsonText =
-                    runCatching { volumeInspectJson.encodeToString(volume) }
-                        .getOrElse { it.message ?: "" },
+            ResourceDetailsDialog(
+                target = DetailsTarget.VolumeTarget(volume.name),
                 onDismiss = { inspectOpen = false },
             )
         }
     }
 }
-
-private val volumeInspectJson = kotlinx.serialization.json.Json { prettyPrint = true }

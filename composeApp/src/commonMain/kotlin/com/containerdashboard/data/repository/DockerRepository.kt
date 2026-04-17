@@ -1,6 +1,7 @@
 package com.containerdashboard.data.repository
 
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.models.DockerNetwork
@@ -30,6 +31,8 @@ expect class DockerRepository(
     suspend fun refreshContainers()
 
     suspend fun getContainer(id: String): Result<Container>
+
+    suspend fun inspectContainer(id: String): Result<ContainerInspect>
 
     suspend fun getContainerLogs(
         id: String,
@@ -67,6 +70,8 @@ expect class DockerRepository(
 
     suspend fun getImage(id: String): Result<DockerImage>
 
+    suspend fun inspectImage(id: String): Result<String>
+
     suspend fun pullImage(
         name: String,
         tag: String = "latest",
@@ -82,6 +87,8 @@ expect class DockerRepository(
 
     suspend fun getVolume(name: String): Result<Volume>
 
+    suspend fun inspectVolume(name: String): Result<String>
+
     suspend fun createVolume(
         name: String,
         driver: String = "local",
@@ -93,6 +100,8 @@ expect class DockerRepository(
     fun getNetworks(): Flow<List<DockerNetwork>>
 
     suspend fun getNetwork(id: String): Result<DockerNetwork>
+
+    suspend fun inspectNetwork(id: String): Result<String>
 
     suspend fun createNetwork(
         name: String,

@@ -65,14 +65,14 @@ import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
-import com.containerdashboard.ui.components.InspectDialog
+import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.ImageContextMenu
 import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.util.copyToClipboard
-import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -688,16 +688,13 @@ private fun ImageRow(
         )
 
         if (inspectOpen) {
-            InspectDialog(
-                title = "Image: ${image.displayName}",
-                jsonText = runCatching { imageInspectJson.encodeToString(image) }.getOrElse { it.message ?: "" },
+            ResourceDetailsDialog(
+                target = DetailsTarget.ImageTarget(image.id, image.displayName),
                 onDismiss = { inspectOpen = false },
             )
         }
     }
 }
-
-private val imageInspectJson = kotlinx.serialization.json.Json { prettyPrint = true }
 
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"

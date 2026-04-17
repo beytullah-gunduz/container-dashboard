@@ -64,12 +64,12 @@ import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
-import com.containerdashboard.ui.components.InspectDialog
+import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.util.copyToClipboard
-import kotlinx.serialization.encodeToString
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -674,15 +674,10 @@ private fun NetworkRow(
         )
 
         if (inspectOpen) {
-            InspectDialog(
-                title = "Network: ${network.name}",
-                jsonText =
-                    runCatching { networkInspectJson.encodeToString(network) }
-                        .getOrElse { it.message ?: "" },
+            ResourceDetailsDialog(
+                target = DetailsTarget.NetworkTarget(network.id, network.name),
                 onDismiss = { inspectOpen = false },
             )
         }
     }
 }
-
-private val networkInspectJson = kotlinx.serialization.json.Json { prettyPrint = true }

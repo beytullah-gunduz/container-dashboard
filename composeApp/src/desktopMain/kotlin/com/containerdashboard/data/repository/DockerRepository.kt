@@ -1,16 +1,24 @@
 package com.containerdashboard.data.repository
 
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerPort
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.models.DockerVersion
+import com.containerdashboard.data.models.EnvVar
 import com.containerdashboard.data.models.IPAM
 import com.containerdashboard.data.models.IPAMConfig
+import com.containerdashboard.data.models.MountInfo
+import com.containerdashboard.data.models.NetworkAttachment
 import com.containerdashboard.data.models.NetworkContainer
+import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Event
 import com.github.dockerjava.api.model.EventType
@@ -324,6 +332,62 @@ actual class DockerRepository actual constructor(
                 Result.success(container)
             } catch (e: Exception) {
                 logger.error("Failed to get container {}", id, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun inspectContainer(id: String): Result<ContainerInspect> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response =
+                    withRetryOnPoolShutdown {
+                        dockerClient.inspectContainerCmd(id).exec()
+                    }
+                Result.success(response.toContainerInspect())
+            } catch (e: Exception) {
+                logger.error("Failed to inspect container {}", id, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun inspectImage(id: String): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response =
+                    withRetryOnPoolShutdown {
+                        dockerClient.inspectImageCmd(id).exec()
+                    }
+                Result.success(toPrettyJson(response))
+            } catch (e: Exception) {
+                logger.error("Failed to inspect image {}", id, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun inspectVolume(name: String): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response =
+                    withRetryOnPoolShutdown {
+                        dockerClient.inspectVolumeCmd(name).exec()
+                    }
+                Result.success(toPrettyJson(response))
+            } catch (e: Exception) {
+                logger.error("Failed to inspect volume {}", name, e)
+                Result.failure(e)
+            }
+        }
+
+    actual suspend fun inspectNetwork(id: String): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response =
+                    withRetryOnPoolShutdown {
+                        dockerClient.inspectNetworkCmd().withNetworkId(id).exec()
+                    }
+                Result.success(toPrettyJson(response))
+            } catch (e: Exception) {
+                logger.error("Failed to inspect network {}", id, e)
                 Result.failure(e)
             }
         }
@@ -1207,6 +1271,146 @@ actual class DockerRepository actual constructor(
         } catch (e: Exception) {
             logger.warn("Error during DockerRepository shutdown", e)
         }
+    }
+
+    private val inspectJsonMapper: ObjectMapper =
+        ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+
+    private fun toPrettyJson(obj: Any): String =
+        try {
+            inspectJsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
+        } catch (e: Exception) {
+            logger.warn("Failed to serialize docker-java response to JSON: {}", e.message)
+            obj.toString()
+        }
+
+    private fun com.github.dockerjava.api.command.InspectContainerResponse.toContainerInspect(): ContainerInspect {
+        val config = this.config
+        val hostConfig = this.hostConfig
+        val netSettings = this.networkSettings
+        val state = this.state
+
+        val statusText = state?.status ?: ""
+        val stateText =
+            when {
+                state?.running == true -> "running"
+                state?.paused == true -> "paused"
+                state?.restarting == true -> "restarting"
+                state?.dead == true -> "dead"
+                !statusText.isNullOrBlank() -> statusText
+                else -> "unknown"
+            }
+
+        val envPairs =
+            config?.env?.map { entry ->
+                val idx = entry.indexOf('=')
+                if (idx >= 0) {
+                    EnvVar(entry.substring(0, idx), entry.substring(idx + 1))
+                } else {
+                    EnvVar(entry, "")
+                }
+            } ?: emptyList()
+
+        val mounts =
+            this.mounts?.map { mount ->
+                MountInfo(
+                    type = if (!mount.name.isNullOrBlank()) "volume" else "bind",
+                    source = mount.source ?: "",
+                    destination = mount.destination?.path ?: "",
+                    mode = mount.mode ?: "",
+                    rw = mount.rw ?: true,
+                )
+            } ?: emptyList()
+
+        val hostBindings = hostConfig?.portBindings?.bindings ?: emptyMap()
+        val exposedBindings = netSettings?.ports?.bindings ?: emptyMap()
+        val allBindingKeys = (hostBindings.keys + exposedBindings.keys).distinct()
+
+        val portMappings =
+            allBindingKeys.flatMap { exposed ->
+                val bindings = exposedBindings[exposed] ?: hostBindings[exposed]
+                if (bindings == null || bindings.isEmpty()) {
+                    listOf(
+                        PortMapping(
+                            containerPort = exposed.port,
+                            hostPort = null,
+                            protocol = exposed.protocol?.name?.lowercase() ?: "tcp",
+                            hostIp = null,
+                        ),
+                    )
+                } else {
+                    bindings.map { binding ->
+                        PortMapping(
+                            containerPort = exposed.port,
+                            hostPort = binding.hostPortSpec?.toIntOrNull(),
+                            protocol = exposed.protocol?.name?.lowercase() ?: "tcp",
+                            hostIp = binding.hostIp,
+                        )
+                    }
+                }
+            }
+
+        val networkAttachments =
+            netSettings?.networks?.entries?.map { (netName, net) ->
+                NetworkAttachment(
+                    name = netName,
+                    ipAddress = net.ipAddress ?: "",
+                    gateway = net.gateway ?: "",
+                    macAddress = net.macAddress ?: "",
+                    aliases = net.aliases ?: emptyList(),
+                )
+            } ?: emptyList()
+
+        val restartPolicyText =
+            hostConfig?.restartPolicy?.let { rp ->
+                val base = rp.name.orEmpty().ifBlank { "no" }
+                val retries = rp.maximumRetryCount ?: 0
+                if (base == "on-failure" && retries > 0) "$base:$retries" else base
+            } ?: "no"
+
+        val entrypointList = config?.entrypoint?.toList().orEmpty()
+        val cmdText =
+            config
+                ?.cmd
+                ?.joinToString(" ")
+                .orEmpty()
+                .ifBlank {
+                    this.path.orEmpty() +
+                        (
+                            this.args
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.joinToString(" ", prefix = " ")
+                                .orEmpty()
+                        )
+                }.trim()
+
+        val displayName = (this.name ?: "").removePrefix("/")
+
+        return ContainerInspect(
+            id = this.id ?: "",
+            name = displayName,
+            image = config?.image ?: "",
+            imageId = this.imageId ?: "",
+            status = statusText,
+            state = stateText,
+            createdAt = this.created ?: "",
+            startedAt = state?.startedAt ?: "",
+            command = cmdText,
+            entrypoint = entrypointList,
+            workingDir = config?.workingDir ?: "",
+            user = config?.user ?: "",
+            restartPolicy = restartPolicyText,
+            hostname = config?.hostName ?: "",
+            platform = this.platform ?: "",
+            environment = envPairs,
+            mounts = mounts,
+            ports = portMappings,
+            networks = networkAttachments,
+            labels = config?.labels ?: emptyMap(),
+            rawJson = toPrettyJson(this),
+        )
     }
 
     // Extension functions to convert Docker Java models to our models
