@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.logging.AppLogEntry
+import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.EmptyStateAction
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
@@ -197,37 +199,31 @@ fun AppLogsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.Article,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text =
-                                if (searchQuery.isNotEmpty() || levelFilter != null) {
-                                    "No matching log entries"
-                                } else {
-                                    "No log entries yet"
-                                },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text =
-                                if (searchQuery.isNotEmpty() || levelFilter != null) {
-                                    "Try adjusting your search or filters"
-                                } else {
-                                    "Logs will appear here as the application runs"
-                                },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
+                    val isFiltering = searchQuery.isNotEmpty() || levelFilter != null
+                    EmptyState(
+                        icon = Icons.AutoMirrored.Outlined.Article,
+                        title =
+                            if (isFiltering) {
+                                "No matching log entries"
+                            } else {
+                                "No logs yet"
+                            },
+                        body =
+                            if (isFiltering) {
+                                "Try adjusting your search or filters."
+                            } else {
+                                "Application log messages will appear here as the app runs."
+                            },
+                        action =
+                            if (isFiltering) {
+                                EmptyStateAction("Clear filters") {
+                                    viewModel.setSearchQuery("")
+                                    viewModel.setLevelFilter(null)
+                                }
+                            } else {
+                                null
+                            },
+                    )
                 }
             } else {
                 LazyColumn(

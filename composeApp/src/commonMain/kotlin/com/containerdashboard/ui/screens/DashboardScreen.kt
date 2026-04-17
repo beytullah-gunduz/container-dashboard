@@ -1,6 +1,8 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,14 +35,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.components.MiniStatsCard
+import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
+import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -60,6 +69,7 @@ fun DashboardScreen(
     val networks by viewModel.networks.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
@@ -131,42 +141,46 @@ fun DashboardScreen(
             val totalImageSize = images.sumOf { it.size }
 
             val containersCard: @Composable (Modifier) -> Unit = { m ->
-                StatsCard(
+                MaybeSkeletonStatsCard(
                     title = "Containers",
                     value = containers.size.toString(),
                     subtitle = "$runningContainers running",
                     icon = Icons.Outlined.ViewInAr,
                     iconTint = AppColors.AccentBlue,
+                    isLoading = !hasLoaded,
                     modifier = m,
                 )
             }
             val imagesCard: @Composable (Modifier) -> Unit = { m ->
-                StatsCard(
+                MaybeSkeletonStatsCard(
                     title = "Images",
                     value = images.size.toString(),
                     subtitle = formatBytes(totalImageSize),
                     icon = Icons.Outlined.Layers,
                     iconTint = AppColors.Running,
+                    isLoading = !hasLoaded,
                     modifier = m,
                 )
             }
             val volumesCard: @Composable (Modifier) -> Unit = { m ->
-                StatsCard(
+                MaybeSkeletonStatsCard(
                     title = "Volumes",
                     value = volumes.size.toString(),
                     subtitle = "${volumes.size} total",
                     icon = Icons.Outlined.Storage,
                     iconTint = AppColors.Warning,
+                    isLoading = !hasLoaded,
                     modifier = m,
                 )
             }
             val networksCard: @Composable (Modifier) -> Unit = { m ->
-                StatsCard(
+                MaybeSkeletonStatsCard(
                     title = "Networks",
                     value = networks.size.toString(),
                     subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                     icon = Icons.Outlined.Hub,
                     iconTint = AppColors.AccentBlueDark,
+                    isLoading = !hasLoaded,
                     modifier = m,
                 )
             }
@@ -228,21 +242,35 @@ fun DashboardScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                         ) {
-                            MiniStatsCard(
-                                label = "Running",
-                                value = running.toString(),
-                                valueColor = AppColors.Running,
-                            )
-                            MiniStatsCard(
-                                label = "Paused",
-                                value = paused.toString(),
-                                valueColor = AppColors.Paused,
-                            )
-                            MiniStatsCard(
-                                label = "Stopped",
-                                value = stopped.toString(),
-                                valueColor = AppColors.Stopped,
-                            )
+                            if (!hasLoaded) {
+                                val alpha = rememberSkeletonAlpha()
+                                repeat(3) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        SkeletonBar(width = 40.dp, height = 22.dp, alpha = alpha)
+                                        SkeletonBar(width = 56.dp, height = 10.dp, alpha = alpha)
+                                    }
+                                }
+                            } else {
+                                MiniStatsCard(
+                                    label = "Running",
+                                    value = running.toString(),
+                                    valueColor = AppColors.Running,
+                                )
+                                MiniStatsCard(
+                                    label = "Paused",
+                                    value = paused.toString(),
+                                    valueColor = AppColors.Paused,
+                                )
+                                MiniStatsCard(
+                                    label = "Stopped",
+                                    value = stopped.toString(),
+                                    valueColor = AppColors.Stopped,
+                                )
+                            }
                         }
                     }
                 }
@@ -315,7 +343,28 @@ fun DashboardScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (containers.isEmpty()) {
+                    if (!hasLoaded) {
+                        val alpha = rememberSkeletonAlpha()
+                        repeat(3) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                SkeletonBar(width = 8.dp, height = 8.dp, alpha = alpha)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    SkeletonBar(width = 160.dp, height = 12.dp, alpha = alpha)
+                                    SkeletonBar(width = 100.dp, height = 10.dp, alpha = alpha)
+                                }
+                            }
+                        }
+                    } else if (containers.isEmpty()) {
                         Text(
                             text = "No containers found",
                             style = MaterialTheme.typography.bodyMedium,
@@ -416,6 +465,80 @@ private fun RecentContainerItem(
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+        }
+    }
+}
+
+/**
+ * Renders [StatsCard] normally when data is available and a skeleton variant
+ * with shimmer placeholders for the value and subtitle rows while the first
+ * fetch is still in flight. The icon stays visible so the card's identity is
+ * preserved during the swap.
+ */
+@Composable
+private fun MaybeSkeletonStatsCard(
+    title: String,
+    value: String,
+    subtitle: String?,
+    icon: ImageVector,
+    iconTint: androidx.compose.ui.graphics.Color,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (!isLoading) {
+        StatsCard(
+            title = title,
+            value = value,
+            subtitle = subtitle,
+            icon = icon,
+            iconTint = iconTint,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val alpha = rememberSkeletonAlpha()
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(Radius.lg),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.lg),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                SkeletonBar(width = 56.dp, height = 22.dp, alpha = alpha)
+                SkeletonBar(width = 72.dp, height = 10.dp, alpha = alpha)
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(Radius.lg))
+                        .background(iconTint.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
     }
 }

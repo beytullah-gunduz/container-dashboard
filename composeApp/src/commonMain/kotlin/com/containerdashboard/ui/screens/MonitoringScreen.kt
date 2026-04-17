@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.CircularSlider
+import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
@@ -65,7 +66,8 @@ fun MonitoringScreen(
 ) {
     val statsOrNull by viewModel.containerStats.collectAsState(null)
     val stats = statsOrNull.orEmpty()
-    val isLoading = statsOrNull == null
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
+    val isLoading = !hasLoaded && statsOrNull == null
     val error by viewModel.error.collectAsState()
     val history by viewModel.usageHistory.collectAsState(UsageHistory())
     val refreshRate by viewModel.refreshRate.collectAsState()
@@ -200,12 +202,34 @@ fun MonitoringScreen(
             }
 
             if (isLoading) {
-                // Loading state
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(48.dp),
-                    contentAlignment = Alignment.Center,
+                // First data has not arrived yet — show an inline "Collecting data" EmptyState
+                // with a small spinner underneath so the live feed feels progressive rather
+                // than blank.
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        ),
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        EmptyState(
+                            icon = Icons.Outlined.MonitorHeart,
+                            title = "Collecting data…",
+                            body = "Waiting for the first stats snapshot from the container engine.",
+                        )
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier
+                                    .padding(bottom = 24.dp)
+                                    .size(24.dp),
+                            strokeWidth = 2.5.dp,
+                        )
+                    }
                 }
             } else if (stats.isEmpty()) {
                 Card(
@@ -216,31 +240,11 @@ fun MonitoringScreen(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         ),
                 ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Outlined.MonitorHeart,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "No running containers",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Start some containers to see CPU and memory usage",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
+                    EmptyState(
+                        icon = Icons.Outlined.MonitorHeart,
+                        title = "No running containers",
+                        body = "Start some containers to see CPU and memory usage.",
+                    )
                 }
             } else {
                 // CPU Usage Card
