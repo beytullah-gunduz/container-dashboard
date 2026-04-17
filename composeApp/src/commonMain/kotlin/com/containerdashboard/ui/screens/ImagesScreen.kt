@@ -7,7 +7,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +29,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -66,6 +67,10 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.EmptyStateAction
+import com.containerdashboard.ui.components.ErrorStateCard
+import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.ImageContextMenu
@@ -84,6 +89,7 @@ fun ImagesScreen(
     viewModel: ImagesScreenViewModel = viewModel { ImagesScreenViewModel() },
 ) {
     val images by viewModel.images.collectAsState(listOf())
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedImage by viewModel.selectedImageId.collectAsState()
     val sortColumn by viewModel.sortColumn.collectAsState()
@@ -253,15 +259,34 @@ fun ImagesScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (filteredImages.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No images found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (!hasLoaded && images.isEmpty()) {
+                if (error != null) {
+                    ErrorStateCard(
+                        message = error ?: "Could not load images",
+                        onRetry = {
+                            viewModel.clearError()
+                            viewModel.refresh()
+                        },
+                    )
+                } else {
+                    ListRowSkeleton(rowCount = 6)
+                }
+            } else if (filteredImages.isEmpty()) {
+                if (searchQuery.isNotEmpty()) {
+                    EmptyState(
+                        icon = Icons.Outlined.SearchOff,
+                        title = "No matches",
+                        body = "Nothing matched \"$searchQuery\".",
+                        action =
+                            EmptyStateAction("Clear search") {
+                                viewModel.setSearchQuery("")
+                            },
+                    )
+                } else {
+                    EmptyState(
+                        icon = Icons.Outlined.Layers,
+                        title = "No images",
+                        body = "Pull an image or build one to see it here.",
                     )
                 }
             } else {

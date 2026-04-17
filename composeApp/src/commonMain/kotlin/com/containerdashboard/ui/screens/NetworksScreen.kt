@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,6 +66,10 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.EmptyStateAction
+import com.containerdashboard.ui.components.ErrorStateCard
+import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
@@ -81,6 +86,7 @@ fun NetworksScreen(
     viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() },
 ) {
     val networks by viewModel.networks.collectAsState(listOf())
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
@@ -265,32 +271,93 @@ fun NetworksScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Table Header
-            NetworkTableHeader(
-                allSelected = customNetworks.isNotEmpty() && customNetworks.all { it.id in checkedNetworkIds },
-                onSelectAllChange = { selectAll ->
-                    if (selectAll) {
-                        viewModel.checkAll(customNetworks.map { it.id })
-                    } else {
-                        viewModel.clearChecked()
-                    }
-                },
-                hasItems = customNetworks.isNotEmpty(),
-                isCompactMode = isCompactMode,
-            )
-
-            if (filteredNetworks.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No networks found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (!hasLoaded && networks.isEmpty()) {
+                if (error != null) {
+                    ErrorStateCard(
+                        message = error ?: "Could not load networks",
+                        onRetry = {
+                            viewModel.clearError()
+                            viewModel.refresh()
+                        },
                     )
+                } else {
+                    ListRowSkeleton(rowCount = 6)
+                }
+            } else if (networks.isEmpty()) {
+                EmptyState(
+                    icon = Icons.Outlined.Hub,
+                    title = "No networks",
+                    body = "Custom networks show up here. Create one to get started.",
+                    action =
+                        EmptyStateAction("Create network") {
+                            viewModel.setShowCreateDialog(true)
+                        },
+                )
+            } else if (filteredNetworks.isEmpty()) {
+                // Search produced no hits
+                EmptyState(
+                    icon = Icons.Outlined.SearchOff,
+                    title = "No matches",
+                    body = "Nothing matched \"$searchQuery\".",
+                    action =
+                        EmptyStateAction("Clear search") {
+                            viewModel.setSearchQuery("")
+                        },
+                )
+            } else if (customNetworks.isEmpty()) {
+                // Only the built-in bridge/host/none networks are present
+                NetworkTableHeader(
+                    allSelected = false,
+                    onSelectAllChange = {},
+                    hasItems = false,
+                    isCompactMode = isCompactMode,
+                )
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    items(filteredNetworks, key = { it.id }) { network ->
+                        NetworkRow(
+                            network = network,
+                            isSelected = selectedNetwork == network.id,
+                            isSystem = network.name in systemNetworks,
+                            isChecked = network.id in checkedNetworkIds,
+                            onCheckedChange = { viewModel.toggleChecked(network.id, it) },
+                            onClick = { viewModel.setSelectedNetwork(network.id) },
+                            onRemove = {
+                                askConfirm(
+                                    "Delete network?",
+                                    "This will delete \"${network.name}\".",
+                                ) { viewModel.removeNetwork(network.id) }
+                            },
+                            isCompactMode = isCompactMode,
+                        )
+                    }
+                    item(key = "networks-only-defaults-empty") {
+                        EmptyState(
+                            icon = Icons.Outlined.Hub,
+                            title = "Only default networks",
+                            body = "Custom networks show up here. Create one to get started.",
+                            action =
+                                EmptyStateAction("Create network") {
+                                    viewModel.setShowCreateDialog(true)
+                                },
+                        )
+                    }
                 }
             } else {
+                // Table Header
+                NetworkTableHeader(
+                    allSelected = customNetworks.isNotEmpty() && customNetworks.all { it.id in checkedNetworkIds },
+                    onSelectAllChange = { selectAll ->
+                        if (selectAll) {
+                            viewModel.checkAll(customNetworks.map { it.id })
+                        } else {
+                            viewModel.clearChecked()
+                        }
+                    },
+                    hasItems = customNetworks.isNotEmpty(),
+                    isCompactMode = isCompactMode,
+                )
                 // Network List
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(2.dp),

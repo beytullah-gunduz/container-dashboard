@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -71,6 +72,10 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.EmptyStateAction
+import com.containerdashboard.ui.components.ErrorStateCard
+import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
@@ -89,6 +94,7 @@ fun VolumesScreen(
     viewModel: VolumesScreenViewModel = viewModel { VolumesScreenViewModel() },
 ) {
     val volumes by viewModel.volumes.collectAsState(listOf())
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedVolume by viewModel.selectedVolumeName.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
@@ -295,54 +301,76 @@ fun VolumesScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Table Header
-            VolumeTableHeader(
-                allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
-                onSelectAllChange = { selectAll ->
-                    if (selectAll) {
-                        viewModel.checkAll(filteredVolumes.map { it.name })
-                    } else {
-                        viewModel.clearChecked()
-                    }
-                },
-                hasItems = filteredVolumes.isNotEmpty(),
-                sortColumn = sortColumn,
-                sortDirection = sortDirection,
-                onSort = { viewModel.toggleSort(it) },
-                nameWeight = nameWeight,
-                driverWeight = driverWeight,
-                mountpointWeight = mountpointWeight,
-                onResizeName = { delta ->
-                    val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
-                    val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
-                    if (newName >= 0.5f && newDriver >= 0.3f) {
-                        nameWeight = newName
-                        driverWeight = newDriver
-                    }
-                },
-                onResizeDriver = { delta ->
-                    val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
-                    val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
-                    if (newDriver >= 0.3f && newMount >= 0.5f) {
-                        driverWeight = newDriver
-                        mountpointWeight = newMount
-                    }
-                },
-                isCompactMode = isCompactMode,
-            )
-
-            if (filteredVolumes.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No volumes found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (!hasLoaded && volumes.isEmpty()) {
+                if (error != null) {
+                    ErrorStateCard(
+                        message = error ?: "Could not load volumes",
+                        onRetry = {
+                            viewModel.clearError()
+                            viewModel.refresh()
+                        },
+                    )
+                } else {
+                    ListRowSkeleton(rowCount = 6)
+                }
+            } else if (filteredVolumes.isEmpty()) {
+                if (searchQuery.isNotEmpty()) {
+                    EmptyState(
+                        icon = Icons.Outlined.SearchOff,
+                        title = "No matches",
+                        body = "Nothing matched \"$searchQuery\".",
+                        action =
+                            EmptyStateAction("Clear search") {
+                                viewModel.setSearchQuery("")
+                            },
+                    )
+                } else {
+                    EmptyState(
+                        icon = Icons.Outlined.Storage,
+                        title = "No volumes",
+                        body = "Volumes persist container data. Create one to get started.",
+                        action =
+                            EmptyStateAction("Create volume") {
+                                viewModel.setShowCreateDialog(true)
+                            },
                     )
                 }
             } else {
+                // Table Header
+                VolumeTableHeader(
+                    allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
+                    onSelectAllChange = { selectAll ->
+                        if (selectAll) {
+                            viewModel.checkAll(filteredVolumes.map { it.name })
+                        } else {
+                            viewModel.clearChecked()
+                        }
+                    },
+                    hasItems = filteredVolumes.isNotEmpty(),
+                    sortColumn = sortColumn,
+                    sortDirection = sortDirection,
+                    onSort = { viewModel.toggleSort(it) },
+                    nameWeight = nameWeight,
+                    driverWeight = driverWeight,
+                    mountpointWeight = mountpointWeight,
+                    onResizeName = { delta ->
+                        val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
+                        val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
+                        if (newName >= 0.5f && newDriver >= 0.3f) {
+                            nameWeight = newName
+                            driverWeight = newDriver
+                        }
+                    },
+                    onResizeDriver = { delta ->
+                        val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
+                        val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
+                        if (newDriver >= 0.3f && newMount >= 0.5f) {
+                            driverWeight = newDriver
+                            mountpointWeight = newMount
+                        }
+                    },
+                    isCompactMode = isCompactMode,
+                )
                 // Volume List
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(2.dp),

@@ -53,8 +53,10 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -104,6 +106,10 @@ import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
 import com.containerdashboard.ui.components.DetailsTarget
+import com.containerdashboard.ui.components.EmptyState
+import com.containerdashboard.ui.components.EmptyStateAction
+import com.containerdashboard.ui.components.ErrorStateCard
+import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
@@ -208,6 +214,7 @@ fun ContainersScreen(
     }
 
     val containers by viewModel.containers.collectAsState(listOf())
+    val hasLoaded by viewModel.hasLoaded.collectAsState()
     val error by viewModel.error.collectAsState()
     val actionInProgress by viewModel.actionInProgress.collectAsState()
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
@@ -747,15 +754,34 @@ fun ContainersScreen(
                     groupContainers(otherContainers, expandedOtherProjects)
                 }
 
-            if (filteredContainers.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No containers found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (!hasLoaded && containers.isEmpty()) {
+                if (error != null) {
+                    ErrorStateCard(
+                        message = error ?: "Could not load containers",
+                        onRetry = {
+                            viewModel.clearError()
+                            viewModel.refresh()
+                        },
+                    )
+                } else {
+                    ListRowSkeleton(rowCount = 6)
+                }
+            } else if (filteredContainers.isEmpty()) {
+                if (searchQuery.isNotEmpty()) {
+                    EmptyState(
+                        icon = Icons.Outlined.SearchOff,
+                        title = "No matches",
+                        body = "Nothing matched \"$searchQuery\".",
+                        action =
+                            EmptyStateAction("Clear search") {
+                                searchQuery = ""
+                            },
+                    )
+                } else {
+                    EmptyState(
+                        icon = Icons.Outlined.ViewInAr,
+                        title = "No containers",
+                        body = "Run a container from the Images tab to see it here.",
                     )
                 }
             } else {
