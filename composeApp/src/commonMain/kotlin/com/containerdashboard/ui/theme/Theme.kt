@@ -24,24 +24,24 @@ object AppColors {
     // Backgrounds
     val DarkBackground = Color(0xFF1E1E1E)
     val DarkSurface = Color(0xFF252526)
-    val DarkSurfaceVariant = Color(0xFF2D2D30)
-    val DarkSurfaceElevated = Color(0xFF333337)
+    val DarkSurfaceVariant = Color(0xFF34343A)
+    val DarkSurfaceElevated = Color(0xFF3A3A40)
 
     // Light theme
     val LightBackground = Color(0xFFF5F5F5)
     val LightSurface = Color(0xFFFFFFFF)
-    val LightSurfaceVariant = Color(0xFFE8E8E8)
+    val LightSurfaceVariant = Color(0xFFDDDDDD)
 
     // Status colors
     val Running = Color(0xFF4CAF50)
     val Stopped = Color(0xFFEF5350)
-    val Paused = Color(0xFFFFB74D)
+    val Paused = Color(0xFFFFCA3A)
     val Warning = Color(0xFFFF9800)
 
     // Text
     val TextPrimary = Color(0xFFE0E0E0)
     val TextSecondary = Color(0xFF9E9E9E)
-    val TextMuted = Color(0xFF757575)
+    val TextMuted = Color(0xFF9C9C9C)
 
     // Extended semantic surfaces (dark theme values)
     val DividerStrong = Color(0xFF404040)
@@ -108,7 +108,7 @@ private val DarkColorScheme =
         surfaceVariant = AppColors.DarkSurfaceVariant,
         onSurfaceVariant = AppColors.TextSecondary,
         outline = Color(0xFF404040),
-        outlineVariant = Color(0xFF303030),
+        outlineVariant = Color(0xFF3A3A3A),
     )
 
 private val LightColorScheme =

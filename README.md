@@ -89,13 +89,13 @@ cd container-dashboard
 3. Build distribution packages:
 ```bash
 # macOS
-./gradlew :composeApp:packageDmg
+./gradlew :composeApp:packageReleaseDmg
 
 # Windows
-./gradlew :composeApp:packageMsi
+./gradlew :composeApp:packageReleaseMsi
 
 # Linux
-./gradlew :composeApp:packageDeb
+./gradlew :composeApp:packageReleaseDeb
 ```
 
 ## Configuration

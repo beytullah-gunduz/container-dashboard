@@ -15,17 +15,17 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            task: packageDeb
+            task: packageReleaseDeb
             artifact-name: container-dashboard-linux
-            artifact-path: composeApp/build/compose/binaries/main/deb/*.deb
+            artifact-path: composeApp/build/compose/binaries/main-release/deb/*.deb
           - os: macos-latest
-            task: packageDmg
+            task: packageReleaseDmg
             artifact-name: container-dashboard-macos
-            artifact-path: composeApp/build/compose/binaries/main/dmg/*.dmg
+            artifact-path: composeApp/build/compose/binaries/main-release/dmg/*.dmg
           - os: windows-latest
-            task: packageMsi
+            task: packageReleaseMsi
             artifact-name: container-dashboard-windows
-            artifact-path: composeApp/build/compose/binaries/main/msi/*.msi
+            artifact-path: composeApp/build/compose/binaries/main-release/msi/*.msi
 
     runs-on: ${{ matrix.os }}
 
