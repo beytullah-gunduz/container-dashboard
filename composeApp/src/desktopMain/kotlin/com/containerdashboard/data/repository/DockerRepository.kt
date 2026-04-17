@@ -940,7 +940,7 @@ actual class DockerRepository actual constructor(
                     }
 
                     override fun onError(throwable: Throwable?) {
-                        logger.warn("Stats stream error for container {}: {}", containerId, throwable?.message)
+                        logger.debug("Stats stream closed for container {}: {}", containerId, throwable?.message)
                         close()
                     }
 
