@@ -237,19 +237,16 @@ actual class DockerRepository actual constructor(
         containerRefreshTrigger.emit(Unit)
     }
 
-    // Containers
-    actual fun getContainers(all: Boolean): Flow<List<Container>> =
+    // Containers — hot shared flow. One poll timer + one list call per 15 s,
+    // supplemented by dockerEvents-driven refreshes. Replay-1 so new subscribers
+    // see the latest list immediately.
+    private val containersSharedAll: SharedFlow<List<Container>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.CONTAINER }.map { },
             containerRefreshTrigger,
-            // Periodic poll as a fallback — Docker's event stream can
-            // silently drop events (connection race on Lazily-started
-            // SharedFlow, daemon socket restart, callbackFlow buffer
-            // overflow). Polling every 3s is cheap and guarantees the UI
-            // converges even when events are lost.
             flow {
                 while (true) {
-                    delay(3000)
+                    delay(15_000)
                     emit(Unit)
                 }
             },
@@ -258,7 +255,7 @@ actual class DockerRepository actual constructor(
                 withRetryOnPoolShutdown {
                     dockerClient
                         .listContainersCmd()
-                        .withShowAll(all)
+                        .withShowAll(true)
                         .exec()
                         .map { it.toContainer() }
                 }
@@ -272,7 +269,7 @@ actual class DockerRepository actual constructor(
                     withRetryOnPoolShutdown {
                         dockerClient
                             .listContainersCmd()
-                            .withShowAll(all)
+                            .withShowAll(true)
                             .exec()
                             .map { it.toContainer() }
                     }
@@ -285,6 +282,32 @@ actual class DockerRepository actual constructor(
             logger.error("Container flow error", e)
             emit(emptyList())
         }.flowOn(Dispatchers.IO)
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    actual fun getContainers(all: Boolean): Flow<List<Container>> =
+        if (all) {
+            containersSharedAll
+        } else {
+            // One-shot cold fallback for the single all=false caller
+            // (SettingsScreenViewModel.stopAllContainers uses .first()).
+            flow {
+                emit(
+                    try {
+                        withRetryOnPoolShutdown {
+                            dockerClient
+                                .listContainersCmd()
+                                .withShowAll(false)
+                                .exec()
+                                .map { it.toContainer() }
+                        }
+                    } catch (e: Exception) {
+                        logger.warn("Failed to list containers (all=false): {}", e.message)
+                        emptyList()
+                    },
+                )
+            }.flowOn(Dispatchers.IO)
+        }
 
     actual suspend fun getContainer(id: String): Result<Container> =
         withContext(Dispatchers.IO) {
@@ -541,13 +564,13 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    // Images
-    actual fun getImages(): Flow<List<DockerImage>> =
+    // Images — hot shared flow (shared across DashboardScreenViewModel + ImagesScreenViewModel).
+    private val imagesShared: SharedFlow<List<DockerImage>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.IMAGE }.map { },
             flow {
                 while (true) {
-                    delay(3000)
+                    delay(15_000)
                     emit(Unit)
                 }
             },
@@ -583,6 +606,10 @@ actual class DockerRepository actual constructor(
             logger.error("Image flow error", e)
             emit(emptyList())
         }.flowOn(Dispatchers.IO)
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    actual fun getImages(): Flow<List<DockerImage>> = imagesShared
 
     actual suspend fun getImage(id: String): Result<DockerImage> =
         withContext(Dispatchers.IO) {
@@ -638,13 +665,13 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    // Volumes
-    actual fun getVolumes(): Flow<List<Volume>> =
+    // Volumes — hot shared flow.
+    private val volumesShared: SharedFlow<List<Volume>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.VOLUME }.map { },
             flow {
                 while (true) {
-                    delay(3000)
+                    delay(15_000)
                     emit(Unit)
                 }
             },
@@ -698,6 +725,10 @@ actual class DockerRepository actual constructor(
             logger.error("Volume flow error", e)
             emit(emptyList())
         }.flowOn(Dispatchers.IO)
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    actual fun getVolumes(): Flow<List<Volume>> = volumesShared
 
     actual suspend fun getVolume(name: String): Result<Volume> =
         withContext(Dispatchers.IO) {
@@ -755,13 +786,13 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    // Networks
-    actual fun getNetworks(): Flow<List<DockerNetwork>> =
+    // Networks — hot shared flow.
+    private val networksShared: SharedFlow<List<DockerNetwork>> by lazy {
         merge(
             dockerEvents.filter { it.type == EventType.NETWORK }.map { },
             flow {
                 while (true) {
-                    delay(3000)
+                    delay(15_000)
                     emit(Unit)
                 }
             },
@@ -795,6 +826,10 @@ actual class DockerRepository actual constructor(
             logger.error("Network flow error", e)
             emit(emptyList())
         }.flowOn(Dispatchers.IO)
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    actual fun getNetworks(): Flow<List<DockerNetwork>> = networksShared
 
     actual suspend fun getNetwork(id: String): Result<DockerNetwork> =
         withContext(Dispatchers.IO) {
