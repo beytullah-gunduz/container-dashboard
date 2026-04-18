@@ -70,6 +70,7 @@ import com.containerdashboard.data.models.MountInfo
 import com.containerdashboard.data.models.NetworkAttachment
 import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.theme.Radius
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -290,7 +291,7 @@ private fun DetailsHeader(
                     .size(36.dp)
                     .background(
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                        RoundedCornerShape(8.dp),
+                        RoundedCornerShape(Radius.md),
                     ),
             contentAlignment = Alignment.Center,
         ) {
@@ -823,7 +824,7 @@ private fun NetworksTab(networks: List<NetworkAttachment>) {
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                            RoundedCornerShape(8.dp),
+                            RoundedCornerShape(Radius.md),
                         ).padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -937,11 +938,11 @@ private fun RawJsonTab(json: String) {
                     .padding(bottom = 16.dp)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                        RoundedCornerShape(8.dp),
+                        RoundedCornerShape(Radius.md),
                     ).border(
                         0.5.dp,
                         MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(8.dp),
+                        RoundedCornerShape(Radius.md),
                     ),
         ) {
             SelectionContainer(

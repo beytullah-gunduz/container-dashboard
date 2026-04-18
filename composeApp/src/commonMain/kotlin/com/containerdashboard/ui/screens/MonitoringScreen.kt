@@ -63,6 +63,7 @@ import com.containerdashboard.ui.screens.viewmodel.DerivedContainerStats
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
 
 // Threshold for switching between compact and expanded layouts.
 // Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
@@ -172,7 +173,7 @@ fun MonitoringScreen(
                 ) {
                     Surface(
                         modifier = Modifier.size(8.dp),
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(Radius.sm),
                         color = if (stats.isNotEmpty()) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
                     ) {}
                     Text(
@@ -309,7 +310,7 @@ fun MonitoringScreen(
             if (isLoading) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -336,7 +337,7 @@ fun MonitoringScreen(
             } else if (stats.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -352,7 +353,7 @@ fun MonitoringScreen(
                 // CPU Usage Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -394,7 +395,7 @@ fun MonitoringScreen(
                 // Memory Usage Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -438,7 +439,7 @@ fun MonitoringScreen(
                 // Detailed Stats Table
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -723,7 +724,7 @@ private fun ContainerBarRow(
                 Modifier
                     .fillMaxWidth()
                     .height(20.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(Radius.sm))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
@@ -732,7 +733,7 @@ private fun ContainerBarRow(
                     Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(fraction)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(Radius.sm))
                         .background(barColor),
             )
         }
@@ -959,7 +960,7 @@ private fun UsageHistoryGraph(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -1005,7 +1006,7 @@ private fun UsageHistoryGraph(
                     Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Radius.md))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             ) {
                 // Y-axis labels
@@ -1101,7 +1102,7 @@ private fun IoHistoryGraph(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -1146,7 +1147,7 @@ private fun IoHistoryGraph(
                     Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(Radius.md))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             ) {
                 Box(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {

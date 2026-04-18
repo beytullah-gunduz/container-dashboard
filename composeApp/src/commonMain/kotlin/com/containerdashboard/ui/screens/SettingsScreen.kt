@@ -61,6 +61,7 @@ import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
 
 @Composable
 fun SettingsScreen(
@@ -483,7 +484,7 @@ private fun EngineManagementSection(
                     }
                 androidx.compose.material3.Surface(
                     modifier = Modifier.size(8.dp),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(Radius.sm),
                     color = statusColor,
                 ) {}
                 Text(
@@ -509,7 +510,7 @@ private fun EngineManagementSection(
                         value = cpu,
                         onValueChange = { cpu = it.filter { c -> c.isDigit() } },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -520,7 +521,7 @@ private fun EngineManagementSection(
                         value = memory,
                         onValueChange = { memory = it.filter { c -> c.isDigit() } },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -531,7 +532,7 @@ private fun EngineManagementSection(
                         value = disk,
                         onValueChange = { disk = it.filter { c -> c.isDigit() } },
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -559,7 +560,7 @@ private fun EngineManagementSection(
         // Command output log
         if (commandOutput.isNotBlank()) {
             androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(Radius.md),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -665,7 +666,7 @@ private fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
@@ -738,7 +739,7 @@ private fun EngineHostField(
                 modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
                 placeholder = { Text(DockerHostConfig.fallbackUri) },
                 singleLine = true,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(Radius.md),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             )
             ExposedDropdownMenu(

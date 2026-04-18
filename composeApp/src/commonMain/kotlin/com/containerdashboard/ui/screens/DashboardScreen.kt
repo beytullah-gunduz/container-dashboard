@@ -218,7 +218,7 @@ fun DashboardScreen(
             val containerStatusCard: @Composable (Modifier) -> Unit = { m ->
                 Card(
                     modifier = m,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -278,7 +278,7 @@ fun DashboardScreen(
             val systemInfoCard: @Composable (Modifier) -> Unit = { m ->
                 Card(
                     modifier = m,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(Radius.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -321,7 +321,7 @@ fun DashboardScreen(
             // Recent Activity
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Radius.lg),
                 colors =
                     CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -421,7 +421,7 @@ private fun RecentContainerItem(
     ) {
         Surface(
             modifier = Modifier.size(8.dp),
-            shape = RoundedCornerShape(4.dp),
+            shape = RoundedCornerShape(Radius.sm),
             color =
                 when {
                     container.isRunning -> AppColors.Running

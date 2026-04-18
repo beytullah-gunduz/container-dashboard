@@ -83,6 +83,7 @@ import com.containerdashboard.ui.screens.components.VolumeContextMenu
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
+import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.util.copyToClipboard
 
 // Threshold for switching between compact and expanded layouts.
@@ -547,7 +548,7 @@ private fun VolumeSortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Radius.sm))
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -83,6 +83,7 @@ import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.util.copyToClipboard
 
 @Composable
@@ -96,7 +97,7 @@ internal fun ContainerSectionHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(Radius.md))
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -114,7 +115,7 @@ internal fun ContainerSectionHeader(
             fontWeight = FontWeight.SemiBold,
         )
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radius.lg),
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Text(
@@ -290,7 +291,7 @@ internal fun ComposeProjectCard(
     onRemoveAll: (List<String>) -> Unit,
 ) {
     val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(Radius.lg)
     val animatedPadding by animateDpAsState(
         targetValue = if (item.expanded) 6.dp else 0.dp,
         animationSpec = tween(durationMillis = 250),
@@ -491,7 +492,7 @@ internal fun SortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Radius.sm))
                 .clickable { onSortChange(column) }
                 .padding(vertical = 4.dp, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

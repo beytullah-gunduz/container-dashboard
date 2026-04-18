@@ -77,6 +77,7 @@ import com.containerdashboard.ui.screens.components.ImageContextMenu
 import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
+import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.util.copyToClipboard
 
 // Threshold for switching between compact and expanded layouts.
@@ -432,7 +433,7 @@ private fun ImageSectionHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(Radius.md))
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -450,7 +451,7 @@ private fun ImageSectionHeader(
             fontWeight = FontWeight.SemiBold,
         )
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(Radius.lg),
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Text(
@@ -516,7 +517,7 @@ private fun SortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Radius.sm))
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

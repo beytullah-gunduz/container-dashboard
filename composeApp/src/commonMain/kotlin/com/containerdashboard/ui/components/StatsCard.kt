@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.theme.Radius
 
 @Composable
 fun StatsCard(
@@ -35,7 +36,7 @@ fun StatsCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(Radius.lg),
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -74,7 +75,7 @@ fun StatsCard(
 
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(Radius.lg),
                 color = iconTint.copy(alpha = 0.1f),
             ) {
                 Box(contentAlignment = Alignment.Center) {

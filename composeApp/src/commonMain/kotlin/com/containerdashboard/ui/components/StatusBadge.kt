@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
 
 enum class ContainerStatus {
     RUNNING,
@@ -59,7 +60,7 @@ fun StatusBadge(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(Radius.sm))
                 .background(backgroundColor)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -89,7 +90,7 @@ fun StatusDot(
 ) {
     Surface(
         modifier = modifier.size(8.dp),
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(Radius.sm),
         color = if (isActive) activeColor else inactiveColor,
     ) {}
 }
