@@ -410,7 +410,7 @@ fun MonitoringScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Icon(
-                                Icons.Outlined.Storage,
+                                Icons.Outlined.Memory,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                                 tint = AppColors.AccentBlueDark,
