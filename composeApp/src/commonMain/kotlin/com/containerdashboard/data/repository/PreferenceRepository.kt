@@ -227,11 +227,17 @@ object PreferenceRepository {
 
     fun logsPaneRightWidth(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_RIGHT_W] }
 
+    val logsPaneRightWidthSync: Int?
+        get() = runBlocking { dataStore.data.firstOrNull()?.get(LOGS_PANE_RIGHT_W) }
+
     suspend fun setLogsPaneRightWidth(dp: Int) {
         dataStore.edit { it[LOGS_PANE_RIGHT_W] = dp }
     }
 
     fun logsPaneBottomHeight(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_BOTTOM_H] }
+
+    val logsPaneBottomHeightSync: Int?
+        get() = runBlocking { dataStore.data.firstOrNull()?.get(LOGS_PANE_BOTTOM_H) }
 
     suspend fun setLogsPaneBottomHeight(dp: Int) {
         dataStore.edit { it[LOGS_PANE_BOTTOM_H] = dp }

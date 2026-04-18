@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -147,16 +146,19 @@ private fun RowScope.RightLayout(
 ) {
     val minDetailWidth = 450.dp
     val maxExtraWidth = (availableWidth - minDetailWidth).coerceAtLeast(minExtraPaneSize)
-    val persistedRight by PreferenceRepository.logsPaneRightWidth().collectAsState(initial = null)
-    var extraWidth by remember(maxExtraWidth, persistedRight) {
+    var extraWidth by remember {
         mutableStateOf(
-            persistedRight
+            PreferenceRepository.logsPaneRightWidthSync
                 ?.dp
                 ?.coerceIn(minExtraPaneSize, maxExtraWidth)
                 ?: maxExtraWidth,
         )
     }
-    if (extraWidth > maxExtraWidth) extraWidth = maxExtraWidth
+    // Re-clamp on window resize without resetting the state holder.
+    LaunchedEffect(maxExtraWidth) {
+        if (extraWidth > maxExtraWidth) extraWidth = maxExtraWidth
+        if (extraWidth < minExtraPaneSize) extraWidth = minExtraPaneSize
+    }
     LaunchedEffect(extraWidth) {
         kotlinx.coroutines.delay(300)
         PreferenceRepository.setLogsPaneRightWidth(extraWidth.value.toInt())
@@ -200,16 +202,19 @@ private fun RowScope.BottomLayout(
     val minDetailHeight = 300.dp
     val maxExtraHeight = (availableHeight - minDetailHeight).coerceAtLeast(minExtraPaneSize)
     val initialHeight = (availableHeight * 0.4f).coerceIn(minExtraPaneSize, maxExtraHeight)
-    val persistedBottom by PreferenceRepository.logsPaneBottomHeight().collectAsState(initial = null)
-    var extraHeight by remember(maxExtraHeight, persistedBottom) {
+    var extraHeight by remember {
         mutableStateOf(
-            persistedBottom
+            PreferenceRepository.logsPaneBottomHeightSync
                 ?.dp
                 ?.coerceIn(minExtraPaneSize, maxExtraHeight)
                 ?: initialHeight,
         )
     }
-    if (extraHeight > maxExtraHeight) extraHeight = maxExtraHeight
+    // Re-clamp on window resize without resetting the state holder.
+    LaunchedEffect(maxExtraHeight) {
+        if (extraHeight > maxExtraHeight) extraHeight = maxExtraHeight
+        if (extraHeight < minExtraPaneSize) extraHeight = minExtraPaneSize
+    }
     LaunchedEffect(extraHeight) {
         kotlinx.coroutines.delay(300)
         PreferenceRepository.setLogsPaneBottomHeight(extraHeight.value.toInt())
