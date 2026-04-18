@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberDialogState
@@ -37,6 +39,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.data.repository.WindowBounds
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
 import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
@@ -46,6 +49,7 @@ import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flow
 import org.slf4j.LoggerFactory
 
@@ -182,11 +186,48 @@ fun main() {
             }
         }
 
+        val persistedBounds = remember { PreferenceRepository.windowBoundsSync }
         val windowState =
             rememberWindowState(
-                size = DpSize(1400.dp, 900.dp),
-                position = WindowPosition(Alignment.Center),
+                size =
+                    if (persistedBounds != null) {
+                        DpSize(persistedBounds.width.dp, persistedBounds.height.dp)
+                    } else {
+                        DpSize(1400.dp, 900.dp)
+                    },
+                position =
+                    if (persistedBounds != null) {
+                        WindowPosition(persistedBounds.x.dp, persistedBounds.y.dp)
+                    } else {
+                        WindowPosition(Alignment.Center)
+                    },
+                placement =
+                    if (persistedBounds?.maximized == true) {
+                        WindowPlacement.Maximized
+                    } else {
+                        WindowPlacement.Floating
+                    },
             )
+
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
+        LaunchedEffect(windowState) {
+            snapshotFlow {
+                val pos = windowState.position
+                val size = windowState.size
+                WindowBounds(
+                    x = if (pos is WindowPosition.Absolute) pos.x.value.toInt() else 0,
+                    y = if (pos is WindowPosition.Absolute) pos.y.value.toInt() else 0,
+                    width = size.width.value.toInt(),
+                    height = size.height.value.toInt(),
+                    maximized = windowState.placement == WindowPlacement.Maximized,
+                )
+            }.debounce(300L).collect { bounds ->
+                // Skip spurious zero-size emissions during startup
+                if (bounds.width > 100 && bounds.height > 100) {
+                    PreferenceRepository.setWindowBounds(bounds)
+                }
+            }
+        }
 
         val refreshRate by PreferenceRepository
             .trayRefreshRateSeconds()

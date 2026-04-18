@@ -33,7 +33,11 @@ class AppViewModel : ViewModel() {
             .flatMapLatest { it.isDockerAvailable() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    private val _currentRoute = MutableStateFlow(Screen.Dashboard.route)
+    private val _currentRoute =
+        MutableStateFlow(
+            PreferenceRepository.lastRouteSync.takeIf { it != null && Screen.entries.any { s -> s.route == it } }
+                ?: Screen.Dashboard.route,
+        )
     val currentRoute: StateFlow<String> = _currentRoute.asStateFlow()
 
     val engineName: StateFlow<String> =
@@ -107,6 +111,7 @@ class AppViewModel : ViewModel() {
 
     fun navigate(route: String) {
         _currentRoute.value = route
+        viewModelScope.launch { PreferenceRepository.setLastRoute(route) }
     }
 
     private var logFollowJob: Job? = null

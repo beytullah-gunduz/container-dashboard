@@ -45,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -104,11 +105,21 @@ fun VolumesScreen(
     val checkedVolumeNames by viewModel.checkedVolumeNames.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
 
-    // Resizable column weights
-    var nameWeight by remember { mutableFloatStateOf(1.5f) }
-    var driverWeight by remember { mutableFloatStateOf(0.7f) }
-    var mountpointWeight by remember { mutableFloatStateOf(2f) }
+    // Resizable column weights (persisted)
+    val persistedWeights by PreferenceRepository.volumeColumnWeights().collectAsState(
+        initial = com.containerdashboard.data.repository.VolumeColumnWeights.Default,
+    )
+    var nameWeight by remember(persistedWeights) { mutableFloatStateOf(persistedWeights.name) }
+    var driverWeight by remember(persistedWeights) { mutableFloatStateOf(persistedWeights.driver) }
+    var mountpointWeight by remember(persistedWeights) { mutableFloatStateOf(persistedWeights.mountpoint) }
     val totalWeight = nameWeight + driverWeight + mountpointWeight
+    LaunchedEffect(nameWeight, driverWeight, mountpointWeight) {
+        kotlinx.coroutines.delay(300)
+        PreferenceRepository.setVolumeColumnWeights(
+            com.containerdashboard.data.repository
+                .VolumeColumnWeights(nameWeight, driverWeight, mountpointWeight),
+        )
+    }
 
     val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
     var pendingConfirmTitle by remember { mutableStateOf("") }

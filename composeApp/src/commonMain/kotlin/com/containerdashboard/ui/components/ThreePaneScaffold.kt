@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
 import java.awt.Cursor
@@ -144,8 +147,20 @@ private fun RowScope.RightLayout(
 ) {
     val minDetailWidth = 450.dp
     val maxExtraWidth = (availableWidth - minDetailWidth).coerceAtLeast(minExtraPaneSize)
-    var extraWidth by remember(maxExtraWidth) { mutableStateOf(maxExtraWidth) }
+    val persistedRight by PreferenceRepository.logsPaneRightWidth().collectAsState(initial = null)
+    var extraWidth by remember(maxExtraWidth, persistedRight) {
+        mutableStateOf(
+            persistedRight
+                ?.dp
+                ?.coerceIn(minExtraPaneSize, maxExtraWidth)
+                ?: maxExtraWidth,
+        )
+    }
     if (extraWidth > maxExtraWidth) extraWidth = maxExtraWidth
+    LaunchedEffect(extraWidth) {
+        kotlinx.coroutines.delay(300)
+        PreferenceRepository.setLogsPaneRightWidth(extraWidth.value.toInt())
+    }
 
     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
         detailPane()
@@ -185,8 +200,20 @@ private fun RowScope.BottomLayout(
     val minDetailHeight = 300.dp
     val maxExtraHeight = (availableHeight - minDetailHeight).coerceAtLeast(minExtraPaneSize)
     val initialHeight = (availableHeight * 0.4f).coerceIn(minExtraPaneSize, maxExtraHeight)
-    var extraHeight by remember(maxExtraHeight) { mutableStateOf(initialHeight) }
+    val persistedBottom by PreferenceRepository.logsPaneBottomHeight().collectAsState(initial = null)
+    var extraHeight by remember(maxExtraHeight, persistedBottom) {
+        mutableStateOf(
+            persistedBottom
+                ?.dp
+                ?.coerceIn(minExtraPaneSize, maxExtraHeight)
+                ?: initialHeight,
+        )
+    }
     if (extraHeight > maxExtraHeight) extraHeight = maxExtraHeight
+    LaunchedEffect(extraHeight) {
+        kotlinx.coroutines.delay(300)
+        PreferenceRepository.setLogsPaneBottomHeight(extraHeight.value.toInt())
+    }
 
     Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {

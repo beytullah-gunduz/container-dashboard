@@ -26,6 +26,24 @@ data class ContainerColumnWidths(
     }
 }
 
+data class VolumeColumnWeights(
+    val name: Float,
+    val driver: Float,
+    val mountpoint: Float,
+) {
+    companion object {
+        val Default = VolumeColumnWeights(name = 1.5f, driver = 0.7f, mountpoint = 2f)
+    }
+}
+
+data class WindowBounds(
+    val x: Int,
+    val y: Int,
+    val width: Int,
+    val height: Int,
+    val maximized: Boolean,
+)
+
 object PreferenceRepository {
     private val dataStore: DataStore<Preferences> by lazy { dataStorePreferencesInstance }
 
@@ -41,6 +59,17 @@ object PreferenceRepository {
     private val COL_WIDTH_IMAGE by lazy { floatPreferencesKey("container_col_width_image") }
     private val COL_WIDTH_STATUS by lazy { floatPreferencesKey("container_col_width_status") }
     private val COL_WIDTH_PORTS by lazy { floatPreferencesKey("container_col_width_ports") }
+    private val VOL_COL_WEIGHT_NAME by lazy { floatPreferencesKey("volume_col_weight_name") }
+    private val VOL_COL_WEIGHT_DRIVER by lazy { floatPreferencesKey("volume_col_weight_driver") }
+    private val VOL_COL_WEIGHT_MOUNT by lazy { floatPreferencesKey("volume_col_weight_mount") }
+    private val WINDOW_X by lazy { intPreferencesKey("window_x") }
+    private val WINDOW_Y by lazy { intPreferencesKey("window_y") }
+    private val WINDOW_W by lazy { intPreferencesKey("window_width") }
+    private val WINDOW_H by lazy { intPreferencesKey("window_height") }
+    private val WINDOW_MAXIMIZED by lazy { booleanPreferencesKey("window_maximized") }
+    private val LAST_ROUTE by lazy { stringPreferencesKey("last_route") }
+    private val LOGS_PANE_RIGHT_W by lazy { intPreferencesKey("logs_pane_right_width_dp") }
+    private val LOGS_PANE_BOTTOM_H by lazy { intPreferencesKey("logs_pane_bottom_height_dp") }
 
     private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
 
@@ -143,5 +172,68 @@ object PreferenceRepository {
             prefs[COL_WIDTH_STATUS] = widths.status
             prefs[COL_WIDTH_PORTS] = widths.ports
         }
+    }
+
+    fun volumeColumnWeights(): Flow<VolumeColumnWeights> =
+        dataStore.data.map { prefs ->
+            VolumeColumnWeights(
+                name = prefs[VOL_COL_WEIGHT_NAME] ?: VolumeColumnWeights.Default.name,
+                driver = prefs[VOL_COL_WEIGHT_DRIVER] ?: VolumeColumnWeights.Default.driver,
+                mountpoint = prefs[VOL_COL_WEIGHT_MOUNT] ?: VolumeColumnWeights.Default.mountpoint,
+            )
+        }
+
+    suspend fun setVolumeColumnWeights(weights: VolumeColumnWeights) {
+        dataStore.edit { prefs ->
+            prefs[VOL_COL_WEIGHT_NAME] = weights.name
+            prefs[VOL_COL_WEIGHT_DRIVER] = weights.driver
+            prefs[VOL_COL_WEIGHT_MOUNT] = weights.mountpoint
+        }
+    }
+
+    val windowBoundsSync: WindowBounds?
+        get() =
+            runBlocking {
+                val prefs = dataStore.data.firstOrNull() ?: return@runBlocking null
+                val x = prefs[WINDOW_X] ?: return@runBlocking null
+                val y = prefs[WINDOW_Y] ?: return@runBlocking null
+                val w = prefs[WINDOW_W] ?: return@runBlocking null
+                val h = prefs[WINDOW_H] ?: return@runBlocking null
+                WindowBounds(
+                    x = x,
+                    y = y,
+                    width = w,
+                    height = h,
+                    maximized = prefs[WINDOW_MAXIMIZED] ?: false,
+                )
+            }
+
+    suspend fun setWindowBounds(bounds: WindowBounds) {
+        dataStore.edit { prefs ->
+            prefs[WINDOW_X] = bounds.x
+            prefs[WINDOW_Y] = bounds.y
+            prefs[WINDOW_W] = bounds.width
+            prefs[WINDOW_H] = bounds.height
+            prefs[WINDOW_MAXIMIZED] = bounds.maximized
+        }
+    }
+
+    val lastRouteSync: String?
+        get() = runBlocking { dataStore.data.firstOrNull()?.get(LAST_ROUTE) }
+
+    suspend fun setLastRoute(route: String) {
+        dataStore.edit { it[LAST_ROUTE] = route }
+    }
+
+    fun logsPaneRightWidth(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_RIGHT_W] }
+
+    suspend fun setLogsPaneRightWidth(dp: Int) {
+        dataStore.edit { it[LOGS_PANE_RIGHT_W] = dp }
+    }
+
+    fun logsPaneBottomHeight(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_BOTTOM_H] }
+
+    suspend fun setLogsPaneBottomHeight(dp: Int) {
+        dataStore.edit { it[LOGS_PANE_BOTTOM_H] = dp }
     }
 }
