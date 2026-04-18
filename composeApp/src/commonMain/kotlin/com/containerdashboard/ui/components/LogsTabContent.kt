@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.ui.state.LogsFilterState
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.monospaceMedium
@@ -106,8 +107,8 @@ internal fun LogsTabContent(
                 }
             }
             else -> {
-                var filterText by remember { mutableStateOf("") }
-                var selectedService by remember { mutableStateOf<String?>(null) }
+                val filterText = LogsFilterState.filterText
+                val selectedService = LogsFilterState.selectedService
                 var serviceDropdownExpanded by remember { mutableStateOf(false) }
 
                 val serviceNames =
@@ -190,7 +191,7 @@ internal fun LogsTabContent(
                                             )
                                         },
                                         onClick = {
-                                            selectedService = null
+                                            LogsFilterState.selectedService = null
                                             serviceDropdownExpanded = false
                                         },
                                     )
@@ -209,7 +210,7 @@ internal fun LogsTabContent(
                                                 )
                                             },
                                             onClick = {
-                                                selectedService = name
+                                                LogsFilterState.selectedService = name
                                                 serviceDropdownExpanded = false
                                             },
                                         )
@@ -235,7 +236,7 @@ internal fun LogsTabContent(
                         Spacer(modifier = Modifier.width(6.dp))
                         BasicTextField(
                             value = filterText,
-                            onValueChange = { filterText = it },
+                            onValueChange = { LogsFilterState.filterText = it },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle =
@@ -259,7 +260,7 @@ internal fun LogsTabContent(
                         if (filterText.isNotEmpty()) {
                             Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
-                                onClick = { filterText = "" },
+                                onClick = { LogsFilterState.filterText = "" },
                                 modifier = Modifier.size(18.dp),
                             ) {
                                 Icon(
