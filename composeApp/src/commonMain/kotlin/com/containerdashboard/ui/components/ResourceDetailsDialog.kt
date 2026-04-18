@@ -64,11 +64,16 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.data.models.AttachedContainer
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.EnvVar
+import com.containerdashboard.data.models.ImageInspect
+import com.containerdashboard.data.models.IpamConfigEntry
 import com.containerdashboard.data.models.MountInfo
 import com.containerdashboard.data.models.NetworkAttachment
+import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.PortMapping
+import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.Radius
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,8 +125,16 @@ private sealed interface DetailsState {
         val inspect: ContainerInspect,
     ) : DetailsState
 
-    data class RawJsonLoaded(
-        val json: String,
+    data class ImageLoaded(
+        val inspect: ImageInspect,
+    ) : DetailsState
+
+    data class NetworkLoaded(
+        val inspect: NetworkInspect,
+    ) : DetailsState
+
+    data class VolumeLoaded(
+        val inspect: VolumeInspect,
     ) : DetailsState
 }
 
@@ -150,19 +163,19 @@ private class ResourceDetailsViewModel(
 
                     is DetailsTarget.ImageTarget ->
                         repo.inspectImage(t.id).fold(
-                            onSuccess = { DetailsState.RawJsonLoaded(it) },
+                            onSuccess = { DetailsState.ImageLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect image") },
                         )
 
                     is DetailsTarget.NetworkTarget ->
                         repo.inspectNetwork(t.id).fold(
-                            onSuccess = { DetailsState.RawJsonLoaded(it) },
+                            onSuccess = { DetailsState.NetworkLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect network") },
                         )
 
                     is DetailsTarget.VolumeTarget ->
                         repo.inspectVolume(t.name).fold(
-                            onSuccess = { DetailsState.RawJsonLoaded(it) },
+                            onSuccess = { DetailsState.VolumeLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect volume") },
                         )
                 }
@@ -227,7 +240,9 @@ fun ResourceDetailsDialog(
                     is DetailsState.Error ->
                         ErrorState(message = s.message, onRetry = { vm.load() })
                     is DetailsState.ContainerLoaded -> ContainerTabs(s.inspect)
-                    is DetailsState.RawJsonLoaded -> RawOnlyTabs(s.json)
+                    is DetailsState.ImageLoaded -> ImageTabs(s.inspect)
+                    is DetailsState.NetworkLoaded -> NetworkTabs(s.inspect)
+                    is DetailsState.VolumeLoaded -> VolumeTabs(s.inspect)
                 }
             }
         }
@@ -423,38 +438,129 @@ private fun ContainerTabs(inspect: ContainerInspect) {
     }
 }
 
+private enum class ImageTab(
+    val title: String,
+) {
+    OVERVIEW("Overview"),
+    LAYERS("Layers"),
+    ENVIRONMENT("Environment"),
+    CONFIG("Config"),
+    LABELS("Labels"),
+    RAW("Raw JSON"),
+}
+
+private enum class NetworkTab(
+    val title: String,
+) {
+    OVERVIEW("Overview"),
+    ATTACHED("Attached"),
+    IPAM("IPAM"),
+    OPTIONS("Options"),
+    LABELS("Labels"),
+    RAW("Raw JSON"),
+}
+
+private enum class VolumeTab(
+    val title: String,
+) {
+    OVERVIEW("Overview"),
+    OPTIONS("Options"),
+    LABELS("Labels"),
+    RAW("Raw JSON"),
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RawOnlyTabs(json: String) {
+private fun ImageTabs(inspect: ImageInspect) {
+    var selected by remember { mutableStateOf(ImageTab.OVERVIEW) }
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
-            selectedTabIndex = 0,
+            selectedTabIndex = selected.ordinal,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary,
         ) {
-            Tab(
-                selected = true,
-                onClick = {},
-                text = {
-                    Text(
-                        text = "Raw JSON",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                },
-            )
+            ImageTab.entries.forEach { tab ->
+                Tab(
+                    selected = selected == tab,
+                    onClick = { selected = tab },
+                    text = {
+                        Text(tab.title, style = MaterialTheme.typography.labelLarge)
+                    },
+                )
+            }
         }
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "Rich tabs coming soon",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                RawJsonTab(json)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            when (selected) {
+                ImageTab.OVERVIEW -> ImageOverviewTab(inspect)
+                ImageTab.LAYERS -> ImageLayersTab(inspect.layers)
+                ImageTab.ENVIRONMENT -> EnvironmentTab(inspect.environment)
+                ImageTab.CONFIG -> ImageConfigTab(inspect)
+                ImageTab.LABELS -> LabelsTab(inspect.labels)
+                ImageTab.RAW -> RawJsonTab(inspect.rawJson)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NetworkTabs(inspect: NetworkInspect) {
+    var selected by remember { mutableStateOf(NetworkTab.OVERVIEW) }
+    Column(modifier = Modifier.fillMaxSize()) {
+        SecondaryTabRow(
+            selectedTabIndex = selected.ordinal,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+        ) {
+            NetworkTab.entries.forEach { tab ->
+                Tab(
+                    selected = selected == tab,
+                    onClick = { selected = tab },
+                    text = {
+                        Text(tab.title, style = MaterialTheme.typography.labelLarge)
+                    },
+                )
+            }
+        }
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            when (selected) {
+                NetworkTab.OVERVIEW -> NetworkOverviewTab(inspect)
+                NetworkTab.ATTACHED -> NetworkAttachedTab(inspect.attachedContainers)
+                NetworkTab.IPAM -> NetworkIpamTab(inspect.ipamDriver, inspect.ipamConfig)
+                NetworkTab.OPTIONS -> OptionsTab(inspect.options)
+                NetworkTab.LABELS -> LabelsTab(inspect.labels)
+                NetworkTab.RAW -> RawJsonTab(inspect.rawJson)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VolumeTabs(inspect: VolumeInspect) {
+    var selected by remember { mutableStateOf(VolumeTab.OVERVIEW) }
+    Column(modifier = Modifier.fillMaxSize()) {
+        SecondaryTabRow(
+            selectedTabIndex = selected.ordinal,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+        ) {
+            VolumeTab.entries.forEach { tab ->
+                Tab(
+                    selected = selected == tab,
+                    onClick = { selected = tab },
+                    text = {
+                        Text(tab.title, style = MaterialTheme.typography.labelLarge)
+                    },
+                )
+            }
+        }
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            when (selected) {
+                VolumeTab.OVERVIEW -> VolumeOverviewTab(inspect)
+                VolumeTab.OPTIONS -> OptionsTab(inspect.options)
+                VolumeTab.LABELS -> LabelsTab(inspect.labels)
+                VolumeTab.RAW -> RawJsonTab(inspect.rawJson)
             }
         }
     }
@@ -962,6 +1068,288 @@ private fun RawJsonTab(json: String) {
             }
         }
     }
+}
+
+@Composable
+private fun ImageOverviewTab(inspect: ImageInspect) {
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        KeyValueRow(
+            label = "ID",
+            value = inspect.shortId,
+            monospace = true,
+            trailing = {
+                CopyIconButton(tooltip = "Copy ID") {
+                    clipboard.setText(
+                        androidx.compose.ui.text
+                            .AnnotatedString(inspect.id),
+                    )
+                }
+            },
+        )
+        KeyValueRow(label = "Tags", value = inspect.repoTags.joinToString(", "))
+        KeyValueRow(label = "Digests", value = inspect.repoDigests.joinToString(", "), monospace = true)
+        KeyValueRow(label = "Architecture", value = inspect.architecture)
+        KeyValueRow(label = "OS", value = inspect.os)
+        KeyValueRow(label = "Size", value = formatBytes(inspect.size))
+        KeyValueRow(label = "Virtual size", value = formatBytes(inspect.virtualSize))
+        KeyValueRow(label = "Created", value = inspect.createdAt)
+        KeyValueRow(label = "Docker version", value = inspect.dockerVersion)
+        KeyValueRow(label = "Author", value = inspect.author)
+    }
+}
+
+@Composable
+private fun ImageLayersTab(layers: List<String>) {
+    if (layers.isEmpty()) {
+        EmptyState("No layer information available")
+        return
+    }
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        layers.forEachIndexed { index, digest ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "#${index + 1}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(40.dp),
+                )
+                SelectionContainer(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = digest,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                CopyIconButton(tooltip = "Copy digest") {
+                    clipboard.setText(
+                        androidx.compose.ui.text
+                            .AnnotatedString(digest),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageConfigTab(inspect: ImageInspect) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        KeyValueRow(label = "Entrypoint", value = inspect.entrypoint.joinToString(" "), monospace = true)
+        KeyValueRow(label = "Command", value = inspect.command.joinToString(" "), monospace = true)
+        KeyValueRow(label = "Working dir", value = inspect.workingDir, monospace = true)
+        KeyValueRow(label = "User", value = inspect.user)
+        KeyValueRow(
+            label = "Exposed ports",
+            value = if (inspect.exposedPorts.isEmpty()) "" else inspect.exposedPorts.joinToString(", "),
+        )
+    }
+}
+
+@Composable
+private fun NetworkOverviewTab(inspect: NetworkInspect) {
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        KeyValueRow(
+            label = "ID",
+            value = inspect.shortId,
+            monospace = true,
+            trailing = {
+                CopyIconButton(tooltip = "Copy ID") {
+                    clipboard.setText(
+                        androidx.compose.ui.text
+                            .AnnotatedString(inspect.id),
+                    )
+                }
+            },
+        )
+        KeyValueRow(label = "Name", value = inspect.name)
+        KeyValueRow(label = "Driver", value = inspect.driver)
+        KeyValueRow(label = "Scope", value = inspect.scope)
+        KeyValueRow(label = "Attachable", value = inspect.attachable.toString())
+        KeyValueRow(label = "Internal", value = inspect.internal.toString())
+        KeyValueRow(label = "IPv6 enabled", value = inspect.ipv6Enabled.toString())
+    }
+}
+
+@Composable
+private fun NetworkAttachedTab(attached: List<AttachedContainer>) {
+    if (attached.isEmpty()) {
+        EmptyState("No containers attached to this network")
+        return
+    }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        attached.forEach { c ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            RoundedCornerShape(Radius.sm),
+                        ).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = c.name.ifBlank { "(unnamed)" },
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (c.id.isNotBlank()) {
+                    KeyValueRow(label = "ID", value = c.id.take(12), monospace = true)
+                }
+                if (c.ipv4Address.isNotBlank()) {
+                    KeyValueRow(label = "IPv4", value = c.ipv4Address, monospace = true)
+                }
+                if (c.ipv6Address.isNotBlank()) {
+                    KeyValueRow(label = "IPv6", value = c.ipv6Address, monospace = true)
+                }
+                if (c.macAddress.isNotBlank()) {
+                    KeyValueRow(label = "MAC", value = c.macAddress, monospace = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NetworkIpamTab(
+    driver: String,
+    entries: List<IpamConfigEntry>,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        KeyValueRow(label = "Driver", value = driver)
+        if (entries.isEmpty()) {
+            Text(
+                text = "No IPAM config entries",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return
+        }
+        entries.forEachIndexed { idx, entry ->
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            RoundedCornerShape(Radius.sm),
+                        ).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Config #${idx + 1}",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                KeyValueRow(label = "Subnet", value = entry.subnet, monospace = true)
+                KeyValueRow(label = "Gateway", value = entry.gateway, monospace = true)
+                if (entry.ipRange.isNotBlank()) {
+                    KeyValueRow(label = "IP range", value = entry.ipRange, monospace = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VolumeOverviewTab(inspect: VolumeInspect) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        KeyValueRow(label = "Name", value = inspect.name, monospace = true)
+        KeyValueRow(label = "Driver", value = inspect.driver)
+        KeyValueRow(label = "Mountpoint", value = inspect.mountpoint, monospace = true)
+        KeyValueRow(label = "Scope", value = inspect.scope)
+        KeyValueRow(label = "Created", value = inspect.createdAt)
+    }
+}
+
+@Composable
+private fun OptionsTab(options: Map<String, String>) {
+    if (options.isEmpty()) {
+        EmptyState("No options set")
+        return
+    }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.entries.sortedBy { it.key }.forEach { (k, v) ->
+            KeyValueRow(label = k, value = v, monospace = true)
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "-"
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "%.1f KB".format(kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return "%.1f MB".format(mb)
+    val gb = mb / 1024.0
+    return "%.2f GB".format(gb)
 }
 
 @Composable

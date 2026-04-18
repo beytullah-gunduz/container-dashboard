@@ -6,8 +6,11 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.models.DockerVersion
+import com.containerdashboard.data.models.ImageInspect
+import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
+import com.containerdashboard.data.models.VolumeInspect
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -76,7 +79,7 @@ expect class DockerRepository(
 
     suspend fun getImage(id: String): Result<DockerImage>
 
-    suspend fun inspectImage(id: String): Result<String>
+    suspend fun inspectImage(id: String): Result<ImageInspect>
 
     suspend fun pullImage(
         name: String,
@@ -93,7 +96,7 @@ expect class DockerRepository(
 
     suspend fun getVolume(name: String): Result<Volume>
 
-    suspend fun inspectVolume(name: String): Result<String>
+    suspend fun inspectVolume(name: String): Result<VolumeInspect>
 
     suspend fun createVolume(
         name: String,
@@ -107,7 +110,7 @@ expect class DockerRepository(
 
     suspend fun getNetwork(id: String): Result<DockerNetwork>
 
-    suspend fun inspectNetwork(id: String): Result<String>
+    suspend fun inspectNetwork(id: String): Result<NetworkInspect>
 
     suspend fun createNetwork(
         name: String,

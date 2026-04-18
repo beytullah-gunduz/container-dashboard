@@ -1,5 +1,6 @@
 package com.containerdashboard.data.repository
 
+import com.containerdashboard.data.models.AttachedContainer
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerPort
@@ -10,12 +11,16 @@ import com.containerdashboard.data.models.DockerVersion
 import com.containerdashboard.data.models.EnvVar
 import com.containerdashboard.data.models.IPAM
 import com.containerdashboard.data.models.IPAMConfig
+import com.containerdashboard.data.models.ImageInspect
+import com.containerdashboard.data.models.IpamConfigEntry
 import com.containerdashboard.data.models.MountInfo
 import com.containerdashboard.data.models.NetworkAttachment
 import com.containerdashboard.data.models.NetworkContainer
+import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
+import com.containerdashboard.data.models.VolumeInspect
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -365,42 +370,42 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun inspectImage(id: String): Result<String> =
+    actual suspend fun inspectImage(id: String): Result<ImageInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
                     withRetryOnPoolShutdown {
                         dockerClient.inspectImageCmd(id).exec()
                     }
-                Result.success(toPrettyJson(response))
+                Result.success(response.toImageInspect())
             } catch (e: Exception) {
                 logger.error("Failed to inspect image {}", id, e)
                 Result.failure(e)
             }
         }
 
-    actual suspend fun inspectVolume(name: String): Result<String> =
+    actual suspend fun inspectVolume(name: String): Result<VolumeInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
                     withRetryOnPoolShutdown {
                         dockerClient.inspectVolumeCmd(name).exec()
                     }
-                Result.success(toPrettyJson(response))
+                Result.success(response.toVolumeInspect())
             } catch (e: Exception) {
                 logger.error("Failed to inspect volume {}", name, e)
                 Result.failure(e)
             }
         }
 
-    actual suspend fun inspectNetwork(id: String): Result<String> =
+    actual suspend fun inspectNetwork(id: String): Result<NetworkInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
                     withRetryOnPoolShutdown {
                         dockerClient.inspectNetworkCmd().withNetworkId(id).exec()
                     }
-                Result.success(toPrettyJson(response))
+                Result.success(response.toNetworkInspect())
             } catch (e: Exception) {
                 logger.error("Failed to inspect network {}", id, e)
                 Result.failure(e)
@@ -1476,6 +1481,112 @@ actual class DockerRepository actual constructor(
             rawJson = toPrettyJson(this),
         )
     }
+
+    private fun com.github.dockerjava.api.command.InspectImageResponse.toImageInspect(): ImageInspect {
+        val config = this.config
+        val envPairs =
+            config?.env?.map { entry ->
+                val idx = entry.indexOf('=')
+                if (idx >= 0) {
+                    EnvVar(entry.substring(0, idx), entry.substring(idx + 1))
+                } else {
+                    EnvVar(entry, "")
+                }
+            } ?: emptyList()
+
+        val exposedPortStrings =
+            config
+                ?.exposedPorts
+                ?.map { port ->
+                    val proto = port?.protocol?.name?.lowercase() ?: "tcp"
+                    "${port?.port ?: 0}/$proto"
+                }.orEmpty()
+
+        val rawId = this.id ?: ""
+        val shortId = rawId.removePrefix("sha256:").take(12)
+
+        val layerDigests = this.rootFS?.layers.orEmpty()
+
+        return ImageInspect(
+            id = rawId,
+            shortId = shortId,
+            repoTags = this.repoTags.orEmpty(),
+            repoDigests = this.repoDigests.orEmpty(),
+            architecture = this.arch ?: "",
+            os = this.os ?: "",
+            size = this.size ?: 0L,
+            virtualSize = this.virtualSize ?: 0L,
+            createdAt = this.created ?: "",
+            dockerVersion = this.dockerVersion ?: "",
+            author = this.author ?: "",
+            entrypoint = config?.entrypoint?.toList().orEmpty(),
+            command = config?.cmd?.toList().orEmpty(),
+            workingDir = config?.workingDir ?: "",
+            user = config?.user ?: "",
+            exposedPorts = exposedPortStrings,
+            environment = envPairs,
+            labels = config?.labels ?: emptyMap(),
+            layers = layerDigests,
+            rawJson = toPrettyJson(this),
+        )
+    }
+
+    private fun com.github.dockerjava.api.model.Network.toNetworkInspect(): NetworkInspect {
+        val rawId = this.id ?: ""
+        val shortId = rawId.take(12)
+
+        val ipam = this.ipam
+        val ipamEntries =
+            ipam?.config?.map { entry ->
+                IpamConfigEntry(
+                    subnet = entry.subnet ?: "",
+                    gateway = entry.gateway ?: "",
+                    ipRange = entry.ipRange ?: "",
+                )
+            } ?: emptyList()
+
+        val attached =
+            this.containers?.entries?.map { (cid, info) ->
+                AttachedContainer(
+                    id = cid,
+                    name = info?.name ?: "",
+                    ipv4Address = info?.ipv4Address ?: "",
+                    ipv6Address = info?.ipv6Address ?: "",
+                    macAddress = info?.macAddress ?: "",
+                )
+            } ?: emptyList()
+
+        return NetworkInspect(
+            id = rawId,
+            shortId = shortId,
+            name = this.name ?: "",
+            driver = this.driver ?: "",
+            scope = this.scope ?: "",
+            attachable = this.isAttachable ?: false,
+            ingress = false,
+            internal = this.getInternal() ?: false,
+            ipv6Enabled = this.enableIPv6 ?: false,
+            createdAt = "",
+            ipamDriver = ipam?.driver ?: "",
+            ipamConfig = ipamEntries,
+            options = this.options ?: emptyMap(),
+            labels = this.labels ?: emptyMap(),
+            attachedContainers = attached,
+            rawJson = toPrettyJson(this),
+        )
+    }
+
+    private fun com.github.dockerjava.api.command.InspectVolumeResponse.toVolumeInspect(): VolumeInspect =
+        VolumeInspect(
+            name = this.name ?: "",
+            driver = this.driver ?: "",
+            mountpoint = this.mountpoint ?: "",
+            scope = "",
+            createdAt = "",
+            options = this.options ?: emptyMap(),
+            labels = this.labels ?: emptyMap(),
+            rawJson = toPrettyJson(this),
+        )
 
     // Extension functions to convert Docker Java models to our models
     private fun DockerContainer.toContainer(): Container =
