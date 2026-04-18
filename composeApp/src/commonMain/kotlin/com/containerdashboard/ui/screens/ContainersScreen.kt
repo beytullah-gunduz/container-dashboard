@@ -139,25 +139,11 @@ fun ContainersScreen(
     var sortDirection by remember { mutableStateOf(SortDirection.ASCENDING) }
     var runningVisible by remember { mutableStateOf(true) }
     var otherVisible by remember { mutableStateOf(true) }
-    var expandedRunningProjects by remember { mutableStateOf(setOf<String>()) }
-    var expandedOtherProjects by remember { mutableStateOf(setOf<String>()) }
+    val expandedRunningProjects by viewModel.expandedRunningProjects.collectAsState()
+    val expandedOtherProjects by viewModel.expandedOtherProjects.collectAsState()
 
-    val toggleRunningGroup: (String) -> Unit = { project ->
-        expandedRunningProjects =
-            if (project in expandedRunningProjects) {
-                expandedRunningProjects - project
-            } else {
-                expandedRunningProjects + project
-            }
-    }
-    val toggleOtherGroup: (String) -> Unit = { project ->
-        expandedOtherProjects =
-            if (project in expandedOtherProjects) {
-                expandedOtherProjects - project
-            } else {
-                expandedOtherProjects + project
-            }
-    }
+    val toggleRunningGroup: (String) -> Unit = { project -> viewModel.toggleRunningProject(project) }
+    val toggleOtherGroup: (String) -> Unit = { project -> viewModel.toggleOtherProject(project) }
 
     val onSortChange: (SortColumn) -> Unit = { column ->
         if (sortColumn == column) {

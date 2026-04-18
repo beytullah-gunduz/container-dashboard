@@ -57,6 +57,23 @@ class ContainersScreenViewModel : ViewModel() {
     private val _pendingDeleteIds = MutableStateFlow(setOf<String>())
     val pendingDeleteIds: StateFlow<Set<String>> = _pendingDeleteIds.asStateFlow()
 
+    // Compose-project expand state. Kept in the VM (not `remember` inside
+    // the screen) so groups stay expanded when the user navigates away
+    // and comes back.
+    private val _expandedRunningProjects = MutableStateFlow(setOf<String>())
+    val expandedRunningProjects: StateFlow<Set<String>> = _expandedRunningProjects.asStateFlow()
+
+    private val _expandedOtherProjects = MutableStateFlow(setOf<String>())
+    val expandedOtherProjects: StateFlow<Set<String>> = _expandedOtherProjects.asStateFlow()
+
+    fun toggleRunningProject(project: String) {
+        _expandedRunningProjects.update { if (project in it) it - project else it + project }
+    }
+
+    fun toggleOtherProject(project: String) {
+        _expandedOtherProjects.update { if (project in it) it - project else it + project }
+    }
+
     val columnWidths: Flow<ContainerColumnWidths> = PreferenceRepository.containerColumnWidths()
 
     fun setColumnWidths(widths: ContainerColumnWidths) {
