@@ -193,91 +193,99 @@ fun ContainerExtraPane(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
-            // Tabs row
-            @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-            SecondaryTabRow(
-                selectedTabIndex = selectedTab,
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Article,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Logs",
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
-                    },
+            if (logsState.isGroupMode) {
+                // Group mode has no meaningful console target — show logs only.
+                LogsTabContent(
+                    state = logsState,
+                    onRefresh = onRefreshLogs,
                 )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = {
-                        selectedTab = 1
-                        onConsoleTabSelected()
-                    },
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box {
+            } else {
+                // Tabs row
+                @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+                SecondaryTabRow(
+                    selectedTabIndex = selectedTab,
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.Outlined.Terminal,
+                                    Icons.AutoMirrored.Outlined.Article,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
                                 )
-                                if (isConsoleAlive) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .size(7.dp)
-                                                .align(Alignment.TopEnd)
-                                                .offset(x = 3.dp, y = (-2).dp)
-                                                .clip(CircleShape)
-                                                .background(AppColors.Running),
-                                    )
-                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Logs",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Console",
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
-                    },
-                )
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Console stays composed once first opened so the exec session
-                // survives tab switches. Shrunk to 0 when not active because
-                // SwingPanel can't be reliably hidden via Compose layering.
-                if (consoleEverOpened) {
-                    Box(
-                        modifier =
-                            if (selectedTab == 1) {
-                                Modifier.fillMaxSize()
-                            } else {
-                                Modifier.size(0.dp)
-                            },
-                    ) {
-                        consoleContent()
-                    }
-                }
-                if (selectedTab == 0) {
-                    LogsTabContent(
-                        state = logsState,
-                        onRefresh = onRefreshLogs,
+                        },
                     )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = {
+                            selectedTab = 1
+                            onConsoleTabSelected()
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box {
+                                    Icon(
+                                        Icons.Outlined.Terminal,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    if (isConsoleAlive) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .size(7.dp)
+                                                    .align(Alignment.TopEnd)
+                                                    .offset(x = 3.dp, y = (-2).dp)
+                                                    .clip(CircleShape)
+                                                    .background(AppColors.Running),
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Console",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        },
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Console stays composed once first opened so the exec session
+                    // survives tab switches. Shrunk to 0 when not active because
+                    // SwingPanel can't be reliably hidden via Compose layering.
+                    if (consoleEverOpened) {
+                        Box(
+                            modifier =
+                                if (selectedTab == 1) {
+                                    Modifier.fillMaxSize()
+                                } else {
+                                    Modifier.size(0.dp)
+                                },
+                        ) {
+                            consoleContent()
+                        }
+                    }
+                    if (selectedTab == 0) {
+                        LogsTabContent(
+                            state = logsState,
+                            onRefresh = onRefreshLogs,
+                        )
+                    }
                 }
             }
         }
