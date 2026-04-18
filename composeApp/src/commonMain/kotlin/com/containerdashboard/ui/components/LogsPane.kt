@@ -33,10 +33,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.monospaceMedium
@@ -48,6 +51,7 @@ fun LogsPane(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val maxLines by PreferenceRepository.logsMaxLines().collectAsState(initial = 1000)
     Surface(
         modifier = modifier.fillMaxSize().widthIn(min = 400.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -261,7 +265,7 @@ fun LogsPane(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "Last 500 lines",
+                        text = "Last $maxLines lines",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

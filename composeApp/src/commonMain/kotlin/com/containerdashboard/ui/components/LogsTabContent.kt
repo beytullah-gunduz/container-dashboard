@@ -63,6 +63,7 @@ internal fun LogsTabContent(
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
     val wordWrap by PreferenceRepository.logsWordWrap().collectAsState(initial = true)
+    val maxLines by PreferenceRepository.logsMaxLines().collectAsState(initial = 1000)
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(state.logs) {
@@ -363,7 +364,7 @@ internal fun LogsTabContent(
                             }
                         } else {
                             Text(
-                                text = "Last 500 lines",
+                                text = "Last $maxLines lines",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
