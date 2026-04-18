@@ -62,15 +62,11 @@ object PreferenceRepository {
     private val VOL_COL_WEIGHT_NAME by lazy { floatPreferencesKey("volume_col_weight_name") }
     private val VOL_COL_WEIGHT_DRIVER by lazy { floatPreferencesKey("volume_col_weight_driver") }
     private val VOL_COL_WEIGHT_MOUNT by lazy { floatPreferencesKey("volume_col_weight_mount") }
-    // The application directory (`~/RssHerding/`, inherited from the parent
-    // project) already contains `window_x`, `window_y`, `window_width`,
-    // `window_height` keys stored as Float. Our window-bounds integers live
-    // under a `cd_` prefix to avoid a ClassCastException on read.
-    private val WINDOW_X by lazy { intPreferencesKey("cd_window_x") }
-    private val WINDOW_Y by lazy { intPreferencesKey("cd_window_y") }
-    private val WINDOW_W by lazy { intPreferencesKey("cd_window_width") }
-    private val WINDOW_H by lazy { intPreferencesKey("cd_window_height") }
-    private val WINDOW_MAXIMIZED by lazy { booleanPreferencesKey("cd_window_maximized") }
+    private val WINDOW_X by lazy { intPreferencesKey("window_x") }
+    private val WINDOW_Y by lazy { intPreferencesKey("window_y") }
+    private val WINDOW_W by lazy { intPreferencesKey("window_width") }
+    private val WINDOW_H by lazy { intPreferencesKey("window_height") }
+    private val WINDOW_MAXIMIZED by lazy { booleanPreferencesKey("window_maximized") }
     private val LAST_ROUTE by lazy { stringPreferencesKey("last_route") }
     private val LOGS_PANE_RIGHT_W by lazy { intPreferencesKey("logs_pane_right_width_dp") }
     private val LOGS_PANE_BOTTOM_H by lazy { intPreferencesKey("logs_pane_bottom_height_dp") }
