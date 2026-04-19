@@ -701,7 +701,6 @@ private fun ImageRow(
         }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f),
-            thickness = 0.5.dp,
         )
 
         ImageContextMenu(
