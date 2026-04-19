@@ -1,3 +1,4 @@
+import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.awt.BasicStroke
 import java.awt.Color
@@ -142,6 +143,7 @@ val generatedIconsDir = layout.buildDirectory.dir("generated-icons")
 val generatedIcnsFile = generatedIconsDir.map { it.file("container-dashboard.icns") }
 
 val generateMacIcon by tasks.registering {
+    onlyIf { OperatingSystem.current().isMacOsX }
     val outDir = generatedIconsDir
     outputs.dir(outDir)
     doLast {
@@ -290,13 +292,17 @@ fun renderContainerIcon(size: Int): BufferedImage {
 
 // Ensure every packaging task regenerates the icon first. CI invocations
 // of `packageReleaseDmg` / `createDistributable` / etc. pick up icon
-// changes without a manual bootstrap step.
-tasks
-    .matching { task ->
-        task.name.startsWith("package") || task.name.contains("Distributable", ignoreCase = true)
-    }.configureEach {
-        dependsOn(generateMacIcon)
-    }
+// changes without a manual bootstrap step. Only attached on macOS hosts
+// because the .icns is consumed only by the DMG build, and `iconutil`
+// is unavailable on the Linux/Windows CI runners that build .deb/.msi.
+if (OperatingSystem.current().isMacOsX) {
+    tasks
+        .matching { task ->
+            task.name.startsWith("package") || task.name.contains("Distributable", ignoreCase = true)
+        }.configureEach {
+            dependsOn(generateMacIcon)
+        }
+}
 
 compose.desktop {
     application {
