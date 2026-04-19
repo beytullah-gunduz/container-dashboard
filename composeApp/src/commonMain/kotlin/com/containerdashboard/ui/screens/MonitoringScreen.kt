@@ -73,6 +73,11 @@ private val COMPACT_THRESHOLD = 700.dp
 // two-row-per-container layout so disk/network columns stay legible.
 private val NARROW_TABLE_THRESHOLD = 900.dp
 
+// Shared left-padding for history-graph canvases so the bar areas of
+// UsageHistoryGraph and IoHistoryGraph line up vertically when the
+// graphs are stacked. Sized for the widest expected label ("999 MB/s").
+private val GRAPH_Y_AXIS_PADDING = 72.dp
+
 private enum class MonitoringSort { NAME, CPU, MEM, DISK_R, DISK_W, NET_RX, NET_TX }
 
 private enum class MonitoringSortDirection { ASC, DESC }
@@ -1031,7 +1036,7 @@ private fun UsageHistoryGraph(
                     )
                 }
 
-                Canvas(modifier = Modifier.fillMaxSize().padding(start = 32.dp)) {
+                Canvas(modifier = Modifier.fillMaxSize().padding(start = GRAPH_Y_AXIS_PADDING)) {
                     val chartWidth = size.width
                     val chartHeight = size.height
                     val barWidth = chartWidth / maxHistorySize
@@ -1171,7 +1176,7 @@ private fun IoHistoryGraph(
                     )
                 }
 
-                Canvas(modifier = Modifier.fillMaxSize().padding(start = 72.dp)) {
+                Canvas(modifier = Modifier.fillMaxSize().padding(start = GRAPH_Y_AXIS_PADDING)) {
                     val chartWidth = size.width
                     val chartHeight = size.height
                     val slotWidth = chartWidth / maxHistorySize
