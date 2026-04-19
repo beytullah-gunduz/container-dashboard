@@ -41,7 +41,6 @@ object AppColors {
     // Text
     val TextPrimary = Color(0xFFE0E0E0)
     val TextSecondary = Color(0xFF9E9E9E)
-    val TextMuted = Color(0xFF9C9C9C)
 
     // Extended semantic surfaces (dark theme values)
     val DividerStrong = Color(0xFF404040)

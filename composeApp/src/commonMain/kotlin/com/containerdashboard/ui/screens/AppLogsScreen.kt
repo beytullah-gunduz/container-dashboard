@@ -376,7 +376,7 @@ private fun levelColor(level: String): Color =
         "WARN" -> AppColors.Warning
         "INFO" -> AppColors.Running
         "DEBUG" -> AppColors.AccentBlue
-        "TRACE" -> AppColors.TextMuted
+        "TRACE" -> AppColors.TextSecondary
         else -> AppColors.TextSecondary
     }
 
