@@ -21,8 +21,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NetworkCheck
@@ -295,11 +295,11 @@ fun MonitoringScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Default.Close, null)
+                            Icon(Icons.Outlined.Close, null)
                         }
                     }
                 }

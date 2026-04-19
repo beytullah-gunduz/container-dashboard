@@ -21,13 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
@@ -241,19 +240,19 @@ fun VolumesScreen(
                                     color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
-                                Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedVolumeNames.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Outlined.Close, null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
                     Button(onClick = { viewModel.setShowCreateDialog(true) }) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create volume")
                     }
@@ -276,11 +275,11 @@ fun VolumesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Default.Close, null)
+                            Icon(Icons.Outlined.Close, null)
                         }
                     }
                 }

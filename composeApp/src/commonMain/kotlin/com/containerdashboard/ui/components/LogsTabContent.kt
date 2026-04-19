@@ -24,7 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.WrapText
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material3.Button
@@ -265,7 +265,7 @@ internal fun LogsTabContent(
                                 modifier = Modifier.size(18.dp),
                             ) {
                                 Icon(
-                                    Icons.Filled.Clear,
+                                    Icons.Outlined.Clear,
                                     contentDescription = "Clear filter",
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

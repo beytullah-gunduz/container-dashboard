@@ -17,8 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Storage
@@ -119,7 +119,7 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            Icons.Default.Error,
+                            Icons.Outlined.Error,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -129,7 +129,7 @@ fun DashboardScreen(
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Default.Close, null)
+                            Icon(Icons.Outlined.Close, null)
                         }
                     }
                 }

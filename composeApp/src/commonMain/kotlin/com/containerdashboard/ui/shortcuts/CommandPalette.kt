@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -179,7 +179,7 @@ fun CommandPalette(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Outlined.Search,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(IconSize.lg),

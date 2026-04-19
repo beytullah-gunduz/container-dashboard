@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -55,7 +55,7 @@ internal fun CompactCheckbox(
     ) {
         if (checked) {
             Icon(
-                Icons.Default.Check,
+                Icons.Outlined.Check,
                 contentDescription = null,
                 modifier = Modifier.size(11.dp),
                 tint = MaterialTheme.colorScheme.onPrimary,

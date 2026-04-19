@@ -33,10 +33,9 @@ import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Stop
@@ -672,7 +671,7 @@ internal fun CompactContainerRow(
                     modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
-                        Icons.Default.MoreVert,
+                        Icons.Outlined.MoreVert,
                         contentDescription = "Actions",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -19,9 +19,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -110,7 +110,7 @@ fun LogsPane(
                             )
                         } else {
                             Icon(
-                                Icons.Default.Refresh,
+                                Icons.Outlined.Refresh,
                                 contentDescription = "Refresh logs",
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -122,7 +122,7 @@ fun LogsPane(
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
-                            Icons.Default.Close,
+                            Icons.Outlined.Close,
                             contentDescription = "Close logs",
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -168,7 +168,7 @@ fun LogsPane(
                                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
                                 Icon(
-                                    Icons.Default.ErrorOutline,
+                                    Icons.Outlined.ErrorOutline,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(48.dp),
@@ -191,7 +191,7 @@ fun LogsPane(
                                             contentColor = MaterialTheme.colorScheme.onSurface,
                                         ),
                                 ) {
-                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Outlined.Refresh, null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(Spacing.sm))
                                     Text("Retry")
                                 }

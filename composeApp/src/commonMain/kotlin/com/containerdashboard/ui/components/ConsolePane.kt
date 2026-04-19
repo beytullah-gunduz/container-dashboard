@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Pause
@@ -166,7 +166,7 @@ fun ContainerExtraPane(
                 AppTooltip(label = "Close logs pane", shortcut = "Esc") {
                     IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Default.Close,
+                            Icons.Outlined.Close,
                             contentDescription = "Close",
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,

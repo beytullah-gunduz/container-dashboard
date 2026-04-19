@@ -25,14 +25,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.RemoveDone
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Error
+import androidx.compose.material.icons.outlined.RemoveDone
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.ViewAgenda
@@ -316,14 +315,14 @@ fun ContainersScreen(
                         if (iconOnly) {
                             IconButton(onClick = { viewModel.clearSelection() }) {
                                 Icon(
-                                    Icons.Default.RemoveDone,
+                                    Icons.Outlined.RemoveDone,
                                     contentDescription = "Clear selection",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else {
                             OutlinedButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.RemoveDone, null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Outlined.RemoveDone, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Clear")
                             }
@@ -432,7 +431,7 @@ fun ContainersScreen(
                                         )
                                     } else {
                                         Icon(
-                                            Icons.Default.Delete,
+                                            Icons.Outlined.Delete,
                                             contentDescription = "Delete ${selectedContainerIds.size} selected",
                                             tint = MaterialTheme.colorScheme.error,
                                         )
@@ -460,7 +459,7 @@ fun ContainersScreen(
                                         color = MaterialTheme.colorScheme.onError,
                                     )
                                 } else {
-                                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Delete ${selectedContainerIds.size} selected")
@@ -483,7 +482,7 @@ fun ContainersScreen(
                                         )
                                     } else {
                                         Icon(
-                                            Icons.Default.DeleteForever,
+                                            Icons.Outlined.DeleteForever,
                                             contentDescription = "Delete All",
                                             tint = MaterialTheme.colorScheme.error,
                                         )
@@ -503,7 +502,7 @@ fun ContainersScreen(
                                         color = MaterialTheme.colorScheme.onError,
                                     )
                                 } else {
-                                    Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Outlined.DeleteForever, null, modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Delete All")
@@ -626,11 +625,11 @@ fun ContainersScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Default.Close, null)
+                            Icon(Icons.Outlined.Close, null)
                         }
                     }
                 }
@@ -657,7 +656,7 @@ fun ContainersScreen(
                     label = { Text("All") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.ALL) {
-                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },
@@ -669,7 +668,7 @@ fun ContainersScreen(
                     label = { Text("Running") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.RUNNING) {
-                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },
@@ -681,7 +680,7 @@ fun ContainersScreen(
                     label = { Text("Stopped") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.STOPPED) {
-                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },

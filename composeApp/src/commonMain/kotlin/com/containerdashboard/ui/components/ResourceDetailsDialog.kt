@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Hub
@@ -335,7 +335,7 @@ private fun DetailsHeader(
         }
         IconButton(onClick = onClose) {
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = Icons.Outlined.Close,
                 contentDescription = "Close",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

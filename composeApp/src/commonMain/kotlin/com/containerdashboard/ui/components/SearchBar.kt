@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +62,7 @@ fun SearchBar(
             horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = Icons.Outlined.Search,
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(iconSize),
@@ -103,7 +103,7 @@ fun SearchBar(
                         modifier = Modifier.size(clearButtonSize),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            imageVector = Icons.Outlined.Clear,
                             contentDescription = "Clear",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(clearIconSize),
