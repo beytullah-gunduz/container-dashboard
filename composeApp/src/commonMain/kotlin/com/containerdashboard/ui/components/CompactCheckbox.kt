@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.theme.Radius
 
 /**
  * 14dp desktop-sized checkbox. Replacement for Material3 `Checkbox` in dense
@@ -43,12 +44,12 @@ internal fun CompactCheckbox(
         modifier =
             Modifier
                 .size(14.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .clip(RoundedCornerShape(Radius.xs))
                 .background(fillColor)
                 .border(
                     width = 1.2.dp,
                     color = if (checked && enabled) MaterialTheme.colorScheme.primary else outlineColor,
-                    shape = RoundedCornerShape(3.dp),
+                    shape = RoundedCornerShape(Radius.xs),
                 ).clickable(enabled = enabled) { onCheckedChange(!checked) },
         contentAlignment = Alignment.Center,
     ) {

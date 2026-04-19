@@ -73,6 +73,7 @@ import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
+import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.util.copyToClipboard
 
 @Composable
@@ -546,7 +547,7 @@ private fun NetworkRow(
                         )
                         if (isSystem) {
                             Surface(
-                                shape = RoundedCornerShape(3.dp),
+                                shape = RoundedCornerShape(Radius.xs),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                             ) {
                                 Text(
@@ -559,7 +560,7 @@ private fun NetworkRow(
                         }
                         if (network.containerCount > 0) {
                             Surface(
-                                shape = RoundedCornerShape(3.dp),
+                                shape = RoundedCornerShape(Radius.xs),
                                 color = MaterialTheme.colorScheme.primaryContainer,
                             ) {
                                 Text(
@@ -615,7 +616,7 @@ private fun NetworkRow(
                     )
                     if (isSystem) {
                         Surface(
-                            shape = RoundedCornerShape(3.dp),
+                            shape = RoundedCornerShape(Radius.xs),
                             color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Text(
@@ -670,7 +671,7 @@ private fun NetworkRow(
                 Box(modifier = Modifier.weight(0.6f)) {
                     if (network.containerCount > 0) {
                         Surface(
-                            shape = RoundedCornerShape(3.dp),
+                            shape = RoundedCornerShape(Radius.xs),
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(

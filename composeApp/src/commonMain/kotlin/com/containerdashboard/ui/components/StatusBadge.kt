@@ -68,7 +68,7 @@ fun StatusBadge(
     ) {
         Surface(
             modifier = Modifier.size(6.dp),
-            shape = RoundedCornerShape(3.dp),
+            shape = RoundedCornerShape(Radius.xs),
             color = textColor,
         ) {}
 

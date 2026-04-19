@@ -180,7 +180,7 @@ internal fun ComposeProjectHeader(
             )
             if (showComposeBadge) {
                 Surface(
-                    shape = RoundedCornerShape(3.dp),
+                    shape = RoundedCornerShape(Radius.xs),
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 ) {
                     Text(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Close
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Radius
 
 @Composable
 fun ContainerExtraPane(
@@ -94,9 +96,7 @@ fun ContainerExtraPane(
                     if (logsState.isGroupMode) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            shape =
-                                androidx.compose.foundation.shape
-                                    .RoundedCornerShape(3.dp),
+                            shape = RoundedCornerShape(Radius.xs),
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         ) {
                             Text(
