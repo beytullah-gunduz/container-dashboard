@@ -874,6 +874,8 @@ fun ContainersScreen(
                                                 onViewGroupLogs = { onShowGroupLogs(it) },
                                                 onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
+                                                onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
+                                                onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },
                                                 onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
                                             )
                                         }
@@ -1035,6 +1037,8 @@ fun ContainersScreen(
                                                 onViewGroupLogs = { onShowGroupLogs(it) },
                                                 onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
+                                                onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
+                                                onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },
                                                 onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
                                             )
                                         }

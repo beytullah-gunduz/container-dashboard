@@ -137,12 +137,15 @@ internal fun ComposeProjectHeader(
     containerCount: Int,
     expanded: Boolean,
     hasRunning: Boolean,
+    hasPaused: Boolean,
     onToggle: () -> Unit,
     allSelected: Boolean,
     onSelectAll: (Boolean) -> Unit,
     onViewGroupLogs: () -> Unit,
     onStartAll: () -> Unit,
     onStopAll: () -> Unit,
+    onPauseAll: () -> Unit,
+    onUnpauseAll: () -> Unit,
     onRemoveAll: () -> Unit,
     cpuPercent: Double? = null,
     memoryUsage: Long? = null,
@@ -255,6 +258,25 @@ internal fun ComposeProjectHeader(
                     )
                 }
             }
+            if (hasRunning) {
+                IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        Icons.Outlined.Pause,
+                        contentDescription = "Pause all",
+                        modifier = Modifier.size(14.dp),
+                        tint = AppColors.Paused,
+                    )
+                }
+            } else if (hasPaused) {
+                IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        Icons.Outlined.PlayArrow,
+                        contentDescription = "Unpause all",
+                        modifier = Modifier.size(14.dp),
+                        tint = AppColors.Running,
+                    )
+                }
+            }
             IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
                 Icon(
                     Icons.Outlined.Delete,
@@ -290,6 +312,8 @@ internal fun ComposeProjectCard(
     onViewGroupLogs: (List<Container>) -> Unit,
     onStartAll: (List<String>) -> Unit,
     onStopAll: (List<String>) -> Unit,
+    onPauseAll: (List<String>) -> Unit,
+    onUnpauseAll: (List<String>) -> Unit,
     onRemoveAll: (List<String>) -> Unit,
 ) {
     val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
@@ -341,12 +365,15 @@ internal fun ComposeProjectCard(
             containerCount = item.containers.size,
             expanded = item.expanded,
             hasRunning = item.containers.any { it.isRunning },
+            hasPaused = item.containers.any { it.isPaused },
             onToggle = onToggle,
             allSelected = item.containers.all { it.id in selectedContainerIds },
             onSelectAll = onSelectAll,
             onViewGroupLogs = { onViewGroupLogs(item.containers) },
             onStartAll = { onStartAll(item.containers.map { it.id }) },
             onStopAll = { onStopAll(item.containers.map { it.id }) },
+            onPauseAll = { onPauseAll(item.containers.filter { it.isRunning }.map { it.id }) },
+            onUnpauseAll = { onUnpauseAll(item.containers.filter { it.isPaused }.map { it.id }) },
             onRemoveAll = { onRemoveAll(item.containers.map { it.id }) },
             cpuPercent = if (groupStats.isNotEmpty()) totalCpu else null,
             memoryUsage = if (groupStats.isNotEmpty()) totalMem else null,
