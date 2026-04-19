@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,7 +40,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,6 +63,7 @@ import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
+import com.containerdashboard.ui.components.CreateResourceDialog
 import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
@@ -125,50 +124,38 @@ fun NetworksScreen(
     if (showCreateDialog) {
         var networkName by remember { mutableStateOf("") }
         var selectedDriver by remember { mutableStateOf("bridge") }
-        AlertDialog(
-            onDismissRequest = { viewModel.setShowCreateDialog(false) },
-            title = { Text("Create Network") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(
-                        value = networkName,
-                        onValueChange = { networkName = it },
-                        label = { Text("Network Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+        CreateResourceDialog(
+            title = "Create Network",
+            confirmEnabled = networkName.isNotBlank(),
+            onConfirm = {
+                if (networkName.isNotBlank()) {
+                    viewModel.createNetwork(networkName, selectedDriver)
+                    viewModel.setShowCreateDialog(false)
+                }
+            },
+            onDismiss = { viewModel.setShowCreateDialog(false) },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = networkName,
+                    onValueChange = { networkName = it },
+                    label = { Text("Network Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-                    Text("Driver", style = MaterialTheme.typography.labelMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("bridge", "overlay", "macvlan").forEach { driver ->
-                            FilterChip(
-                                selected = selectedDriver == driver,
-                                onClick = { selectedDriver = driver },
-                                label = { Text(driver) },
-                            )
-                        }
+                Text("Driver", style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("bridge", "overlay", "macvlan").forEach { driver ->
+                        FilterChip(
+                            selected = selectedDriver == driver,
+                            onClick = { selectedDriver = driver },
+                            label = { Text(driver) },
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (networkName.isNotBlank()) {
-                            viewModel.createNetwork(networkName, selectedDriver)
-                            viewModel.setShowCreateDialog(false)
-                        }
-                    },
-                    enabled = networkName.isNotBlank(),
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.setShowCreateDialog(false) }) {
-                    Text("Cancel")
-                }
-            },
-        )
+            }
+        }
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {

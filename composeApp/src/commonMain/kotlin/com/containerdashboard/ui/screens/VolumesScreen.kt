@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,6 +70,7 @@ import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
+import com.containerdashboard.ui.components.CreateResourceDialog
 import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
@@ -180,37 +179,25 @@ fun VolumesScreen(
     // Create Volume Dialog
     if (showCreateDialog) {
         var volumeName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { viewModel.setShowCreateDialog(false) },
-            title = { Text("Create Volume") },
-            text = {
-                OutlinedTextField(
-                    value = volumeName,
-                    onValueChange = { volumeName = it },
-                    label = { Text("Volume Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (volumeName.isNotBlank()) {
-                            viewModel.createVolume(volumeName)
-                            viewModel.setShowCreateDialog(false)
-                        }
-                    },
-                    enabled = volumeName.isNotBlank(),
-                ) {
-                    Text("Create")
+        CreateResourceDialog(
+            title = "Create Volume",
+            confirmEnabled = volumeName.isNotBlank(),
+            onConfirm = {
+                if (volumeName.isNotBlank()) {
+                    viewModel.createVolume(volumeName)
+                    viewModel.setShowCreateDialog(false)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { viewModel.setShowCreateDialog(false) }) {
-                    Text("Cancel")
-                }
-            },
-        )
+            onDismiss = { viewModel.setShowCreateDialog(false) },
+        ) {
+            OutlinedTextField(
+                value = volumeName,
+                onValueChange = { volumeName = it },
+                label = { Text("Volume Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
