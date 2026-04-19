@@ -48,6 +48,7 @@ import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 @Composable
 fun ContainerExtraPane(
@@ -84,7 +85,7 @@ fun ContainerExtraPane(
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (logsState.displayName.isNotEmpty()) {
@@ -160,7 +161,7 @@ fun ContainerExtraPane(
                     onClick = onRemoveContainer,
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.sm))
 
                 AppTooltip(label = "Close logs pane", shortcut = "Esc") {
                     IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {

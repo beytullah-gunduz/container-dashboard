@@ -78,6 +78,7 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
+import com.containerdashboard.ui.theme.Spacing
 
 internal enum class SortColumn {
     NAME,
@@ -271,7 +272,7 @@ fun ContainersScreen(
         val iconOnly = maxWidth < COMPACT_BUTTONS_THRESHOLD
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(Spacing.xl),
         ) {
             // Header
             Row(
@@ -323,7 +324,7 @@ fun ContainersScreen(
                         } else {
                             OutlinedButton(onClick = { viewModel.clearSelection() }) {
                                 Icon(Icons.Default.RemoveDone, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Clear")
                             }
                         }
@@ -393,7 +394,7 @@ fun ContainersScreen(
                                 } else {
                                     Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Stop $runningSelectedCount selected")
                             }
                         }
@@ -461,7 +462,7 @@ fun ContainersScreen(
                                 } else {
                                     Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Delete ${selectedContainerIds.size} selected")
                             }
                         }
@@ -504,7 +505,7 @@ fun ContainersScreen(
                                 } else {
                                     Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(Spacing.sm))
                                 Text("Delete All")
                             }
                         }
@@ -612,16 +613,16 @@ fun ContainersScreen(
             // Error message
             error?.let { errorMessage ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -636,7 +637,7 @@ fun ContainersScreen(
             // Filters Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SearchBar(
@@ -685,7 +686,7 @@ fun ContainersScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             val runningContainers = filteredContainers.filter { it.isRunning }
             val otherContainers = filteredContainers.filter { !it.isRunning }
@@ -895,7 +896,7 @@ fun ContainersScreen(
                     if (otherContainers.isNotEmpty()) {
                         item(key = "other-header") {
                             if (runningContainers.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(Spacing.lg))
                             }
                             ContainerSectionHeader(
                                 title = "Stopped / Other",

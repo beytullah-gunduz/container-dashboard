@@ -83,6 +83,7 @@ import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 
 @Composable
@@ -200,7 +201,7 @@ fun VolumesScreen(
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(Spacing.xl),
         ) {
             // Header
             Row(
@@ -221,7 +222,7 @@ fun VolumesScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     if (checkedVolumeNames.isNotEmpty()) {
                         Button(
                             onClick = {
@@ -242,18 +243,18 @@ fun VolumesScreen(
                             } else {
                                 Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedVolumeNames.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
                     Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create volume")
                     }
                 }
@@ -264,16 +265,16 @@ fun VolumesScreen(
             // Error message
             error?.let { errorMessage ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -294,7 +295,7 @@ fun VolumesScreen(
                 compact = isCompactMode,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             if (!hasLoaded && volumes.isEmpty()) {
                 if (error != null) {
@@ -429,7 +430,7 @@ private fun VolumeTableHeader(
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .padding(horizontal = Spacing.sm, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -439,7 +440,7 @@ private fun VolumeTableHeader(
                     enabled = hasItems,
                 )
                 VolumeSortableHeaderCell("VOLUME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(1f))
-                Spacer(modifier = Modifier.width(24.dp))
+                Spacer(modifier = Modifier.width(Spacing.xl))
             }
         } else {
             BoxWithConstraints(
@@ -452,7 +453,7 @@ private fun VolumeTableHeader(
                 val pxPerWeight = constraints.maxWidth / totalWeight
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -480,7 +481,7 @@ private fun VolumeTableHeader(
                         onSort,
                         Modifier.weight(mountpointWeight),
                     )
-                    Spacer(modifier = Modifier.width(32.dp))
+                    Spacer(modifier = Modifier.width(Spacing.xxl))
                 }
             }
         }
@@ -535,7 +536,7 @@ private fun VolumeSortableHeaderCell(
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -603,7 +604,7 @@ private fun VolumeRow(
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ).clickable(onClick = onClick)
-                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
+                    .padding(horizontal = Spacing.sm, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {

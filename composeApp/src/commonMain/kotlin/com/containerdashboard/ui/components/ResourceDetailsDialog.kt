@@ -76,6 +76,7 @@ import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -299,7 +300,7 @@ private fun DetailsHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Box(
             modifier =
@@ -365,7 +366,7 @@ private fun ErrorState(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(Spacing.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -374,13 +375,13 @@ private fun ErrorState(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.error,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Spacing.sm))
         Text(
             text = message,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Spacing.lg))
         Button(onClick = onRetry) {
             Text("Retry")
         }
@@ -576,7 +577,7 @@ private fun OverviewTab(inspect: ContainerInspect) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         KeyValueRow(
@@ -705,7 +706,7 @@ private fun TwoColumnTable(
                 Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = Spacing.sm),
         ) {
             Text(
                 text = left,
@@ -772,7 +773,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         mounts.forEach { mount ->
@@ -783,7 +784,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             RoundedCornerShape(6.dp),
-                        ).padding(horizontal = 10.dp, vertical = 8.dp),
+                        ).padding(horizontal = 10.dp, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -844,7 +845,7 @@ private fun PortsTab(ports: List<PortMapping>) {
                 Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = Spacing.sm),
         ) {
             TableHeaderCell("Container port", 140.dp)
             TableHeaderCell("Protocol", 90.dp)
@@ -921,7 +922,7 @@ private fun NetworksTab(networks: List<NetworkAttachment>) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         networks.forEach { net ->
@@ -932,8 +933,8 @@ private fun NetworksTab(networks: List<NetworkAttachment>) {
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             RoundedCornerShape(Radius.md),
-                        ).padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ).padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
                     text = net.name,
@@ -952,7 +953,7 @@ private fun NetworksTab(networks: List<NetworkAttachment>) {
                     )
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         net.aliases.forEach { alias ->
                             Badge(text = alias)
@@ -1008,7 +1009,7 @@ private fun Badge(
         modifier =
             Modifier
                 .background(container, RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+                .padding(horizontal = Spacing.sm, vertical = 2.dp),
     ) {
         Text(
             text = text,
@@ -1026,7 +1027,7 @@ private fun RawJsonTab(json: String) {
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1042,7 +1043,7 @@ private fun RawJsonTab(json: String) {
                 Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = Spacing.lg)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                         RoundedCornerShape(Radius.md),
@@ -1058,7 +1059,7 @@ private fun RawJsonTab(json: String) {
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .horizontalScroll(rememberScrollState())
-                        .padding(12.dp),
+                        .padding(Spacing.md),
             ) {
                 Text(
                     text = json,
@@ -1080,7 +1081,7 @@ private fun ImageOverviewTab(inspect: ImageInspect) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         KeyValueRow(
@@ -1121,7 +1122,7 @@ private fun ImageLayersTab(layers: List<String>) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         layers.forEachIndexed { index, digest ->
@@ -1161,7 +1162,7 @@ private fun ImageConfigTab(inspect: ImageInspect) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         KeyValueRow(label = "Entrypoint", value = inspect.entrypoint.joinToString(" "), monospace = true)
@@ -1184,7 +1185,7 @@ private fun NetworkOverviewTab(inspect: NetworkInspect) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         KeyValueRow(
@@ -1220,8 +1221,8 @@ private fun NetworkAttachedTab(attached: List<AttachedContainer>) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         attached.forEach { c ->
             Column(
@@ -1231,8 +1232,8 @@ private fun NetworkAttachedTab(attached: List<AttachedContainer>) {
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             RoundedCornerShape(Radius.sm),
-                        ).padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ).padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
                     text = c.name.ifBlank { "(unnamed)" },
@@ -1266,8 +1267,8 @@ private fun NetworkIpamTab(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         KeyValueRow(label = "Driver", value = driver)
         if (entries.isEmpty()) {
@@ -1286,8 +1287,8 @@ private fun NetworkIpamTab(
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             RoundedCornerShape(Radius.sm),
-                        ).padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ).padding(Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
                     text = "Config #${idx + 1}",
@@ -1311,7 +1312,7 @@ private fun VolumeOverviewTab(inspect: VolumeInspect) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         KeyValueRow(label = "Name", value = inspect.name, monospace = true)
@@ -1333,7 +1334,7 @@ private fun OptionsTab(options: Map<String, String>) {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         options.entries.sortedBy { it.key }.forEach { (k, v) ->

@@ -74,6 +74,7 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 
 @Composable
@@ -132,7 +133,7 @@ fun NetworksScreen(
             },
             onDismiss = { viewModel.setShowCreateDialog(false) },
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
                 OutlinedTextField(
                     value = networkName,
                     onValueChange = { networkName = it },
@@ -142,7 +143,7 @@ fun NetworksScreen(
                 )
 
                 Text("Driver", style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     listOf("bridge", "overlay", "macvlan").forEach { driver ->
                         FilterChip(
                             selected = selectedDriver == driver,
@@ -159,7 +160,7 @@ fun NetworksScreen(
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(Spacing.xl),
         ) {
             // Header
             Row(
@@ -180,7 +181,7 @@ fun NetworksScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     if (checkedNetworkIds.isNotEmpty()) {
                         Button(
                             onClick = {
@@ -201,18 +202,18 @@ fun NetworksScreen(
                             } else {
                                 Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedNetworkIds.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
                     Button(onClick = { viewModel.setShowCreateDialog(true) }) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create network")
                     }
                 }
@@ -223,16 +224,16 @@ fun NetworksScreen(
             // Error message
             error?.let { errorMessage ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -253,7 +254,7 @@ fun NetworksScreen(
                 compact = isCompactMode,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             if (!hasLoaded && networks.isEmpty()) {
                 if (error != null) {
@@ -394,7 +395,7 @@ private fun NetworkTableHeader(
                 Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = Spacing.sm, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -455,7 +456,7 @@ private fun NetworkTableHeader(
                     modifier = Modifier.weight(0.6f),
                 )
             }
-            Spacer(modifier = Modifier.width(32.dp))
+            Spacer(modifier = Modifier.width(Spacing.xxl))
         }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
@@ -511,7 +512,7 @@ private fun NetworkRow(
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ).clickable(onClick = onClick)
-                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
+                    .padding(horizontal = Spacing.sm, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {

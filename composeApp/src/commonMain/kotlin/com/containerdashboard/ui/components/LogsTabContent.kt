@@ -53,6 +53,7 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.state.LogsFilterState
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.monospaceMedium
 import kotlinx.coroutines.launch
 
@@ -84,7 +85,7 @@ internal fun LogsTabContent(
             }
             state.error != null -> {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    modifier = Modifier.fillMaxSize().padding(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -93,7 +94,7 @@ internal fun LogsTabContent(
                         color = AppColors.Stopped,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
                     Button(onClick = onRefresh) { Text("Retry") }
                 }
             }
@@ -136,13 +137,13 @@ internal fun LogsTabContent(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
                                 .height(28.dp)
                                 .border(
                                     width = 1.dp,
                                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(6.dp),
-                                ).padding(horizontal = 8.dp),
+                                ).padding(horizontal = Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Service dropdown (group mode only)
@@ -152,7 +153,7 @@ internal fun LogsTabContent(
                                     modifier =
                                         Modifier
                                             .clickable { serviceDropdownExpanded = true }
-                                            .padding(end = 4.dp),
+                                            .padding(end = Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
@@ -258,7 +259,7 @@ internal fun LogsTabContent(
                             },
                         )
                         if (filterText.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(Spacing.xs))
                             IconButton(
                                 onClick = { LogsFilterState.filterText = "" },
                                 modifier = Modifier.size(18.dp),
@@ -286,7 +287,7 @@ internal fun LogsTabContent(
                                         } else {
                                             Modifier
                                         },
-                                    ).padding(12.dp),
+                                    ).padding(Spacing.md),
                             style = MaterialTheme.typography.monospaceMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             softWrap = wordWrap,
@@ -295,13 +296,13 @@ internal fun LogsTabContent(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Text(
                                 text = "${state.logs.size} lines",

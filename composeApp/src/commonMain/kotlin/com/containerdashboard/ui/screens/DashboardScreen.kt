@@ -114,9 +114,9 @@ fun DashboardScreen(
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
                             Icons.Default.Error,
@@ -231,7 +231,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Spacing.lg))
 
                         val running = containers.count { it.isRunning }
                         val paused = containers.count { it.isPaused }
@@ -245,7 +245,7 @@ fun DashboardScreen(
                                 val alpha = rememberSkeletonAlpha()
                                 repeat(3) {
                                     Column(
-                                        modifier = Modifier.padding(8.dp),
+                                        modifier = Modifier.padding(Spacing.sm),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(6.dp),
                                     ) {
@@ -291,7 +291,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Spacing.lg))
 
                         SystemInfoRow("Engine Version", version?.version ?: "-")
                         SystemInfoRow("API Version", version?.apiVersion ?: "-")
@@ -340,7 +340,7 @@ fun DashboardScreen(
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
 
                     if (!hasLoaded) {
                         val alpha = rememberSkeletonAlpha()
@@ -349,8 +349,8 @@ fun DashboardScreen(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        .padding(vertical = Spacing.sm),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SkeletonBar(width = 8.dp, height = 8.dp, alpha = alpha)
@@ -389,7 +389,7 @@ private fun SystemInfoRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = Spacing.xs),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
@@ -414,8 +414,8 @@ private fun RecentContainerItem(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(vertical = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(

@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.monospaceMedium
 
 @Composable
@@ -64,13 +65,13 @@ fun LogsPane(
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Outlined.Article,
@@ -95,7 +96,7 @@ fun LogsPane(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     IconButton(
                         onClick = onRefresh,
                         enabled = !state.isLoading,
@@ -143,7 +144,7 @@ fun LogsPane(
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(32.dp),
@@ -159,12 +160,12 @@ fun LogsPane(
                     }
                     state.error != null -> {
                         Box(
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            modifier = Modifier.fillMaxSize().padding(Spacing.lg),
                             contentAlignment = Alignment.Center,
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
                                 Icon(
                                     Icons.Default.ErrorOutline,
@@ -182,7 +183,7 @@ fun LogsPane(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(Spacing.sm))
                                 OutlinedButton(
                                     onClick = onRefresh,
                                     colors =
@@ -191,7 +192,7 @@ fun LogsPane(
                                         ),
                                 ) {
                                     Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(Spacing.sm))
                                     Text("Retry")
                                 }
                             }
@@ -204,7 +205,7 @@ fun LogsPane(
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Outlined.Article,
@@ -232,7 +233,7 @@ fun LogsPane(
                         SelectionContainer {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize().padding(12.dp),
+                                modifier = Modifier.fillMaxSize().padding(Spacing.md),
                             ) {
                                 items(state.logs) { line ->
                                     Text(
@@ -255,7 +256,7 @@ fun LogsPane(
                         Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

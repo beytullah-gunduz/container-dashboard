@@ -78,6 +78,7 @@ import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.formatBytes
 
@@ -167,7 +168,7 @@ fun ImagesScreen(
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(Spacing.xl),
         ) {
             // Header
             Row(
@@ -187,7 +188,7 @@ fun ImagesScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     if (checkedImageIds.isNotEmpty()) {
                         Button(
                             onClick = {
@@ -208,12 +209,12 @@ fun ImagesScreen(
                             } else {
                                 Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedImageIds.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
                             Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
@@ -225,16 +226,16 @@ fun ImagesScreen(
             // Error message
             error?.let { errorMessage ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg),
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -255,7 +256,7 @@ fun ImagesScreen(
                 compact = isCompactMode,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             if (!hasLoaded && images.isEmpty()) {
                 if (error != null) {
@@ -349,7 +350,7 @@ fun ImagesScreen(
                     // Unnamed images section
                     if (unnamedImages.isNotEmpty()) {
                         item(key = "unnamed-header") {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(Spacing.lg))
                             ImageSectionHeader(
                                 title = "Dangling Images",
                                 count = unnamedImages.size,
@@ -432,9 +433,9 @@ private fun ImageSectionHeader(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(Radius.md))
                 .clickable(onClick = onToggle)
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
             imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
@@ -455,7 +456,7 @@ private fun ImageSectionHeader(
                 text = count.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 2.dp),
             )
         }
     }
@@ -476,7 +477,7 @@ private fun ImageTableHeader(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -493,7 +494,7 @@ private fun ImageTableHeader(
             SortableHeaderCell("IMAGE ID", ImageSortColumn.IMAGE_ID, sortColumn, sortDirection, onSort, Modifier.weight(1f))
             SortableHeaderCell("SIZE", ImageSortColumn.SIZE, sortColumn, sortDirection, onSort, Modifier.weight(0.7f))
         }
-        Spacer(modifier = Modifier.width(24.dp))
+        Spacer(modifier = Modifier.width(Spacing.xl))
     }
     HorizontalDivider(
         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
@@ -518,7 +519,7 @@ private fun SortableHeaderCell(
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -583,7 +584,7 @@ private fun ImageRow(
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ).clickable(onClick = onClick)
-                    .padding(horizontal = 8.dp, vertical = if (isCompactMode) 6.dp else 0.dp),
+                    .padding(horizontal = Spacing.sm, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
