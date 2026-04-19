@@ -103,7 +103,7 @@ private fun SidebarItem(
     val backgroundColor by animateColorAsState(
         targetValue =
             if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
             } else {
                 Color.Transparent
             },
@@ -129,7 +129,7 @@ private fun SidebarItem(
         Box(
             modifier =
                 Modifier
-                    .width(2.dp)
+                    .width(3.dp)
                     .height(36.dp)
                     .background(stripColor),
         )
