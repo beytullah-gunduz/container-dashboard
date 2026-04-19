@@ -121,7 +121,7 @@ fun App(
             ) { connected ->
                 if (!connected) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        WindowChromeBar(title = "Container Dashboard")
+                        WindowChromeBar()
                         if (currentRoute == Screen.Settings.route) {
                             Column(modifier = Modifier.weight(1f).fillMaxSize()) {
                                 IconButton(
@@ -230,7 +230,7 @@ fun App(
                                 paneLayout = logsPaneLayout,
                                 listPaneWidth = 220.dp,
                                 listPaneHeader = {
-                                    WindowChromeBar(title = "Container Dashboard")
+                                    WindowChromeBar()
                                 },
                                 detailPaneTopOverlay = {
                                     TopBarDragArea {
@@ -342,7 +342,7 @@ fun App(
 }
 
 @Composable
-private fun WindowChromeBar(title: String) {
+private fun WindowChromeBar() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
@@ -358,16 +358,7 @@ private fun WindowChromeBar(title: String) {
             WindowChromeLeading()
             Box(modifier = Modifier.weight(1f)) {
                 TopBarDragArea {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Spacer(modifier = Modifier.fillMaxWidth().height(32.dp))
                 }
             }
             WindowChromeTrailing()

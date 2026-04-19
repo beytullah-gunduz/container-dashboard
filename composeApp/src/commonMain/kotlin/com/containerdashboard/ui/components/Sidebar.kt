@@ -50,23 +50,6 @@ fun Sidebar(
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = Spacing.md),
         ) {
-            // Brand mark + wordmark
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AppBrandMark(modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(Spacing.sm))
-                Text(
-                    text = "Container Dashboard",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
             // Navigation Items
             Screen.mainScreens.forEach { screen ->
                 SidebarItem(

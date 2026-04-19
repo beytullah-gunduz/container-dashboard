@@ -65,6 +65,7 @@ import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.engine.ColimaConfig
 import com.containerdashboard.data.engine.EngineActionStatus
 import com.containerdashboard.data.engine.EngineType
+import com.containerdashboard.ui.components.AppBrandMark
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
@@ -406,6 +407,19 @@ fun SettingsScreen(
 
         // About Section
         SettingsSection(title = "About") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppBrandMark(modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = "Container Dashboard",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
