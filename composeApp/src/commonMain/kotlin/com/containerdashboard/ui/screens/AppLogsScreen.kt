@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.logging.AppLogEntry
+import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
 import com.containerdashboard.ui.components.SearchBar
@@ -108,22 +109,26 @@ fun AppLogsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Auto-scroll toggle
-                IconButton(onClick = { viewModel.toggleAutoScroll() }) {
-                    Icon(
-                        imageVector =
-                            if (autoScroll) {
-                                Icons.Outlined.VerticalAlignBottom
-                            } else {
-                                Icons.Outlined.VerticalAlignCenter
-                            },
-                        contentDescription = "Toggle auto-scroll",
-                        tint =
-                            if (autoScroll) {
-                                AppColors.AccentBlue
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                    )
+                AppTooltip(
+                    label = if (autoScroll) "Auto-scroll: on" else "Auto-scroll: off",
+                ) {
+                    IconButton(onClick = { viewModel.toggleAutoScroll() }) {
+                        Icon(
+                            imageVector =
+                                if (autoScroll) {
+                                    Icons.Outlined.VerticalAlignBottom
+                                } else {
+                                    Icons.Outlined.VerticalAlignCenter
+                                },
+                            contentDescription = "Toggle auto-scroll",
+                            tint =
+                                if (autoScroll) {
+                                    AppColors.AccentBlue
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
                 }
 
                 // Clear logs
