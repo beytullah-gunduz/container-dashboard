@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class AppViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
@@ -215,8 +217,11 @@ class AppViewModel : ViewModel() {
                 ?.id ?: return
         viewModelScope.launch {
             _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
-            repo.pauseContainer(id)
+            val result = repo.pauseContainer(id)
             repo.refreshContainers()
+            if (result.isSuccess) {
+                awaitContainerState(id) { it.isPaused }
+            }
             _logsPaneState.update { it.copy(isPauseActionInProgress = false) }
         }
     }
@@ -228,9 +233,28 @@ class AppViewModel : ViewModel() {
                 ?.id ?: return
         viewModelScope.launch {
             _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
-            repo.unpauseContainer(id)
+            val result = repo.unpauseContainer(id)
             repo.refreshContainers()
+            if (result.isSuccess) {
+                awaitContainerState(id) { it.isRunning }
+            }
             _logsPaneState.update { it.copy(isPauseActionInProgress = false) }
+        }
+    }
+
+    // The pane's spinner stays visible until the background observer actually
+    // reflects the new container state — `refreshContainers()` only fires the
+    // trigger and returns, so without this wait the flag would clear before
+    // the user sees the state flip.
+    private suspend fun awaitContainerState(
+        id: String,
+        predicate: (Container) -> Boolean,
+    ) {
+        withTimeoutOrNull(5000) {
+            containers.first { list ->
+                val c = list.find { it.id == id }
+                c == null || predicate(c)
+            }
         }
     }
 
