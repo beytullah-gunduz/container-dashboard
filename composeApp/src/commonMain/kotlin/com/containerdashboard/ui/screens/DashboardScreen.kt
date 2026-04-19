@@ -41,10 +41,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.ui.components.ContainerStatus
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.components.rememberSkeletonAlpha
+import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
@@ -423,10 +425,16 @@ private fun RecentContainerItem(
             modifier = Modifier.size(8.dp),
             shape = RoundedCornerShape(Radius.sm),
             color =
-                when {
-                    container.isRunning -> AppColors.Running
-                    container.isPaused -> AppColors.Paused
-                    else -> AppColors.Stopped
+                when (container.state.toContainerStatus()) {
+                    ContainerStatus.RUNNING -> AppColors.Running
+                    ContainerStatus.PAUSED -> AppColors.Paused
+                    ContainerStatus.CREATED -> AppColors.AccentBlue
+                    ContainerStatus.RESTARTING -> AppColors.Warning
+                    ContainerStatus.STOPPED,
+                    ContainerStatus.EXITED,
+                    ContainerStatus.REMOVING,
+                    ContainerStatus.DEAD,
+                    -> AppColors.Stopped
                 },
         ) {}
 
