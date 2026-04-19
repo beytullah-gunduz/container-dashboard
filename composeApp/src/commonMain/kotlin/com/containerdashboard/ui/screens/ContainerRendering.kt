@@ -84,6 +84,7 @@ import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 
 @Composable
@@ -99,9 +100,9 @@ internal fun ContainerSectionHeader(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(Radius.md))
                 .clickable(onClick = onToggle)
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
             imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
@@ -159,7 +160,7 @@ internal fun ComposeProjectHeader(
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             CompactCheckbox(
                 checked = allSelected,
@@ -494,9 +495,9 @@ internal fun SortableHeaderCell(
             modifier
                 .clip(RoundedCornerShape(Radius.sm))
                 .clickable { onSortChange(column) }
-                .padding(vertical = 4.dp, horizontal = 2.dp),
+                .padding(vertical = Spacing.xs, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = text,
@@ -533,9 +534,9 @@ internal fun CompactTableHeader(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         CompactCheckbox(
             checked = allSelected,
@@ -600,9 +601,9 @@ internal fun CompactContainerRow(
                         else -> MaterialTheme.colorScheme.surface
                     },
                 ).clickable(enabled = !isPendingDelete) { onViewLogs() }
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         CompactCheckbox(
             checked = isChecked,
@@ -798,7 +799,7 @@ internal fun ExpandedTableHeader(
                     .fillMaxWidth()
                     .height(32.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CompactCheckbox(
@@ -816,7 +817,7 @@ internal fun ExpandedTableHeader(
                 onSortChange = onSortChange,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
             SortableHeaderCell(
                 text = "IMAGE",
                 column = SortColumn.IMAGE,
@@ -825,7 +826,7 @@ internal fun ExpandedTableHeader(
                 onSortChange = onSortChange,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
             SortableHeaderCell(
                 text = "STATUS",
                 column = SortColumn.STATUS,
@@ -942,7 +943,7 @@ internal fun ExpandedContainerRow(
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ).clickable(enabled = !isPendingDelete) { onViewLogs() }
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CompactCheckbox(
@@ -961,7 +962,7 @@ internal fun ExpandedContainerRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             // Image — elastic
             Text(
@@ -971,13 +972,13 @@ internal fun ExpandedContainerRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             // Status
             Box(modifier = Modifier.width(columnWidths.status.dp)) {
                 StatusBadge(status = container.state.toContainerStatus())
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             // Ports — fixed, just wide enough for typical port strings
             Text(
@@ -989,7 +990,7 @@ internal fun ExpandedContainerRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
 
             // Actions
             Row(

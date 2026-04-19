@@ -64,6 +64,7 @@ import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 // Shared left-padding for history-graph canvases so the bar areas of
 // UsageHistoryGraph and IoHistoryGraph line up vertically when the
@@ -166,7 +167,7 @@ fun MonitoringScreen(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Surface(
                         modifier = Modifier.size(8.dp),
@@ -254,24 +255,24 @@ fun MonitoringScreen(
                     )
                 }
                 if (isCompactMode) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                         cpuGraph(Modifier.fillMaxWidth())
                         memGraph(Modifier.fillMaxWidth())
                         diskGraph(Modifier.fillMaxWidth())
                         netGraph(Modifier.fillMaxWidth())
                     }
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                         ) {
                             cpuGraph(Modifier.weight(1f))
                             memGraph(Modifier.weight(1f))
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                         ) {
                             diskGraph(Modifier.weight(1f))
                             netGraph(Modifier.weight(1f))
@@ -290,9 +291,9 @@ fun MonitoringScreen(
                         ),
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -325,7 +326,7 @@ fun MonitoringScreen(
                         CircularProgressIndicator(
                             modifier =
                                 Modifier
-                                    .padding(bottom = 24.dp)
+                                    .padding(bottom = Spacing.xl)
                                     .size(24.dp),
                             strokeWidth = 2.5.dp,
                         )
@@ -358,11 +359,11 @@ fun MonitoringScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Icon(
                                 Icons.Outlined.Memory,
@@ -400,11 +401,11 @@ fun MonitoringScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Icon(
                                 Icons.Outlined.Memory,
@@ -444,7 +445,7 @@ fun MonitoringScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(if (isCompactMode) 16.dp else 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -485,7 +486,7 @@ fun MonitoringScreen(
 
                         if (filteredStats.isEmpty()) {
                             Box(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xl),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
@@ -517,9 +518,9 @@ private fun WideTableHeader(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.md, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         SortableHeader("CONTAINER", MonitoringSort.NAME, sortColumn, sortDirection, onSortChange, Modifier.weight(1.4f))
         SortableHeader("CPU %", MonitoringSort.CPU, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
@@ -546,9 +547,9 @@ private fun NarrowTableHeader(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = Spacing.md, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Row(
             modifier = Modifier.weight(1f),
@@ -692,7 +693,7 @@ private fun ContainerBarRow(
     barColor: Color,
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -750,7 +751,7 @@ private fun StatsTableRow(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = 12.dp, vertical = if (isNarrow) 8.dp else 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             if (isNarrow) {
                 Column(
@@ -760,7 +761,7 @@ private fun StatsTableRow(
                     // Row 1: name, id, CPU, MEM
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
@@ -922,7 +923,7 @@ private fun IoLabel(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -964,8 +965,8 @@ private fun UsageHistoryGraph(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             // Title row
             Row(
@@ -975,7 +976,7 @@ private fun UsageHistoryGraph(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Icon(
                         icon,
@@ -1106,8 +1107,8 @@ private fun IoHistoryGraph(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1116,7 +1117,7 @@ private fun IoHistoryGraph(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Icon(
                         icon,
@@ -1229,7 +1230,7 @@ private fun LegendChip(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Box(
             modifier =

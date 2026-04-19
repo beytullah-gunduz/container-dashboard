@@ -65,6 +65,7 @@ import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.Spacing
 
 @Composable
 fun SettingsScreen(
@@ -102,8 +103,8 @@ fun SettingsScreen(
             modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+                .padding(Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xl),
     ) {
         // Header
         Text(
@@ -119,15 +120,15 @@ fun SettingsScreen(
                 onValueChange = { viewModel.setEngineHost(it) },
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             // Connection test feedback
             when (val state = connectionTestResult) {
                 is ConnectionTestState.Testing -> {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        modifier = Modifier.padding(bottom = Spacing.sm),
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
@@ -138,7 +139,7 @@ fun SettingsScreen(
                         text = state.message,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier.padding(bottom = Spacing.sm),
                     )
                 }
                 is ConnectionTestState.Error -> {
@@ -146,7 +147,7 @@ fun SettingsScreen(
                         text = state.message,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier.padding(bottom = Spacing.sm),
                     )
                 }
                 ConnectionTestState.Idle -> {}
@@ -154,7 +155,7 @@ fun SettingsScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 OutlinedButton(
                     onClick = {
@@ -165,7 +166,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.NetworkCheck, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Test Connection")
                 }
                 Button(
@@ -173,12 +174,12 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Save & Reconnect")
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -196,7 +197,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.lg))
                 val lineOptions = listOf(500, 1000, 2000, 5000)
                 SingleChoiceSegmentedButtonRow {
                     lineOptions.forEachIndexed { index, count ->
@@ -246,7 +247,7 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.setShowSystemContainers(it) },
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
             SettingsSwitch(
                 title = "Confirm Before Delete",
@@ -255,7 +256,7 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.setConfirmBeforeDelete(it) },
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -273,7 +274,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.lg))
                 val refreshOptions = listOf(3, 5, 10, 30)
                 SingleChoiceSegmentedButtonRow {
                     refreshOptions.forEachIndexed { index, seconds ->
@@ -303,7 +304,7 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.error,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Action feedback — reserves a stable height so the action buttons
             // below don't shift when the state transitions between Idle and
@@ -313,14 +314,14 @@ fun SettingsScreen(
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 24.dp)
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = Spacing.sm),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 when (val state = actionState) {
                     is ActionState.InProgress -> {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Text(state.message, style = MaterialTheme.typography.bodySmall)
@@ -346,7 +347,7 @@ fun SettingsScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 OutlinedButton(
                     onClick = { confirmPrune = true },
@@ -358,7 +359,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.CleaningServices, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Prune All Unused")
                 }
 
@@ -372,7 +373,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Stop All Containers")
                 }
             }
@@ -391,7 +392,7 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -504,17 +505,17 @@ private fun EngineManagementSection(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
         // Colima-specific resource config
         if (isColima) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("CPU (cores)", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = cpu,
                         onValueChange = { cpu = it.filter { c -> c.isDigit() } },
@@ -525,7 +526,7 @@ private fun EngineManagementSection(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Memory (GB)", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = memory,
                         onValueChange = { memory = it.filter { c -> c.isDigit() } },
@@ -536,7 +537,7 @@ private fun EngineManagementSection(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Disk (GB)", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = disk,
                         onValueChange = { disk = it.filter { c -> c.isDigit() } },
@@ -548,7 +549,7 @@ private fun EngineManagementSection(
             }
 
             if (colimaConfig != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
                     text = "Current: ${colimaConfig.cpu} CPUs · ${colimaConfig.memoryGB} GB RAM · ${colimaConfig.diskGB} GB disk",
                     style = MaterialTheme.typography.labelSmall,
@@ -556,14 +557,14 @@ private fun EngineManagementSection(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
         } else {
             Text(
                 text = "To configure CPU and memory, use ${engineType.displayName}'s own settings.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
         }
 
         // Command output log
@@ -586,17 +587,17 @@ private fun EngineManagementSection(
                             .fillMaxWidth()
                             .height(100.dp)
                             .verticalScroll(outputScrollState)
-                            .padding(8.dp),
+                            .padding(Spacing.sm),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
         }
 
         // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             val isBusy = actionStatus is EngineActionStatus.Running
 
@@ -615,7 +616,7 @@ private fun EngineManagementSection(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Stop")
                 }
 
@@ -634,7 +635,7 @@ private fun EngineManagementSection(
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Outlined.RestartAlt, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Restart")
                     }
                 }
@@ -660,7 +661,7 @@ private fun EngineManagementSection(
                     } else {
                         Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Start")
                 }
             }
@@ -686,7 +687,7 @@ private fun SettingsSection(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
             content()
         }
     }
@@ -737,7 +738,7 @@ private fun EngineHostField(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.sm))
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = it },
