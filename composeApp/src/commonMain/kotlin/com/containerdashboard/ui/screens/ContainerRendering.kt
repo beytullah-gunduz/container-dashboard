@@ -79,6 +79,7 @@ import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.StatusBadge
+import com.containerdashboard.ui.components.TruncatingText
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.theme.AppColors
@@ -174,12 +175,10 @@ internal fun ComposeProjectHeader(
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
+            TruncatingText(
                 text = projectName,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             if (showComposeBadge) {
                 Surface(
@@ -616,12 +615,10 @@ internal fun CompactContainerRow(
 
         // Container info (Name + Image below)
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            TruncatingText(
                 text = container.displayName,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -958,12 +955,10 @@ internal fun ExpandedContainerRow(
             Spacer(modifier = Modifier.width(10.dp))
 
             // Name (displayName · shortId, single line) — elastic
-            Text(
+            TruncatingText(
                 text = "${container.displayName} · ${container.shortId}",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
             Spacer(modifier = Modifier.width(Spacing.md))

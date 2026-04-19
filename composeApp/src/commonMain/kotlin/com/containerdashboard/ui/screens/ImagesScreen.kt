@@ -72,6 +72,7 @@ import com.containerdashboard.ui.components.ErrorStateCard
 import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.components.TruncatingText
 import com.containerdashboard.ui.screens.components.ImageContextMenu
 import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
@@ -596,7 +597,7 @@ private fun ImageRow(
             )
             if (isCompactMode) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    TruncatingText(
                         text = image.repository,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
@@ -606,14 +607,12 @@ private fun ImageRow(
                             } else {
                                 MaterialTheme.colorScheme.onSurface
                             },
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Text(
+                        TruncatingText(
                             text = image.tag,
                             style = MaterialTheme.typography.labelSmall,
                             color =
@@ -622,8 +621,6 @@ private fun ImageRow(
                                 } else {
                                     MaterialTheme.colorScheme.primary
                                 },
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
                         Text(
@@ -643,7 +640,7 @@ private fun ImageRow(
                     )
                 }
             } else {
-                Text(
+                TruncatingText(
                     text = image.repository,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
@@ -653,11 +650,9 @@ private fun ImageRow(
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         },
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1.5f),
                 )
-                Text(
+                TruncatingText(
                     text = image.tag,
                     style = MaterialTheme.typography.bodySmall,
                     color =
@@ -666,8 +661,6 @@ private fun ImageRow(
                         } else {
                             MaterialTheme.colorScheme.primary
                         },
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
