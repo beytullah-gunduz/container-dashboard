@@ -50,8 +50,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -1098,6 +1101,25 @@ private fun IoHistoryGraph(
             .coerceAtLeast(seriesB.maxOrNull() ?: 0L)
             .coerceAtLeast(1L)
 
+    // Measure the widest Y-axis label so the Canvas can shift past it.
+    // GB/s values ("1.2 GB/s") can exceed the 72 dp fallback on dense
+    // labels; when they fit we stick with the constant so the IO chart
+    // stays vertically aligned with the CPU chart above.
+    val textMeasurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall
+    val density = LocalDensity.current
+    val yAxisPadding =
+        remember(maxInWindow, labelStyle, density) {
+            val widestPx =
+                listOf(
+                    ContainerStats.formatBytesPerSecond(maxInWindow),
+                    ContainerStats.formatBytesPerSecond(maxInWindow / 2),
+                ).maxOf { label ->
+                    textMeasurer.measure(AnnotatedString(label), labelStyle).size.width
+                }
+            with(density) { (widestPx.toDp() + 12.dp).coerceAtLeast(GRAPH_Y_AXIS_PADDING) }
+        }
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(Radius.lg),
@@ -1169,7 +1191,7 @@ private fun IoHistoryGraph(
                     )
                 }
 
-                Canvas(modifier = Modifier.fillMaxSize().padding(start = GRAPH_Y_AXIS_PADDING)) {
+                Canvas(modifier = Modifier.fillMaxSize().padding(start = yAxisPadding)) {
                     val chartWidth = size.width
                     val chartHeight = size.height
                     val slotWidth = chartWidth / maxHistorySize
