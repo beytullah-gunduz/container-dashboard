@@ -462,6 +462,12 @@ private fun EngineManagementSection(
     var memory by remember(colimaConfig) { mutableStateOf(colimaConfig?.memoryGB?.toString() ?: "8") }
     var disk by remember(colimaConfig) { mutableStateOf(colimaConfig?.diskGB?.toString() ?: "60") }
 
+    // Range validation for Colima quotas. Blank = "use default", not an error.
+    val cpuError = cpu.isNotBlank() && (cpu.toIntOrNull()?.let { it !in 1..256 } ?: true)
+    val memoryError = memory.isNotBlank() && (memory.toIntOrNull()?.let { it !in 1..512 } ?: true)
+    val diskError = disk.isNotBlank() && (disk.toIntOrNull()?.let { it !in 1..2048 } ?: true)
+    val quotasValid = !cpuError && !memoryError && !diskError
+
     val profileLabel =
         if (colimaProfile != null && colimaProfile != "default") {
             "${engineType.displayName} ($colimaProfile)"
@@ -528,6 +534,13 @@ private fun EngineManagementSection(
                         value = cpu,
                         onValueChange = { cpu = it.filter { c -> c.isDigit() } },
                         singleLine = true,
+                        isError = cpuError,
+                        supportingText =
+                            if (cpuError) {
+                                { Text("1-256 cores") }
+                            } else {
+                                null
+                            },
                         shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -539,6 +552,13 @@ private fun EngineManagementSection(
                         value = memory,
                         onValueChange = { memory = it.filter { c -> c.isDigit() } },
                         singleLine = true,
+                        isError = memoryError,
+                        supportingText =
+                            if (memoryError) {
+                                { Text("1-512 GB") }
+                            } else {
+                                null
+                            },
                         shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -550,6 +570,13 @@ private fun EngineManagementSection(
                         value = disk,
                         onValueChange = { disk = it.filter { c -> c.isDigit() } },
                         singleLine = true,
+                        isError = diskError,
+                        supportingText =
+                            if (diskError) {
+                                { Text("1-2048 GB") }
+                            } else {
+                                null
+                            },
                         shape = RoundedCornerShape(Radius.md),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -639,7 +666,7 @@ private fun EngineManagementSection(
                                 disk.toIntOrNull(),
                             )
                         },
-                        enabled = !isBusy,
+                        enabled = !isBusy && quotasValid,
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Outlined.RestartAlt, null, modifier = Modifier.size(18.dp))
@@ -658,7 +685,7 @@ private fun EngineManagementSection(
                             if (isColima) disk.toIntOrNull() else null,
                         )
                     },
-                    enabled = !isBusy,
+                    enabled = !isBusy && (!isColima || quotasValid),
                     modifier = Modifier.weight(1f),
                 ) {
                     if (isBusy) {
