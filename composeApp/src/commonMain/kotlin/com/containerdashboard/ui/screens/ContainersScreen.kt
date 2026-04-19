@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
@@ -347,27 +348,29 @@ fun ContainersScreen(
                             ) + fadeOut(animationSpec = tween(durationMillis = 150)),
                     ) {
                         if (iconOnly) {
-                            IconButton(
-                                onClick = {
-                                    val runningIds =
-                                        selectedContainerIds.filter { id ->
-                                            containers.find { it.id == id }?.isRunning == true
-                                        }
-                                    viewModel.stopSelectedContainers(runningIds)
-                                },
-                                enabled = !isStoppingSelected,
-                            ) {
-                                if (isStoppingSelected) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Outlined.Stop,
-                                        contentDescription = "Stop $runningSelectedCount selected",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
+                            AppTooltip(label = "Stop $runningSelectedCount selected") {
+                                IconButton(
+                                    onClick = {
+                                        val runningIds =
+                                            selectedContainerIds.filter { id ->
+                                                containers.find { it.id == id }?.isRunning == true
+                                            }
+                                        viewModel.stopSelectedContainers(runningIds)
+                                    },
+                                    enabled = !isStoppingSelected,
+                                ) {
+                                    if (isStoppingSelected) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Outlined.Stop,
+                                            contentDescription = "Stop $runningSelectedCount selected",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                 }
                             }
                         } else {
@@ -415,26 +418,28 @@ fun ContainersScreen(
                             ) + fadeOut(animationSpec = tween(durationMillis = 150)),
                     ) {
                         if (iconOnly) {
-                            IconButton(
-                                onClick = {
-                                    askConfirm(
-                                        "Delete selected containers?",
-                                        "This will force-stop and delete ${selectedContainerIds.size} container(s).",
-                                    ) { viewModel.deleteSelectedContainers() }
-                                },
-                                enabled = !isDeletingSelected,
-                            ) {
-                                if (isDeletingSelected) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Delete ${selectedContainerIds.size} selected",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
+                            AppTooltip(label = "Delete ${selectedContainerIds.size} selected") {
+                                IconButton(
+                                    onClick = {
+                                        askConfirm(
+                                            "Delete selected containers?",
+                                            "This will force-stop and delete ${selectedContainerIds.size} container(s).",
+                                        ) { viewModel.deleteSelectedContainers() }
+                                    },
+                                    enabled = !isDeletingSelected,
+                                ) {
+                                    if (isDeletingSelected) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete ${selectedContainerIds.size} selected",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                 }
                             }
                         } else {
@@ -469,21 +474,23 @@ fun ContainersScreen(
                     // Delete All Button
                     if (containers.isNotEmpty()) {
                         if (iconOnly) {
-                            IconButton(
-                                onClick = { showDeleteAllDialog = true },
-                                enabled = !isDeletingAll && !isDeletingSelected,
-                            ) {
-                                if (isDeletingAll) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.DeleteForever,
-                                        contentDescription = "Delete All",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
+                            AppTooltip(label = "Delete all containers") {
+                                IconButton(
+                                    onClick = { showDeleteAllDialog = true },
+                                    enabled = !isDeletingAll && !isDeletingSelected,
+                                ) {
+                                    if (isDeletingAll) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.DeleteForever,
+                                            contentDescription = "Delete All",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                 }
                             }
                         } else {
