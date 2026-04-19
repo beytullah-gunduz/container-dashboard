@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.BuildConfig
 import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.engine.ColimaConfig
 import com.containerdashboard.data.engine.EngineActionStatus
@@ -385,7 +386,7 @@ fun SettingsScreen(
             ) {
                 Text("Version", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "1.0.0",
+                    BuildConfig.VERSION,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

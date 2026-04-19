@@ -87,6 +87,47 @@ val appVersion: String =
         ?.removeSuffix("-SNAPSHOT") ?: "1.0.0"
 
 // ---------------------------------------------------------------------------
+// Generate a tiny BuildConfig.kt so runtime UI (Settings > About) can show
+// the same version string Gradle uses for native packaging, rather than
+// hardcoding "1.0.0" in a Compose file.
+// ---------------------------------------------------------------------------
+val generatedBuildConfigDir = layout.buildDirectory.dir("generated/buildconfig/commonMain/kotlin")
+
+val generateBuildConfig by tasks.registering {
+    val outDir = generatedBuildConfigDir
+    val version = appVersion
+    inputs.property("version", version)
+    outputs.dir(outDir)
+    doLast {
+        val pkgDir =
+            outDir
+                .get()
+                .asFile
+                .resolve("com/containerdashboard")
+                .apply { mkdirs() }
+        pkgDir.resolve("BuildConfig.kt").writeText(
+            """
+            package com.containerdashboard
+
+            /** Generated at build time from `app.version` in `gradle.properties`. */
+            internal object BuildConfig {
+                const val VERSION: String = "$version"
+            }
+
+            """.trimIndent(),
+        )
+    }
+}
+
+kotlin {
+    sourceSets {
+        named("commonMain") {
+            kotlin.srcDir(generateBuildConfig)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Generated macOS app icon.
 // Renders the container-dashboard package box at every iconset size
 // (16/32/128/256/512 plus retina @2x variants up to 1024) and pipes them
