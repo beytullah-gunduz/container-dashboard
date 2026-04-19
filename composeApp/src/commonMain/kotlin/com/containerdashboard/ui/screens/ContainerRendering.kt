@@ -85,6 +85,7 @@ import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
+import com.containerdashboard.ui.util.hoverHighlight
 
 @Composable
 internal fun ContainerSectionHeader(
@@ -98,6 +99,7 @@ internal fun ContainerSectionHeader(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(Radius.md))
+                .hoverHighlight(shape = RoundedCornerShape(Radius.md))
                 .clickable(onClick = onToggle)
                 .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -150,6 +152,7 @@ internal fun ComposeProjectHeader(
                 .fillMaxWidth()
                 .height(30.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
+                .hoverHighlight()
                 .clickable(onClick = onToggle)
                 .padding(horizontal = 8.dp),
     ) {
@@ -599,7 +602,8 @@ internal fun CompactContainerRow(
                         isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         else -> MaterialTheme.colorScheme.surface
                     },
-                ).clickable(enabled = !isPendingDelete) { onViewLogs() }
+                ).hoverHighlight()
+                .clickable(enabled = !isPendingDelete) { onViewLogs() }
                 .padding(horizontal = Spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -941,7 +945,8 @@ internal fun ExpandedContainerRow(
                             isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                             else -> MaterialTheme.colorScheme.surface
                         },
-                    ).clickable(enabled = !isPendingDelete) { onViewLogs() }
+                    ).hoverHighlight()
+                    .clickable(enabled = !isPendingDelete) { onViewLogs() }
                     .padding(horizontal = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -84,6 +84,7 @@ import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
+import com.containerdashboard.ui.util.hoverHighlight
 
 @Composable
 fun VolumesScreen(
@@ -602,7 +603,8 @@ private fun VolumeRow(
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
                             else -> MaterialTheme.colorScheme.surface
                         },
-                    ).clickable(onClick = onClick)
+                    ).hoverHighlight()
+                    .clickable(onClick = onClick)
                     .padding(horizontal = Spacing.sm, vertical = if (isCompactMode) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
