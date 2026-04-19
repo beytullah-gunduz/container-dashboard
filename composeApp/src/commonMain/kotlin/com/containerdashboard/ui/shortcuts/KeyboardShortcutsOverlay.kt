@@ -19,8 +19,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.util.isMacHost
 
-private val isMacHost = System.getProperty("os.name", "").contains("mac", ignoreCase = true)
 private val mod = if (isMacHost) "\u2318" else "Ctrl"
 
 private data class ShortcutEntry(

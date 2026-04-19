@@ -70,6 +70,7 @@ import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
+import com.containerdashboard.ui.util.isMacHost
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -380,7 +381,7 @@ private fun buildPaletteActions(
             id = "nav-settings",
             label = "Go to Settings",
             section = "Navigation",
-            keyboardHint = if (isMacHost()) "\u2318 ," else "Ctrl ,",
+            keyboardHint = if (isMacHost) "\u2318 ," else "Ctrl ,",
             icon = Screen.Settings.icon,
             onRun = { onNavigate(Screen.Settings) },
         ),
@@ -436,5 +437,3 @@ private fun buildPaletteActions(
 
     return actions
 }
-
-private fun isMacHost(): Boolean = System.getProperty("os.name", "").contains("mac", ignoreCase = true)
