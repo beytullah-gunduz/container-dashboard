@@ -257,32 +257,41 @@ fun App(
                                                 .fillMaxSize()
                                                 .background(MaterialTheme.colorScheme.background),
                                     ) {
-                                        when (currentRoute) {
-                                            Screen.Dashboard.route -> DashboardScreen()
-                                            Screen.Containers.route ->
-                                                ContainersScreen(
-                                                    onShowLogs = { container ->
-                                                        viewModel.showContainerLogs(container)
-                                                        navigator.showExtraPane()
-                                                    },
-                                                    onShowGroupLogs = { containersList ->
-                                                        viewModel.showGroupLogs(containersList)
-                                                        navigator.showExtraPane()
-                                                    },
-                                                    currentLogsContainerId = logsPaneState.container?.id,
-                                                    paneActionContainerId =
-                                                        logsPaneState.container
-                                                            ?.id
-                                                            ?.takeIf { logsPaneState.isPauseActionInProgress },
-                                                    logsPaneLayout = logsPaneLayout,
-                                                    onLogsPaneLayoutChange = { viewModel.setLogsPaneLayout(it) },
-                                                )
-                                            Screen.Images.route -> ImagesScreen()
-                                            Screen.Volumes.route -> VolumesScreen()
-                                            Screen.Networks.route -> NetworksScreen()
-                                            Screen.Monitoring.route -> MonitoringScreen()
-                                            Screen.AppLogs.route -> AppLogsScreen()
-                                            Screen.Settings.route -> SettingsScreen()
+                                        AnimatedContent(
+                                            targetState = currentRoute,
+                                            transitionSpec = {
+                                                (fadeIn() + scaleIn(initialScale = 0.96f))
+                                                    .togetherWith(fadeOut())
+                                            },
+                                            label = "DetailPaneScreenTransition",
+                                        ) { route ->
+                                            when (route) {
+                                                Screen.Dashboard.route -> DashboardScreen()
+                                                Screen.Containers.route ->
+                                                    ContainersScreen(
+                                                        onShowLogs = { container ->
+                                                            viewModel.showContainerLogs(container)
+                                                            navigator.showExtraPane()
+                                                        },
+                                                        onShowGroupLogs = { containersList ->
+                                                            viewModel.showGroupLogs(containersList)
+                                                            navigator.showExtraPane()
+                                                        },
+                                                        currentLogsContainerId = logsPaneState.container?.id,
+                                                        paneActionContainerId =
+                                                            logsPaneState.container
+                                                                ?.id
+                                                                ?.takeIf { logsPaneState.isPauseActionInProgress },
+                                                        logsPaneLayout = logsPaneLayout,
+                                                        onLogsPaneLayoutChange = { viewModel.setLogsPaneLayout(it) },
+                                                    )
+                                                Screen.Images.route -> ImagesScreen()
+                                                Screen.Volumes.route -> VolumesScreen()
+                                                Screen.Networks.route -> NetworksScreen()
+                                                Screen.Monitoring.route -> MonitoringScreen()
+                                                Screen.AppLogs.route -> AppLogsScreen()
+                                                Screen.Settings.route -> SettingsScreen()
+                                            }
                                         }
                                     }
                                 },
