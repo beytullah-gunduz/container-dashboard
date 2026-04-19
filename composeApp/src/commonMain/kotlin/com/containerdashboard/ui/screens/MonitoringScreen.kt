@@ -202,7 +202,6 @@ fun MonitoringScreen(
                         history = history.cpuHistory,
                         maxHistorySize = 60,
                         barColor = { getCpuColor(it) },
-                        currentPercent = (stats.sumOf { it.cpuPercent } / stats.size).toFloat(),
                         modifier = m,
                     )
                 }
@@ -214,7 +213,6 @@ fun MonitoringScreen(
                         history = history.memoryHistory,
                         maxHistorySize = 60,
                         barColor = { getMemoryColor(it) },
-                        currentPercent = (stats.sumOf { it.memoryPercent } / stats.size).toFloat(),
                         modifier = m,
                     )
                 }
@@ -947,10 +945,12 @@ private fun UsageHistoryGraph(
     history: List<Double>,
     maxHistorySize: Int,
     barColor: (Double) -> Color,
-    currentPercent: Float,
     maxValue: Double = 100.0,
     modifier: Modifier = Modifier,
 ) {
+    // Drive the gauge from the latest history point so the two views are
+    // guaranteed to agree — both reflect the same aggregation upstream.
+    val currentPercent = (history.lastOrNull() ?: 0.0).toFloat()
     val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 

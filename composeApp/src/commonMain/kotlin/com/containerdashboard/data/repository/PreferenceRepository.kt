@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
+import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -52,6 +53,7 @@ object PreferenceRepository {
     private val SHOW_SYSTEM_CONTAINERS by lazy { booleanPreferencesKey("show_system_containers") }
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
     private val THEME_MODE by lazy { stringPreferencesKey("theme_mode") }
+    private val MONITORING_AGGREGATION by lazy { stringPreferencesKey("monitoring_aggregation") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
     private val LOGS_PANE_LAYOUT by lazy { stringPreferencesKey("logs_pane_layout") }
     private val TRAY_REFRESH_RATE by lazy { intPreferencesKey("tray_refresh_rate_seconds") }
@@ -109,6 +111,16 @@ object PreferenceRepository {
 
     suspend fun setThemeMode(value: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = value.name }
+    }
+
+    fun monitoringAggregation(): Flow<MonitoringAggregation> =
+        dataStore.data.map { prefs ->
+            val stored = prefs[MONITORING_AGGREGATION]
+            MonitoringAggregation.entries.firstOrNull { it.name == stored } ?: MonitoringAggregation.ENGINE
+        }
+
+    suspend fun setMonitoringAggregation(value: MonitoringAggregation) {
+        dataStore.edit { it[MONITORING_AGGREGATION] = value.name }
     }
 
     fun showSystemContainers(): Flow<Boolean> =

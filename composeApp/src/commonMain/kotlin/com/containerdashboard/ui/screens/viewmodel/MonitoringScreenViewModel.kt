@@ -3,7 +3,9 @@ package com.containerdashboard.ui.screens.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.repository.DockerRepository
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -18,7 +20,20 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlin.math.max
+
+/**
+ * How the Monitoring screen aggregates per-container CPU and memory into
+ * the single number shown above the history graph.
+ */
+enum class MonitoringAggregation {
+    /** sum(container usage) / engine capacity — answers "how full is the engine?" */
+    ENGINE,
+
+    /** mean of per-container percentages — legacy behavior. */
+    CONTAINER_AVG,
+}
 
 /**
  * Snapshot in the per-metric history ring buffer. Disk and network values
@@ -70,6 +85,19 @@ class MonitoringScreenViewModel : ViewModel() {
 
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
+    private val systemInfo = MutableStateFlow<SystemInfo?>(null)
+
+    private val aggregation: StateFlow<MonitoringAggregation> =
+        PreferenceRepository
+            .monitoringAggregation()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonitoringAggregation.ENGINE)
+
+    init {
+        viewModelScope.launch {
+            systemInfo.value = repo.getSystemInfo().getOrNull()
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val rawStats: Flow<List<ContainerStats>> =
         _refreshRate
@@ -117,23 +145,25 @@ class MonitoringScreenViewModel : ViewModel() {
             }.map { it.derived }
 
     /**
-     * Aggregate history across all containers. CPU is averaged, memory is
-     * average percent, disk/network are summed bytes/sec.
+     * Aggregate history across all containers. CPU and memory follow the
+     * selected [MonitoringAggregation] mode; disk/network are summed bytes/sec.
      */
     val usageHistory: Flow<UsageHistory> =
         derivedStats.runningFold(UsageHistory()) { acc, stats ->
             if (stats.isEmpty()) {
                 acc
             } else {
-                val avgCpu = stats.sumOf { it.cpuPercent } / stats.size
-                val avgMem = stats.sumOf { it.memoryPercent } / stats.size
+                val mode = aggregation.value
+                val sysInfo = systemInfo.value
+                val aggCpu = aggregateCpu(stats, mode, sysInfo)
+                val aggMem = aggregateMemory(stats, mode, sysInfo)
                 val totalDiskRead = stats.sumOf { it.diskReadBytesPerSec }
                 val totalDiskWrite = stats.sumOf { it.diskWriteBytesPerSec }
                 val totalNetRx = stats.sumOf { it.networkRxBytesPerSec }
                 val totalNetTx = stats.sumOf { it.networkTxBytesPerSec }
                 UsageHistory(
-                    cpuHistory = (acc.cpuHistory + avgCpu).takeLast(maxHistorySize),
-                    memoryHistory = (acc.memoryHistory + avgMem).takeLast(maxHistorySize),
+                    cpuHistory = (acc.cpuHistory + aggCpu).takeLast(maxHistorySize),
+                    memoryHistory = (acc.memoryHistory + aggMem).takeLast(maxHistorySize),
                     diskReadHistory = (acc.diskReadHistory + totalDiskRead).takeLast(maxHistorySize),
                     diskWriteHistory = (acc.diskWriteHistory + totalDiskWrite).takeLast(maxHistorySize),
                     networkRxHistory = (acc.networkRxHistory + totalNetRx).takeLast(maxHistorySize),
@@ -172,4 +202,32 @@ class MonitoringScreenViewModel : ViewModel() {
     }
 
     private fun currentTimeMillis(): Long = System.currentTimeMillis()
+}
+
+private fun aggregateCpu(
+    stats: List<DerivedContainerStats>,
+    mode: MonitoringAggregation,
+    sysInfo: SystemInfo?,
+): Double {
+    val nCpu = sysInfo?.ncpu?.takeIf { it > 0 }
+    return if (mode == MonitoringAggregation.ENGINE && nCpu != null) {
+        // cpuPercent is already "per CPU × 100" per Docker convention, so the
+        // sum maxes at nCpu × 100; dividing by nCpu normalizes to 0..100 engine %.
+        stats.sumOf { it.cpuPercent } / nCpu
+    } else {
+        stats.sumOf { it.cpuPercent } / stats.size
+    }
+}
+
+private fun aggregateMemory(
+    stats: List<DerivedContainerStats>,
+    mode: MonitoringAggregation,
+    sysInfo: SystemInfo?,
+): Double {
+    val memTotal = sysInfo?.memTotal?.takeIf { it > 0 }
+    return if (mode == MonitoringAggregation.ENGINE && memTotal != null) {
+        (stats.sumOf { it.memoryUsage }.toDouble() / memTotal) * 100.0
+    } else {
+        stats.sumOf { it.memoryPercent } / stats.size
+    }
 }

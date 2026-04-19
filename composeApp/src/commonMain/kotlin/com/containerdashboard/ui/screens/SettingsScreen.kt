@@ -21,11 +21,13 @@ import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -66,6 +68,7 @@ import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
+import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
@@ -81,6 +84,9 @@ fun SettingsScreen(
 
     val dockerHost by viewModel.engineHost().collectAsState(initial = DockerHostConfig.detectDockerHost())
     val themeMode by viewModel.themeMode().collectAsState(initial = ThemeMode.AUTO)
+    val monitoringAggregation by viewModel
+        .monitoringAggregation()
+        .collectAsState(initial = MonitoringAggregation.ENGINE)
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
     val trayRefreshRate by viewModel.trayRefreshRateSeconds().collectAsState(initial = 5)
@@ -246,6 +252,14 @@ fun SettingsScreen(
             ThemeModeSelector(
                 selected = themeMode,
                 onSelect = { viewModel.setThemeMode(it) },
+            )
+        }
+
+        // Monitoring Section
+        SettingsSection(title = "Monitoring") {
+            MonitoringAggregationSelector(
+                selected = monitoringAggregation,
+                onSelect = { viewModel.setMonitoringAggregation(it) },
             )
         }
 
@@ -777,6 +791,63 @@ private fun ThemeModeSelector(
                         )
                     },
                     label = { Text(label) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitoringAggregationSelector(
+    selected: MonitoringAggregation,
+    onSelect: (MonitoringAggregation) -> Unit,
+) {
+    val options: List<Triple<MonitoringAggregation, String, ImageVector>> =
+        listOf(
+            Triple(MonitoringAggregation.ENGINE, "Engine", Icons.Outlined.MonitorHeart),
+            Triple(MonitoringAggregation.CONTAINER_AVG, "Per container", Icons.Outlined.ViewInAr),
+        )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Usage aggregation",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = "How CPU and memory are totaled in the Monitoring gauges",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.width(Spacing.lg))
+        SingleChoiceSegmentedButtonRow {
+            options.forEachIndexed { index, (mode, label, icon) ->
+                SegmentedButton(
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = options.size,
+                        ),
+                    onClick = { onSelect(mode) },
+                    selected = selected == mode,
+                    icon = {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = label,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    },
                 )
             }
         }

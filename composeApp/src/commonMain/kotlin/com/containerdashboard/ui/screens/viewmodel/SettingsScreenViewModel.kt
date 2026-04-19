@@ -40,6 +40,8 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun themeMode(): Flow<ThemeMode> = PreferenceRepository.themeMode()
 
+    fun monitoringAggregation(): Flow<MonitoringAggregation> = PreferenceRepository.monitoringAggregation()
+
     fun showSystemContainers(): Flow<Boolean> = PreferenceRepository.showSystemContainers()
 
     fun confirmBeforeDelete(): Flow<Boolean> = PreferenceRepository.confirmBeforeDelete()
@@ -58,6 +60,10 @@ class SettingsScreenViewModel : ViewModel() {
 
     fun setThemeMode(value: ThemeMode) {
         viewModelScope.launch { PreferenceRepository.setThemeMode(value) }
+    }
+
+    fun setMonitoringAggregation(value: MonitoringAggregation) {
+        viewModelScope.launch { PreferenceRepository.setMonitoringAggregation(value) }
     }
 
     fun setShowSystemContainers(value: Boolean) {
