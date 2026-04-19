@@ -524,22 +524,24 @@ fun ContainersScreen(
                                 LogsPaneLayout.BOTTOM -> Icons.Outlined.ViewAgenda
                                 LogsPaneLayout.AUTO -> Icons.Outlined.AutoAwesome
                             }
-                        IconButton(
-                            onClick = { showLayoutMenu = true },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    layoutIcon,
-                                    contentDescription = "Log panel layout",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Icon(
-                                    Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        AppTooltip(label = "Log panel layout") {
+                            IconButton(
+                                onClick = { showLayoutMenu = true },
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        layoutIcon,
+                                        contentDescription = "Log panel layout",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                         DropdownMenu(
