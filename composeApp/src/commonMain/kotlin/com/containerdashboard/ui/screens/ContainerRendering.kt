@@ -217,7 +217,7 @@ internal fun ComposeProjectHeader(
                 }
                 memoryUsage?.let {
                     Text(
-                        text = "MEM ${ContainerStats.formatBytes(it)}",
+                        text = "Mem ${ContainerStats.formatBytes(it)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
