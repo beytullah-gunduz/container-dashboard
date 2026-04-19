@@ -39,8 +39,16 @@ fun CreateResourceDialog(
                 if (ev.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (ev.key) {
                     Key.Enter -> {
-                        if (confirmEnabled) onConfirm()
-                        true
+                        // Only consume Enter when we actually act on it;
+                        // otherwise let it propagate so the focused field
+                        // handles it normally (and the user gets feedback
+                        // if validation rejected the submit).
+                        if (confirmEnabled) {
+                            onConfirm()
+                            true
+                        } else {
+                            false
+                        }
                     }
                     Key.Escape -> {
                         onDismiss()
