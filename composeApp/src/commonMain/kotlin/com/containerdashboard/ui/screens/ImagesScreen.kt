@@ -292,7 +292,7 @@ fun ImagesScreen(
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     // Named images section
                     if (namedImages.isNotEmpty()) {
