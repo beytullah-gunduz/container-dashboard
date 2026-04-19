@@ -19,24 +19,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Spacing
-import com.containerdashboard.ui.util.isMacHost
-
-private val mod = if (isMacHost) "\u2318" else "Ctrl"
-
-private data class ShortcutEntry(
-    val keys: String,
-    val label: String,
-)
-
-private val entries =
-    listOf(
-        ShortcutEntry("$mod K", "Open command palette"),
-        ShortcutEntry("$mod F", "Focus search"),
-        ShortcutEntry("$mod ,", "Open Settings"),
-        ShortcutEntry("$mod 1 – $mod 7", "Jump to sidebar screen"),
-        ShortcutEntry("Esc", "Close overlays / logs pane"),
-        ShortcutEntry("? or $mod /", "Show this cheatsheet"),
-    )
 
 @Composable
 fun KeyboardShortcutsOverlay(onDismiss: () -> Unit) {
@@ -57,13 +39,13 @@ fun KeyboardShortcutsOverlay(onDismiss: () -> Unit) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                entries.forEach { entry ->
+                AppShortcut.entries.forEach { entry ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                     ) {
                         Text(
-                            text = entry.keys,
+                            text = entry.displayKeys(),
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.width(140.dp).padding(end = Spacing.md),
                             color = MaterialTheme.colorScheme.primary,
