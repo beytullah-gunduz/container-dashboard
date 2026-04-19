@@ -80,10 +80,6 @@ import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.util.copyToClipboard
 
-// Threshold for switching between compact and expanded layouts.
-// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
-private val COMPACT_THRESHOLD = 700.dp
-
 @Composable
 fun ImagesScreen(
     modifier: Modifier = Modifier,

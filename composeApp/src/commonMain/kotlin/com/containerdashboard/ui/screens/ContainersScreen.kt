@@ -79,10 +79,6 @@ import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 
-// Threshold for switching between compact and expanded layouts
-private val COMPACT_THRESHOLD = 700.dp
-private val COMPACT_BUTTONS_THRESHOLD = 900.dp
-
 internal enum class SortColumn {
     NAME,
     IMAGE,

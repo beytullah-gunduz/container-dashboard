@@ -65,14 +65,6 @@ import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 
-// Threshold for switching between compact and expanded layouts.
-// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
-private val COMPACT_THRESHOLD = 700.dp
-
-// Threshold below which the per-container table collapses into
-// two-row-per-container layout so disk/network columns stay legible.
-private val NARROW_TABLE_THRESHOLD = 900.dp
-
 // Shared left-padding for history-graph canvases so the bar areas of
 // UsageHistoryGraph and IoHistoryGraph line up vertically when the
 // graphs are stacked. Sized for the widest expected label ("999 MB/s").

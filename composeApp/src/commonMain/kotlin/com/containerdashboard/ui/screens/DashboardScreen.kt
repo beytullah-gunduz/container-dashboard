@@ -52,10 +52,6 @@ import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 
-// Threshold for switching between compact and expanded layouts.
-// Kept in sync with ContainersScreen.COMPACT_THRESHOLD.
-private val COMPACT_THRESHOLD = 700.dp
-
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
