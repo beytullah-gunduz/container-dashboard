@@ -260,16 +260,18 @@ internal fun LogsTabContent(
                         )
                         if (filterText.isNotEmpty()) {
                             Spacer(modifier = Modifier.width(Spacing.xs))
-                            IconButton(
-                                onClick = { LogsFilterState.filterText = "" },
-                                modifier = Modifier.size(18.dp),
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Clear,
-                                    contentDescription = "Clear filter",
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            AppTooltip(label = "Clear filter") {
+                                IconButton(
+                                    onClick = { LogsFilterState.filterText = "" },
+                                    modifier = Modifier.size(18.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Clear,
+                                        contentDescription = "Clear filter",
+                                        modifier = Modifier.size(12.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }

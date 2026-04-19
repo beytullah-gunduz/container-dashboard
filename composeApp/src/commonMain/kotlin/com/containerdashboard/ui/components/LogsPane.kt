@@ -97,36 +97,40 @@ fun LogsPane(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = !state.isLoading,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
+                    AppTooltip(label = if (state.isLoading) "Refreshing…" else "Refresh logs") {
+                        IconButton(
+                            onClick = onRefresh,
+                            enabled = !state.isLoading,
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            if (state.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Outlined.Refresh,
+                                    contentDescription = "Refresh logs",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    AppTooltip(label = "Close logs pane") {
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier.size(32.dp),
+                        ) {
                             Icon(
-                                Icons.Outlined.Refresh,
-                                contentDescription = "Refresh logs",
+                                Icons.Outlined.Close,
+                                contentDescription = "Close logs",
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    }
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Outlined.Close,
-                            contentDescription = "Close logs",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }
