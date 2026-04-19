@@ -724,6 +724,22 @@ fun ContainersScreen(
                                 searchQuery = ""
                             },
                     )
+                } else if (containerFilter != ContainerFilter.ALL) {
+                    val label =
+                        when (containerFilter) {
+                            ContainerFilter.RUNNING -> "running"
+                            ContainerFilter.STOPPED -> "stopped"
+                            ContainerFilter.ALL -> "" // unreachable
+                        }
+                    EmptyState(
+                        icon = Icons.Outlined.ViewInAr,
+                        title = "No $label containers",
+                        body = "No containers match the \"$label\" filter right now.",
+                        action =
+                            EmptyStateAction("Show all") {
+                                containerFilter = ContainerFilter.ALL
+                            },
+                    )
                 } else {
                     EmptyState(
                         icon = Icons.Outlined.ViewInAr,
