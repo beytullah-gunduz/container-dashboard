@@ -307,7 +307,7 @@ fun SettingsScreen(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f),
         ) {
             Text(
-                text = "These actions cannot be undone. Please proceed with caution.",
+                text = "Destructive actions. Each asks for confirmation before running.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
