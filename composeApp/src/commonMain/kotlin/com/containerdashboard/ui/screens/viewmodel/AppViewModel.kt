@@ -10,6 +10,7 @@ import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.state.LogsPaneState
+import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -87,10 +88,10 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    val darkTheme: StateFlow<Boolean> =
+    val themeMode: StateFlow<ThemeMode> =
         PreferenceRepository
-            .darkTheme()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+            .themeMode()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.AUTO)
 
     val logsPaneLayout: StateFlow<LogsPaneLayout> =
         PreferenceRepository

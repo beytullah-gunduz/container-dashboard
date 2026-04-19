@@ -10,6 +10,7 @@ import com.containerdashboard.data.engine.colimaProfileFromHost
 import com.containerdashboard.data.engine.engineTypeFromHost
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,7 +38,7 @@ class SettingsScreenViewModel : ViewModel() {
             .map { colimaProfileFromHost(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun darkTheme(): Flow<Boolean> = PreferenceRepository.darkTheme()
+    fun themeMode(): Flow<ThemeMode> = PreferenceRepository.themeMode()
 
     fun showSystemContainers(): Flow<Boolean> = PreferenceRepository.showSystemContainers()
 
@@ -55,8 +56,8 @@ class SettingsScreenViewModel : ViewModel() {
         viewModelScope.launch { PreferenceRepository.setEngineHost(value) }
     }
 
-    fun setDarkTheme(value: Boolean) {
-        viewModelScope.launch { PreferenceRepository.setDarkTheme(value) }
+    fun setThemeMode(value: ThemeMode) {
+        viewModelScope.launch { PreferenceRepository.setThemeMode(value) }
     }
 
     fun setShowSystemContainers(value: Boolean) {

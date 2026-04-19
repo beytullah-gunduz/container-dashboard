@@ -17,7 +17,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RestartAlt
@@ -51,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -66,6 +70,7 @@ import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeMode
 
 @Composable
 fun SettingsScreen(
@@ -75,7 +80,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
 
     val dockerHost by viewModel.engineHost().collectAsState(initial = DockerHostConfig.detectDockerHost())
-    val darkTheme by viewModel.darkTheme().collectAsState(initial = true)
+    val themeMode by viewModel.themeMode().collectAsState(initial = ThemeMode.AUTO)
     val showSystemContainers by viewModel.showSystemContainers().collectAsState(initial = false)
     val confirmBeforeDelete by viewModel.confirmBeforeDelete().collectAsState(initial = true)
     val trayRefreshRate by viewModel.trayRefreshRateSeconds().collectAsState(initial = 5)
@@ -238,11 +243,9 @@ fun SettingsScreen(
 
         // Appearance Section
         SettingsSection(title = "Appearance") {
-            SettingsSwitch(
-                title = "Dark Theme",
-                subtitle = "Use dark color scheme",
-                checked = darkTheme,
-                onCheckedChange = { viewModel.setDarkTheme(it) },
+            ThemeModeSelector(
+                selected = themeMode,
+                onSelect = { viewModel.setThemeMode(it) },
             )
         }
 
@@ -724,6 +727,58 @@ private fun SettingsSection(
             )
             Spacer(modifier = Modifier.height(Spacing.lg))
             content()
+        }
+    }
+}
+
+@Composable
+private fun ThemeModeSelector(
+    selected: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+) {
+    val options: List<Triple<ThemeMode, String, ImageVector>> =
+        listOf(
+            Triple(ThemeMode.AUTO, "Auto", Icons.Outlined.BrightnessAuto),
+            Triple(ThemeMode.LIGHT, "Light", Icons.Outlined.LightMode),
+            Triple(ThemeMode.DARK, "Dark", Icons.Outlined.DarkMode),
+        )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Theme",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = "Auto follows your system appearance",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.width(Spacing.lg))
+        SingleChoiceSegmentedButtonRow {
+            options.forEachIndexed { index, (mode, label, icon) ->
+                SegmentedButton(
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = options.size,
+                        ),
+                    onClick = { onSelect(mode) },
+                    selected = selected == mode,
+                    icon = {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                        )
+                    },
+                    label = { Text(label) },
+                )
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
+import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -50,6 +51,7 @@ object PreferenceRepository {
     private val ENGINE_HOST by lazy { stringPreferencesKey("engine_host") }
     private val SHOW_SYSTEM_CONTAINERS by lazy { booleanPreferencesKey("show_system_containers") }
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
+    private val THEME_MODE by lazy { stringPreferencesKey("theme_mode") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
     private val LOGS_PANE_LAYOUT by lazy { stringPreferencesKey("logs_pane_layout") }
     private val TRAY_REFRESH_RATE by lazy { intPreferencesKey("tray_refresh_rate_seconds") }
@@ -89,13 +91,24 @@ object PreferenceRepository {
         dataStore.edit { it[ENGINE_HOST] = value }
     }
 
-    fun darkTheme(): Flow<Boolean> =
-        dataStore.data.map {
-            it[DARK_THEME] ?: true
+    fun themeMode(): Flow<ThemeMode> =
+        dataStore.data.map { prefs ->
+            val stored = prefs[THEME_MODE]
+            if (stored != null) {
+                ThemeMode.entries.firstOrNull { it.name == stored } ?: ThemeMode.AUTO
+            } else {
+                // Legacy fallback: honor the pre-migration boolean so existing users
+                // keep whatever dark/light choice they explicitly made.
+                when (prefs[DARK_THEME]) {
+                    true -> ThemeMode.DARK
+                    false -> ThemeMode.LIGHT
+                    null -> ThemeMode.AUTO
+                }
+            }
         }
 
-    suspend fun setDarkTheme(value: Boolean) {
-        dataStore.edit { it[DARK_THEME] = value }
+    suspend fun setThemeMode(value: ThemeMode) {
+        dataStore.edit { it[THEME_MODE] = value.name }
     }
 
     fun showSystemContainers(): Flow<Boolean> =

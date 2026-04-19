@@ -68,8 +68,10 @@ import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeMode
 import com.containerdashboard.ui.util.isMacHost
 import kotlinx.coroutines.launch
 
@@ -83,7 +85,14 @@ fun App(
     val currentRoute by viewModel.currentRoute.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val logsPaneState by viewModel.logsPaneState.collectAsState()
-    val darkTheme by viewModel.darkTheme.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val darkTheme =
+        when (themeMode) {
+            ThemeMode.AUTO -> systemDark
+            ThemeMode.DARK -> true
+            ThemeMode.LIGHT -> false
+        }
     val logsPaneLayout by viewModel.logsPaneLayout.collectAsState()
     val engineName by viewModel.engineName.collectAsState()
 

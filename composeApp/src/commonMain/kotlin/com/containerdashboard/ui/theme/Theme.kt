@@ -79,6 +79,12 @@ private val LightExtendedColors =
 
 val LocalAppColors = staticCompositionLocalOf<ExtendedColors> { DarkExtendedColors }
 
+enum class ThemeMode {
+    AUTO,
+    DARK,
+    LIGHT,
+}
+
 object AppTheme {
     val extended: ExtendedColors
         @Composable
