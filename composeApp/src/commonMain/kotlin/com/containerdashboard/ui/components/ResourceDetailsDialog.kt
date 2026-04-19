@@ -218,7 +218,7 @@ fun ResourceDetailsDialog(
                             false
                         }
                     },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(Radius.lg),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 4.dp,
             shadowElevation = 12.dp,
