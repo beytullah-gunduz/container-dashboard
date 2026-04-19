@@ -12,6 +12,7 @@ import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -242,10 +243,10 @@ class AppViewModel : ViewModel() {
         }
     }
 
-    // The pane's spinner stays visible until the background observer actually
-    // reflects the new container state — `refreshContainers()` only fires the
-    // trigger and returns, so without this wait the flag would clear before
-    // the user sees the state flip.
+    // Keep the spinner up until the container actually reaches the target state,
+    // then hold briefly so the row the container just moved to (e.g. the running
+    // section after an unpause, or a section/card that was collapsed before the
+    // move) has a visible frame of spinner before it swaps back to the icon.
     private suspend fun awaitContainerState(
         id: String,
         predicate: (Container) -> Boolean,
@@ -256,6 +257,7 @@ class AppViewModel : ViewModel() {
                 c == null || predicate(c)
             }
         }
+        delay(400)
     }
 
     fun restartLogsContainer() {
