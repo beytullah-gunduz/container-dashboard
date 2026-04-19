@@ -740,52 +740,45 @@ private fun EngineHostField(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column {
-        Text(
-            text = "Engine Host",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+            label = { Text("Engine host") },
+            placeholder = { Text(DockerHostConfig.fallbackUri) },
+            singleLine = true,
+            shape = RoundedCornerShape(Radius.md),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
         )
-        Spacer(modifier = Modifier.height(Spacing.sm))
-        ExposedDropdownMenuBox(
+        ExposedDropdownMenu(
             expanded = expanded,
-            onExpandedChange = { expanded = it },
+            onDismissRequest = { expanded = false },
         ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-                placeholder = { Text(DockerHostConfig.fallbackUri) },
-                singleLine = true,
-                shape = RoundedCornerShape(Radius.md),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                DockerHostConfig.presets.forEach { preset ->
-                    DropdownMenuItem(
-                        text = {
-                            Column {
-                                Text(
-                                    text = preset.label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                                Text(
-                                    text = preset.uri,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        },
-                        onClick = {
-                            onValueChange(preset.uri)
-                            expanded = false
-                        },
-                    )
-                }
+            DockerHostConfig.presets.forEach { preset ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = preset.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = preset.uri,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    onClick = {
+                        onValueChange(preset.uri)
+                        expanded = false
+                    },
+                )
             }
         }
     }
