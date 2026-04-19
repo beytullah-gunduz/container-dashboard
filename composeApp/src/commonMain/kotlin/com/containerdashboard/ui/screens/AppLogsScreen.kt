@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.logging.AppLogEntry
+import com.containerdashboard.logging.AppLogLevel
 import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
@@ -159,11 +160,11 @@ fun AppLogsScreen(
             LevelFilterChip(label = "All", selected = levelFilter == null) {
                 viewModel.setLevelFilter(null)
             }
-            listOf("DEBUG", "INFO", "WARN", "ERROR").forEach { level ->
+            AppLogLevel.entries.forEach { level ->
                 LevelFilterChip(
-                    label = level,
+                    label = level.name,
                     selected = levelFilter == level,
-                    color = levelColor(level),
+                    color = levelColor(level.name),
                 ) {
                     viewModel.setLevelFilter(level)
                 }

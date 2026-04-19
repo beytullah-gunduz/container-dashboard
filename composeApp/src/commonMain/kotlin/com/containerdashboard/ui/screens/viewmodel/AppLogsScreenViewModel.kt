@@ -3,6 +3,7 @@ package com.containerdashboard.ui.screens.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.logging.AppLogEntry
+import com.containerdashboard.logging.AppLogLevel
 import com.containerdashboard.logging.AppLogStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,8 +21,8 @@ class AppLogsScreenViewModel : ViewModel() {
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     /** Currently selected log-level filter (null = show all). */
-    private val _levelFilter = MutableStateFlow<String?>(null)
-    val levelFilter: StateFlow<String?> = _levelFilter.asStateFlow()
+    private val _levelFilter = MutableStateFlow<AppLogLevel?>(null)
+    val levelFilter: StateFlow<AppLogLevel?> = _levelFilter.asStateFlow()
 
     /** Whether auto-scroll to the latest entry is enabled. */
     private val _autoScroll = MutableStateFlow(true)
@@ -31,7 +32,7 @@ class AppLogsScreenViewModel : ViewModel() {
     val entries: StateFlow<List<AppLogEntry>> =
         combine(allEntries, _searchQuery, _levelFilter) { logs, query, level ->
             logs.filter { entry ->
-                val matchesLevel = level == null || entry.level == level
+                val matchesLevel = level == null || entry.level.equals(level.name, ignoreCase = true)
                 val matchesQuery =
                     query.isBlank() ||
                         entry.message.contains(query, ignoreCase = true) ||
@@ -51,7 +52,7 @@ class AppLogsScreenViewModel : ViewModel() {
         _searchQuery.value = query
     }
 
-    fun setLevelFilter(level: String?) {
+    fun setLevelFilter(level: AppLogLevel?) {
         _levelFilter.value = level
     }
 
