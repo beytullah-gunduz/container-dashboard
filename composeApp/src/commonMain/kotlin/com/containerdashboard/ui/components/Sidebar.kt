@@ -58,7 +58,7 @@ fun Sidebar(
                 AppBrandMark(modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(Spacing.sm))
                 Text(
-                    text = "Container",
+                    text = "Container Dashboard",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
