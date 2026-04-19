@@ -62,6 +62,7 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.components.SemiDonutGauge
 import com.containerdashboard.ui.screens.viewmodel.DerivedContainerStats
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
@@ -201,10 +202,7 @@ fun MonitoringScreen(
                         history = history.cpuHistory,
                         maxHistorySize = 60,
                         barColor = { getCpuColor(it) },
-                        currentValue =
-                            "%.1f%%".format(
-                                stats.sumOf { it.cpuPercent } / stats.size,
-                            ),
+                        currentPercent = (stats.sumOf { it.cpuPercent } / stats.size).toFloat(),
                         modifier = m,
                     )
                 }
@@ -216,10 +214,7 @@ fun MonitoringScreen(
                         history = history.memoryHistory,
                         maxHistorySize = 60,
                         barColor = { getMemoryColor(it) },
-                        currentValue =
-                            "%.1f%%".format(
-                                stats.sumOf { it.memoryPercent } / stats.size,
-                            ),
+                        currentPercent = (stats.sumOf { it.memoryPercent } / stats.size).toFloat(),
                         modifier = m,
                     )
                 }
@@ -952,7 +947,7 @@ private fun UsageHistoryGraph(
     history: List<Double>,
     maxHistorySize: Int,
     barColor: (Double) -> Color,
-    currentValue: String,
+    currentPercent: Float,
     maxValue: Double = 100.0,
     modifier: Modifier = Modifier,
 ) {
@@ -993,11 +988,9 @@ private fun UsageHistoryGraph(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Text(
-                    text = currentValue,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = iconTint,
+                SemiDonutGauge(
+                    percent = currentPercent,
+                    color = barColor(currentPercent.toDouble()),
                 )
             }
 
