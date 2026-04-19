@@ -41,6 +41,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -400,10 +401,43 @@ private enum class ContainerTab(
     RAW("Raw JSON"),
 }
 
+/**
+ * Process-lifetime memory of the last-selected tab per resource kind, so the
+ * user doesn't keep bouncing back to the first tab every time the details
+ * dialog is reopened. Keyed by a short kind string; values are ordinals into
+ * the matching tab enum.
+ */
+private object DialogTabMemory {
+    private val lastOrdinal = mutableMapOf<String, Int>()
+
+    fun get(kind: String): Int = lastOrdinal[kind] ?: 0
+
+    fun set(
+        kind: String,
+        ordinal: Int,
+    ) {
+        lastOrdinal[kind] = ordinal
+    }
+}
+
+@Composable
+private fun <T : Enum<T>> rememberTabMemory(
+    kind: String,
+    entries: List<T>,
+): MutableState<T> {
+    val state =
+        remember(kind) {
+            val stored = DialogTabMemory.get(kind).coerceIn(0, entries.lastIndex)
+            mutableStateOf(entries[stored])
+        }
+    LaunchedEffect(state.value) { DialogTabMemory.set(kind, state.value.ordinal) }
+    return state
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ContainerTabs(inspect: ContainerInspect) {
-    var selected by remember { mutableStateOf(ContainerTab.OVERVIEW) }
+    var selected by rememberTabMemory("container", ContainerTab.entries)
     val tabs = ContainerTab.entries
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -474,7 +508,7 @@ private enum class VolumeTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ImageTabs(inspect: ImageInspect) {
-    var selected by remember { mutableStateOf(ImageTab.OVERVIEW) }
+    var selected by rememberTabMemory("image", ImageTab.entries)
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
@@ -507,7 +541,7 @@ private fun ImageTabs(inspect: ImageInspect) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NetworkTabs(inspect: NetworkInspect) {
-    var selected by remember { mutableStateOf(NetworkTab.OVERVIEW) }
+    var selected by rememberTabMemory("network", NetworkTab.entries)
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
@@ -540,7 +574,7 @@ private fun NetworkTabs(inspect: NetworkInspect) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VolumeTabs(inspect: VolumeInspect) {
-    var selected by remember { mutableStateOf(VolumeTab.OVERVIEW) }
+    var selected by rememberTabMemory("volume", VolumeTab.entries)
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
