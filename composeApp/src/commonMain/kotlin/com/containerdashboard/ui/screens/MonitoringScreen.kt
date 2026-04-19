@@ -522,14 +522,14 @@ private fun WideTableHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        SortableHeader("CONTAINER", MonitoringSort.NAME, sortColumn, sortDirection, onSortChange, Modifier.weight(1.4f))
+        SortableHeader("Container", MonitoringSort.NAME, sortColumn, sortDirection, onSortChange, Modifier.weight(1.4f))
         SortableHeader("CPU %", MonitoringSort.CPU, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
-        SortableHeader("MEM %", MonitoringSort.MEM, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
-        HeaderLabel("MEM", Modifier.weight(1.0f))
-        SortableHeader("DISK R", MonitoringSort.DISK_R, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
-        SortableHeader("DISK W", MonitoringSort.DISK_W, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
-        SortableHeader("NET \u2193", MonitoringSort.NET_RX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
-        SortableHeader("NET \u2191", MonitoringSort.NET_TX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("Memory %", MonitoringSort.MEM, sortColumn, sortDirection, onSortChange, Modifier.weight(0.7f))
+        HeaderLabel("Memory", Modifier.weight(1.0f))
+        SortableHeader("Disk R", MonitoringSort.DISK_R, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("Disk W", MonitoringSort.DISK_W, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("Net \u2193", MonitoringSort.NET_RX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
+        SortableHeader("Net \u2191", MonitoringSort.NET_TX, sortColumn, sortDirection, onSortChange, Modifier.weight(0.9f))
     }
 }
 
@@ -790,7 +790,7 @@ private fun StatsTableRow(
                             color = getCpuColor(stat.cpuPercent),
                         )
                         Text(
-                            text = "MEM",
+                            text = "Mem",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
@@ -808,23 +808,23 @@ private fun StatsTableRow(
                         modifier = Modifier.fillMaxWidth().padding(start = 20.dp),
                     ) {
                         IoLabel(
-                            "DISK R",
+                            "Disk R",
                             ContainerStats.formatBytesPerSecond(stat.diskReadBytesPerSec),
                             AppColors.AccentBlue,
                         )
                         IoLabel(
-                            "DISK W",
+                            "Disk W",
                             ContainerStats.formatBytesPerSecond(stat.diskWriteBytesPerSec),
                             AppColors.Running,
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         IoLabel(
-                            "NET \u2193",
+                            "Net \u2193",
                             ContainerStats.formatBytesPerSecond(stat.networkRxBytesPerSec),
                             AppColors.AccentBlueLight,
                         )
                         IoLabel(
-                            "NET \u2191",
+                            "Net \u2191",
                             ContainerStats.formatBytesPerSecond(stat.networkTxBytesPerSec),
                             AppColors.Warning,
                         )
