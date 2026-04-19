@@ -214,8 +214,10 @@ class AppViewModel : ViewModel() {
                 .firstOrNull()
                 ?.id ?: return
         viewModelScope.launch {
+            _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
             repo.pauseContainer(id)
             repo.refreshContainers()
+            _logsPaneState.update { it.copy(isPauseActionInProgress = false) }
         }
     }
 
@@ -225,8 +227,10 @@ class AppViewModel : ViewModel() {
                 .firstOrNull()
                 ?.id ?: return
         viewModelScope.launch {
+            _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
             repo.unpauseContainer(id)
             repo.refreshContainers()
+            _logsPaneState.update { it.copy(isPauseActionInProgress = false) }
         }
     }
 

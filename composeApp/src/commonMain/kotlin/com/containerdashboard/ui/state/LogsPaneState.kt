@@ -8,6 +8,7 @@ data class LogsPaneState(
     val isLoading: Boolean = false,
     val isFollowing: Boolean = false,
     val isSavingLogs: Boolean = false,
+    val isPauseActionInProgress: Boolean = false,
     val error: String? = null,
 ) {
     val container: Container? get() = containers.singleOrNull()

@@ -131,7 +131,23 @@ fun ContainerExtraPane(
                         onClick = onSaveLogs,
                     )
                 }
-                if (container?.isPaused == true) {
+                if (logsState.isPauseActionInProgress) {
+                    Box(
+                        modifier = Modifier.size(32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color =
+                                if (container?.isPaused == true) {
+                                    AppColors.Running
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                        )
+                    }
+                } else if (container?.isPaused == true) {
                     PaneActionButton(
                         icon = Icons.Outlined.PlayArrow,
                         contentDescription = "Resume container",
