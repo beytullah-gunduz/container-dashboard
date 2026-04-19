@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,7 +26,7 @@ fun DeleteAllContainersDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                Icons.Default.Warning,
+                Icons.Outlined.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
             )
