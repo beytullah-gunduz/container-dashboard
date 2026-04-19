@@ -80,6 +80,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.containerdashboard.ui.util.formatBytes as sharedFormatBytes
 
 /**
  * Target resource the details dialog should load and render.
@@ -1341,16 +1342,7 @@ private fun OptionsTab(options: Map<String, String>) {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "-"
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    val mb = kb / 1024.0
-    if (mb < 1024) return "%.1f MB".format(mb)
-    val gb = mb / 1024.0
-    return "%.2f GB".format(gb)
-}
+private fun formatBytes(bytes: Long): String = if (bytes <= 0) "-" else sharedFormatBytes(bytes)
 
 @Composable
 private fun EmptyState(message: String) {
