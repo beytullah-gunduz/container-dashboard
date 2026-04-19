@@ -665,7 +665,7 @@ private fun CopyIconButton(
 @Composable
 private fun EnvironmentTab(env: List<EnvVar>) {
     if (env.isEmpty()) {
-        EmptyState("No environment variables")
+        TabEmptyPlaceholder("No environment variables")
         return
     }
     TwoColumnTable(
@@ -679,7 +679,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
 @Composable
 private fun LabelsTab(labels: Map<String, String>) {
     if (labels.isEmpty()) {
-        EmptyState("No labels")
+        TabEmptyPlaceholder("No labels")
         return
     }
     TwoColumnTable(
@@ -764,7 +764,7 @@ private fun TwoColumnTable(
 @Composable
 private fun MountsTab(mounts: List<MountInfo>) {
     if (mounts.isEmpty()) {
-        EmptyState("No mounts")
+        TabEmptyPlaceholder("No mounts")
         return
     }
     Column(
@@ -835,7 +835,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
 @Composable
 private fun PortsTab(ports: List<PortMapping>) {
     if (ports.isEmpty()) {
-        EmptyState("No published ports")
+        TabEmptyPlaceholder("No published ports")
         return
     }
     Column(modifier = Modifier.fillMaxSize()) {
@@ -913,7 +913,7 @@ private fun TableCell(
 @Composable
 private fun NetworksTab(networks: List<NetworkAttachment>) {
     if (networks.isEmpty()) {
-        EmptyState("Not attached to any network")
+        TabEmptyPlaceholder("Not attached to any network")
         return
     }
     Column(
@@ -1111,7 +1111,7 @@ private fun ImageOverviewTab(inspect: ImageInspect) {
 @Composable
 private fun ImageLayersTab(layers: List<String>) {
     if (layers.isEmpty()) {
-        EmptyState("No layer information available")
+        TabEmptyPlaceholder("No layer information available")
         return
     }
     @Suppress("DEPRECATION")
@@ -1212,7 +1212,7 @@ private fun NetworkOverviewTab(inspect: NetworkInspect) {
 @Composable
 private fun NetworkAttachedTab(attached: List<AttachedContainer>) {
     if (attached.isEmpty()) {
-        EmptyState("No containers attached to this network")
+        TabEmptyPlaceholder("No containers attached to this network")
         return
     }
     Column(
@@ -1325,7 +1325,7 @@ private fun VolumeOverviewTab(inspect: VolumeInspect) {
 @Composable
 private fun OptionsTab(options: Map<String, String>) {
     if (options.isEmpty()) {
-        EmptyState("No options set")
+        TabEmptyPlaceholder("No options set")
         return
     }
     Column(
@@ -1344,8 +1344,14 @@ private fun OptionsTab(options: Map<String, String>) {
 
 private fun formatBytes(bytes: Long): String = if (bytes <= 0) "-" else sharedFormatBytes(bytes)
 
+/**
+ * Inline placeholder shown when a details-dialog tab has no rows to
+ * render (e.g. "No published ports"). Distinct from the shared
+ * [EmptyState] component — this is a compact one-line message inside
+ * an already-bounded tab pane, not a hero-illustration state.
+ */
 @Composable
-private fun EmptyState(message: String) {
+private fun TabEmptyPlaceholder(message: String) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
