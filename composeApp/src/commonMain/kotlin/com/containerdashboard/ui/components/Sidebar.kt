@@ -48,11 +48,14 @@ fun Sidebar(
         tonalElevation = 2.dp,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(Spacing.md),
+            modifier = Modifier.fillMaxSize().padding(vertical = Spacing.md),
         ) {
             // Brand mark + wordmark
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.md),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = Spacing.md, end = Spacing.md, bottom = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AppBrandMark(modifier = Modifier.size(24.dp))
@@ -77,7 +80,10 @@ fun Sidebar(
             Spacer(modifier = Modifier.weight(1f))
 
             // Settings at bottom
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = Spacing.md),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
             Spacer(modifier = Modifier.height(Spacing.sm))
 
             SidebarItem(
@@ -89,7 +95,11 @@ fun Sidebar(
             Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Connection status
-            ConnectionStatus(isConnected = isConnected, engineName = engineName)
+            ConnectionStatus(
+                isConnected = isConnected,
+                engineName = engineName,
+                modifier = Modifier.padding(horizontal = Spacing.md),
+            )
         }
     }
 }
@@ -103,7 +113,9 @@ private fun SidebarItem(
     val backgroundColor by animateColorAsState(
         targetValue =
             if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
+                // Match the detail pane (App.kt detailPane Box) so the selection
+                // visually continues into the content area across the sidebar seam.
+                MaterialTheme.colorScheme.background
             } else {
                 Color.Transparent
             },
@@ -137,8 +149,14 @@ private fun SidebarItem(
             modifier =
                 Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(Radius.md))
-                    .background(backgroundColor)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = Radius.md,
+                            bottomStart = Radius.md,
+                            topEnd = 0.dp,
+                            bottomEnd = 0.dp,
+                        ),
+                    ).background(backgroundColor)
                     .clickable(onClick = onClick)
                     .padding(horizontal = Spacing.md, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -164,10 +182,11 @@ private fun SidebarItem(
 private fun ConnectionStatus(
     isConnected: Boolean,
     engineName: String,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(Radius.md))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
