@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,7 +69,6 @@ import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
@@ -270,6 +270,10 @@ fun App(
                                                         navigator.showExtraPane()
                                                     },
                                                     currentLogsContainerId = logsPaneState.container?.id,
+                                                    paneActionContainerId =
+                                                        logsPaneState.container
+                                                            ?.id
+                                                            ?.takeIf { logsPaneState.isPauseActionInProgress },
                                                     logsPaneLayout = logsPaneLayout,
                                                     onLogsPaneLayoutChange = { viewModel.setLogsPaneLayout(it) },
                                                 )

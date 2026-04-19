@@ -125,6 +125,7 @@ fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
     onShowGroupLogs: (List<Container>) -> Unit = {},
     currentLogsContainerId: String? = null,
+    paneActionContainerId: String? = null,
     logsPaneLayout: LogsPaneLayout = LogsPaneLayout.AUTO,
     onLogsPaneLayoutChange: (LogsPaneLayout) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -156,6 +157,7 @@ fun ContainersScreen(
     val hasLoaded by viewModel.hasLoaded.collectAsState()
     val error by viewModel.error.collectAsState()
     val actionInProgress by viewModel.actionInProgress.collectAsState()
+    val effectiveActionInProgress = actionInProgress ?: paneActionContainerId
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val pendingDeleteIds by viewModel.pendingDeleteIds.collectAsState()
     val persistedColumnWidths by viewModel.columnWidths.collectAsState(initial = ContainerColumnWidths.Default)
@@ -848,7 +850,7 @@ fun ContainersScreen(
                                                 pendingDeleteIds = pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 currentLogsContainerId = currentLogsContainerId,
-                                                actionInProgress = actionInProgress,
+                                                actionInProgress = effectiveActionInProgress,
                                                 statsById = statsById,
                                                 onToggle = { toggleRunningGroup(item.projectName) },
                                                 onSelectAll = { selectAll ->
@@ -888,7 +890,7 @@ fun ContainersScreen(
                                                 onCheckedChange = { checked ->
                                                     viewModel.toggleContainerSelection(item.container.id, checked)
                                                 },
-                                                isActionInProgress = actionInProgress == item.container.id,
+                                                isActionInProgress = effectiveActionInProgress == item.container.id,
                                                 isPendingDelete = item.container.id in pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },
@@ -1011,7 +1013,7 @@ fun ContainersScreen(
                                                 pendingDeleteIds = pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 currentLogsContainerId = currentLogsContainerId,
-                                                actionInProgress = actionInProgress,
+                                                actionInProgress = effectiveActionInProgress,
                                                 statsById = statsById,
                                                 onToggle = { toggleOtherGroup(item.projectName) },
                                                 onSelectAll = { selectAll ->
@@ -1051,7 +1053,7 @@ fun ContainersScreen(
                                                 onCheckedChange = { checked ->
                                                     viewModel.toggleContainerSelection(item.container.id, checked)
                                                 },
-                                                isActionInProgress = actionInProgress == item.container.id,
+                                                isActionInProgress = effectiveActionInProgress == item.container.id,
                                                 isPendingDelete = item.container.id in pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },
