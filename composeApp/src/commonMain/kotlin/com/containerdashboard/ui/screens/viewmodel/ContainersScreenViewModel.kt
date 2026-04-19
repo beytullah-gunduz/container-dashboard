@@ -9,17 +9,20 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class ContainersScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
@@ -82,24 +85,35 @@ class ContainersScreenViewModel : ViewModel() {
 
     private fun containerAction(
         id: String,
+        awaitAfter: ((Container) -> Boolean)? = null,
         action: suspend DockerRepository.(String) -> Result<Unit>,
     ) {
         viewModelScope.launch {
             _actionInProgress.value = id
-            repo.action(id).onFailure { _error.value = it.message }
+            val result = repo.action(id).onFailure { _error.value = it.message }
+            if (result.isSuccess && awaitAfter != null) {
+                repo.refreshContainers()
+                withTimeoutOrNull(5000) {
+                    containers.first { list ->
+                        val c = list.find { it.id == id }
+                        c == null || awaitAfter(c)
+                    }
+                }
+                delay(400)
+            }
             _actionInProgress.value = null
         }
     }
 
-    fun startContainer(id: String) = containerAction(id) { startContainer(it) }
+    fun startContainer(id: String) = containerAction(id, awaitAfter = { it.isRunning }) { startContainer(it) }
 
-    fun stopContainer(id: String) = containerAction(id) { stopContainer(it) }
+    fun stopContainer(id: String) = containerAction(id, awaitAfter = { !it.isRunning && !it.isPaused }) { stopContainer(it) }
 
-    fun restartContainer(id: String) = containerAction(id) { restartContainer(it) }
+    fun restartContainer(id: String) = containerAction(id, awaitAfter = { it.isRunning }) { restartContainer(it) }
 
-    fun pauseContainer(id: String) = containerAction(id) { pauseContainer(it) }
+    fun pauseContainer(id: String) = containerAction(id, awaitAfter = { it.isPaused }) { pauseContainer(it) }
 
-    fun unpauseContainer(id: String) = containerAction(id) { unpauseContainer(it) }
+    fun unpauseContainer(id: String) = containerAction(id, awaitAfter = { it.isRunning }) { unpauseContainer(it) }
 
     fun removeContainer(id: String) {
         viewModelScope.launch {
