@@ -227,63 +227,69 @@ internal fun ComposeProjectHeader(
                 }
             }
 
-            // Group actions — pushed to far right
-            IconButton(
-                onClick = onViewGroupLogs,
-                modifier = Modifier.size(24.dp),
+            // Group actions — packed tightly at far right to align with per-container action column
+            Row(
+                modifier = Modifier.width(108.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.Article,
-                    contentDescription = "View group logs",
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (hasRunning) {
-                IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
+                IconButton(
+                    onClick = onViewGroupLogs,
+                    modifier = Modifier.size(24.dp),
+                ) {
                     Icon(
-                        Icons.Outlined.Stop,
-                        contentDescription = "Stop all",
+                        Icons.AutoMirrored.Outlined.Article,
+                        contentDescription = "View group logs",
                         modifier = Modifier.size(14.dp),
-                        tint = AppColors.Stopped,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            } else {
-                IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
+                if (hasRunning) {
+                    IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Outlined.Pause,
+                            contentDescription = "Pause all",
+                            modifier = Modifier.size(14.dp),
+                            tint = AppColors.Paused,
+                        )
+                    }
+                } else if (hasPaused) {
+                    IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Outlined.PlayArrow,
+                            contentDescription = "Unpause all",
+                            modifier = Modifier.size(14.dp),
+                            tint = AppColors.Running,
+                        )
+                    }
+                }
+                if (hasRunning) {
+                    IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Outlined.Stop,
+                            contentDescription = "Stop all",
+                            modifier = Modifier.size(14.dp),
+                            tint = AppColors.Stopped,
+                        )
+                    }
+                } else {
+                    IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Outlined.PlayArrow,
+                            contentDescription = "Start all",
+                            modifier = Modifier.size(14.dp),
+                            tint = AppColors.Running,
+                        )
+                    }
+                }
+                IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
                     Icon(
-                        Icons.Outlined.PlayArrow,
-                        contentDescription = "Start all",
+                        Icons.Outlined.Delete,
+                        contentDescription = "Delete all",
                         modifier = Modifier.size(14.dp),
-                        tint = AppColors.Running,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            if (hasRunning) {
-                IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.Outlined.Pause,
-                        contentDescription = "Pause all",
-                        modifier = Modifier.size(14.dp),
-                        tint = AppColors.Paused,
-                    )
-                }
-            } else if (hasPaused) {
-                IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.Outlined.PlayArrow,
-                        contentDescription = "Unpause all",
-                        modifier = Modifier.size(14.dp),
-                        tint = AppColors.Running,
-                    )
-                }
-            }
-            IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
-                Icon(
-                    Icons.Outlined.Delete,
-                    contentDescription = "Delete all",
-                    modifier = Modifier.size(14.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
