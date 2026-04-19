@@ -55,6 +55,7 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
+import com.containerdashboard.ui.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -80,8 +81,8 @@ fun AppLogsScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier.fillMaxSize().padding(Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         // ── Header ──────────────────────────────────────────────
         Row(
@@ -103,7 +104,7 @@ fun AppLogsScreen(
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Auto-scroll toggle
@@ -148,7 +149,7 @@ fun AppLogsScreen(
 
         // Level filter chips
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             LevelFilterChip(label = "All", selected = levelFilter == null) {
                 viewModel.setLevelFilter(null)
@@ -240,7 +241,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
                 .padding(horizontal = 10.dp, vertical = 6.dp)
                 .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         // Timestamp
         Text(

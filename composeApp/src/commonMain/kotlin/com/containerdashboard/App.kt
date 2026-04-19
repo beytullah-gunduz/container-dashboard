@@ -69,6 +69,7 @@ import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
+import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.isMacHost
 import kotlinx.coroutines.launch
 
@@ -116,7 +117,7 @@ fun App(
                             Column(modifier = Modifier.weight(1f).fillMaxSize()) {
                                 IconButton(
                                     onClick = { viewModel.navigate(Screen.Dashboard.route) },
-                                    modifier = Modifier.padding(8.dp),
+                                    modifier = Modifier.padding(Spacing.sm),
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -132,7 +133,7 @@ fun App(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Warning,
@@ -162,7 +163,7 @@ fun App(
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp),
                                         )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
                                         Text("Settings")
                                     }
                                 }
