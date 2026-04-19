@@ -254,20 +254,27 @@ fun DashboardScreen(
                                     }
                                 }
                             } else {
+                                val dominant = maxOf(running, paused, stopped)
                                 MiniStatsCard(
                                     label = "Running",
                                     value = running.toString(),
                                     valueColor = AppColors.Running,
+                                    emphasized = running > 0 && running == dominant,
+                                    muted = running == 0,
                                 )
                                 MiniStatsCard(
                                     label = "Paused",
                                     value = paused.toString(),
                                     valueColor = AppColors.Paused,
+                                    emphasized = paused > 0 && paused == dominant,
+                                    muted = paused == 0,
                                 )
                                 MiniStatsCard(
                                     label = "Stopped",
                                     value = stopped.toString(),
                                     valueColor = AppColors.Stopped,
+                                    emphasized = stopped > 0 && stopped == dominant,
+                                    muted = stopped == 0,
                                 )
                             }
                         }

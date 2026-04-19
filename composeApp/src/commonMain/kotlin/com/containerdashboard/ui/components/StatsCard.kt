@@ -98,16 +98,28 @@ fun MiniStatsCard(
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier,
+    emphasized: Boolean = false,
+    muted: Boolean = false,
 ) {
+    val effectiveValueColor =
+        when {
+            muted -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> valueColor
+        }
     Column(
         modifier = modifier.padding(Spacing.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = value,
-            style = MaterialTheme.typography.titleLarge,
+            style =
+                if (emphasized) {
+                    MaterialTheme.typography.headlineMedium
+                } else {
+                    MaterialTheme.typography.titleLarge
+                },
             fontWeight = FontWeight.Bold,
-            color = valueColor,
+            color = effectiveValueColor,
         )
         Text(
             text = label,
