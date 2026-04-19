@@ -157,17 +157,25 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
+                val isTesting = connectionTestResult is ConnectionTestState.Testing
                 OutlinedButton(
                     onClick = {
                         viewModel.dismissTestResult()
                         viewModel.testConnection(dockerHost)
                     },
-                    enabled = connectionTestResult !is ConnectionTestState.Testing,
+                    enabled = !isTesting,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Outlined.NetworkCheck, null, modifier = Modifier.size(18.dp))
+                    if (isTesting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(Icons.Outlined.NetworkCheck, null, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text("Test Connection")
+                    Text(if (isTesting) "Testing…" else "Test Connection")
                 }
                 Button(
                     onClick = { viewModel.saveAndReconnect(dockerHost) },
