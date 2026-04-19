@@ -122,6 +122,8 @@ fun NetworksScreen(
     if (showCreateDialog) {
         var networkName by remember { mutableStateOf("") }
         var selectedDriver by remember { mutableStateOf("bridge") }
+        var submitAttempted by remember { mutableStateOf(false) }
+        val showNameError = submitAttempted && networkName.isBlank()
         CreateResourceDialog(
             title = "Create Network",
             confirmEnabled = networkName.isNotBlank(),
@@ -132,6 +134,7 @@ fun NetworksScreen(
                 }
             },
             onDismiss = { viewModel.setShowCreateDialog(false) },
+            onBlockedConfirm = { submitAttempted = true },
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.lg)) {
                 OutlinedTextField(
@@ -139,6 +142,13 @@ fun NetworksScreen(
                     onValueChange = { networkName = it },
                     label = { Text("Network Name") },
                     singleLine = true,
+                    isError = showNameError,
+                    supportingText =
+                        if (showNameError) {
+                            { Text("Name is required") }
+                        } else {
+                            null
+                        },
                     modifier = Modifier.fillMaxWidth(),
                 )
 

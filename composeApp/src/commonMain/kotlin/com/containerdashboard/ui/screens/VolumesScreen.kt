@@ -176,6 +176,8 @@ fun VolumesScreen(
     // Create Volume Dialog
     if (showCreateDialog) {
         var volumeName by remember { mutableStateOf("") }
+        var submitAttempted by remember { mutableStateOf(false) }
+        val showNameError = submitAttempted && volumeName.isBlank()
         CreateResourceDialog(
             title = "Create Volume",
             confirmEnabled = volumeName.isNotBlank(),
@@ -186,12 +188,20 @@ fun VolumesScreen(
                 }
             },
             onDismiss = { viewModel.setShowCreateDialog(false) },
+            onBlockedConfirm = { submitAttempted = true },
         ) {
             OutlinedTextField(
                 value = volumeName,
                 onValueChange = { volumeName = it },
                 label = { Text("Volume Name") },
                 singleLine = true,
+                isError = showNameError,
+                supportingText =
+                    if (showNameError) {
+                        { Text("Name is required") }
+                    } else {
+                        null
+                    },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
