@@ -74,6 +74,7 @@ import com.containerdashboard.ui.components.ErrorStateCard
 import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.components.SectionHeader
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
@@ -756,7 +757,7 @@ fun ContainersScreen(
                     // Running containers section
                     if (runningContainers.isNotEmpty()) {
                         item(key = "running-header") {
-                            ContainerSectionHeader(
+                            SectionHeader(
                                 title = "Running",
                                 count = runningContainers.size,
                                 expanded = runningVisible,
@@ -919,7 +920,7 @@ fun ContainersScreen(
                             if (runningContainers.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(Spacing.lg))
                             }
-                            ContainerSectionHeader(
+                            SectionHeader(
                                 title = "Stopped / Other",
                                 count = otherContainers.size,
                                 expanded = otherVisible,

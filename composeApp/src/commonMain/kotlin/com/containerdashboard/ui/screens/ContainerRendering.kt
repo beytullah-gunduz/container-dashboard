@@ -89,49 +89,6 @@ import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 
 @Composable
-internal fun ContainerSectionHeader(
-    title: String,
-    count: Int,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.md))
-                .hoverHighlight(shape = RoundedCornerShape(Radius.md))
-                .clickable(onClick = onToggle)
-                .padding(horizontal = Spacing.sm, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        Icon(
-            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-            contentDescription = if (expanded) "Collapse" else "Expand",
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Surface(
-            shape = RoundedCornerShape(Radius.lg),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-        }
-    }
-}
-
-@Composable
 internal fun ComposeProjectHeader(
     projectName: String,
     containerCount: Int,

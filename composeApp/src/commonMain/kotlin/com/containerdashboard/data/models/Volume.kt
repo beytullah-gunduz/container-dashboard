@@ -27,4 +27,7 @@ data class Volume(
 
     val formattedSize: String
         get() = usageData?.let { DockerImage.formatBytes(it.size) } ?: "N/A"
+
+    val isAnonymous: Boolean
+        get() = labels?.containsKey("com.docker.volume.anonymous") == true
 }

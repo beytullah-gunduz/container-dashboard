@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -77,6 +78,7 @@ import com.containerdashboard.ui.components.ErrorStateCard
 import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.components.SectionHeader
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
@@ -122,6 +124,9 @@ fun VolumesScreen(
     var pendingConfirmTitle by remember { mutableStateOf("") }
     var pendingConfirmBody by remember { mutableStateOf("") }
     var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    var namedVisible by remember { mutableStateOf(true) }
+    var anonymousVisible by remember { mutableStateOf(true) }
 
     fun askConfirm(
         title: String,
@@ -342,64 +347,97 @@ fun VolumesScreen(
                     )
                 }
             } else {
-                // Table Header
-                VolumeTableHeader(
-                    allSelected = filteredVolumes.isNotEmpty() && filteredVolumes.all { it.name in checkedVolumeNames },
-                    onSelectAllChange = { selectAll ->
-                        if (selectAll) {
-                            viewModel.checkAll(filteredVolumes.map { it.name })
-                        } else {
-                            viewModel.clearChecked()
-                        }
-                    },
-                    hasItems = filteredVolumes.isNotEmpty(),
-                    sortColumn = sortColumn,
-                    sortDirection = sortDirection,
-                    onSort = { viewModel.toggleSort(it) },
-                    nameWeight = nameWeight,
-                    driverWeight = driverWeight,
-                    mountpointWeight = mountpointWeight,
-                    onResizeName = { delta ->
-                        val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
-                        val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
-                        if (newName >= 0.5f && newDriver >= 0.3f) {
-                            nameWeight = newName
-                            driverWeight = newDriver
-                        }
-                    },
-                    onResizeDriver = { delta ->
-                        val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
-                        val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
-                        if (newDriver >= 0.3f && newMount >= 0.5f) {
-                            driverWeight = newDriver
-                            mountpointWeight = newMount
-                        }
-                    },
-                    isCompactMode = isCompactMode,
-                )
-                // Volume List
+                val namedVolumes = filteredVolumes.filterNot { it.isAnonymous }
+                val anonymousVolumes = filteredVolumes.filter { it.isAnonymous }
+                val onResizeName: (Float) -> Unit = { delta ->
+                    val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
+                    val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
+                    if (newName >= 0.5f && newDriver >= 0.3f) {
+                        nameWeight = newName
+                        driverWeight = newDriver
+                    }
+                }
+                val onResizeDriver: (Float) -> Unit = { delta ->
+                    val newDriver = (driverWeight + delta).coerceIn(0.3f, totalWeight - 1f)
+                    val newMount = (mountpointWeight - delta).coerceIn(0.5f, totalWeight - 1f)
+                    if (newDriver >= 0.3f && newMount >= 0.5f) {
+                        driverWeight = newDriver
+                        mountpointWeight = newMount
+                    }
+                }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(filteredVolumes, key = { it.name }) { volume ->
-                        VolumeRow(
-                            volume = volume,
-                            isSelected = selectedVolume == volume.name,
-                            isChecked = volume.name in checkedVolumeNames,
-                            onCheckedChange = { viewModel.toggleChecked(volume.name, it) },
-                            onClick = { viewModel.setSelectedVolume(volume.name) },
-                            onRemove = {
-                                askConfirm(
-                                    "Delete volume?",
-                                    "This will delete \"${volume.name}\".",
-                                ) { viewModel.removeVolume(volume.name) }
-                            },
-                            nameWeight = nameWeight,
-                            driverWeight = driverWeight,
-                            mountpointWeight = mountpointWeight,
-                            isCompactMode = isCompactMode,
-                        )
-                    }
+                    volumeSection(
+                        keyPrefix = "named",
+                        title = "Named",
+                        volumes = namedVolumes,
+                        expanded = namedVisible,
+                        onToggleExpanded = { namedVisible = !namedVisible },
+                        checkedVolumeNames = checkedVolumeNames,
+                        selectedVolume = selectedVolume,
+                        sortColumn = sortColumn,
+                        sortDirection = sortDirection,
+                        onSort = { viewModel.toggleSort(it) },
+                        onCheckAll = { selectAll ->
+                            if (selectAll) {
+                                viewModel.checkAll(
+                                    (checkedVolumeNames + namedVolumes.map { it.name }).toList(),
+                                )
+                            } else {
+                                namedVolumes.forEach { viewModel.toggleChecked(it.name, false) }
+                            }
+                        },
+                        onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
+                        onSelect = { viewModel.setSelectedVolume(it) },
+                        onRemove = { volume ->
+                            askConfirm(
+                                "Delete volume?",
+                                "This will delete \"${volume.name}\".",
+                            ) { viewModel.removeVolume(volume.name) }
+                        },
+                        nameWeight = nameWeight,
+                        driverWeight = driverWeight,
+                        mountpointWeight = mountpointWeight,
+                        onResizeName = onResizeName,
+                        onResizeDriver = onResizeDriver,
+                        isCompactMode = isCompactMode,
+                    )
+                    volumeSection(
+                        keyPrefix = "anonymous",
+                        title = "Anonymous",
+                        volumes = anonymousVolumes,
+                        expanded = anonymousVisible,
+                        onToggleExpanded = { anonymousVisible = !anonymousVisible },
+                        checkedVolumeNames = checkedVolumeNames,
+                        selectedVolume = selectedVolume,
+                        sortColumn = sortColumn,
+                        sortDirection = sortDirection,
+                        onSort = { viewModel.toggleSort(it) },
+                        onCheckAll = { selectAll ->
+                            if (selectAll) {
+                                viewModel.checkAll(
+                                    (checkedVolumeNames + anonymousVolumes.map { it.name }).toList(),
+                                )
+                            } else {
+                                anonymousVolumes.forEach { viewModel.toggleChecked(it.name, false) }
+                            }
+                        },
+                        onCheckedChange = { id, checked -> viewModel.toggleChecked(id, checked) },
+                        onSelect = { viewModel.setSelectedVolume(it) },
+                        onRemove = { volume ->
+                            askConfirm(
+                                "Delete volume?",
+                                "This will delete \"${volume.name}\".",
+                            ) { viewModel.removeVolume(volume.name) }
+                        },
+                        nameWeight = nameWeight,
+                        driverWeight = driverWeight,
+                        mountpointWeight = mountpointWeight,
+                        onResizeName = onResizeName,
+                        onResizeDriver = onResizeDriver,
+                        isCompactMode = isCompactMode,
+                    )
                 }
             }
         }
@@ -731,5 +769,69 @@ private fun VolumeRow(
                 onDismiss = { inspectOpen = false },
             )
         }
+    }
+}
+
+private fun LazyListScope.volumeSection(
+    keyPrefix: String,
+    title: String,
+    volumes: List<Volume>,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    checkedVolumeNames: Set<String>,
+    selectedVolume: String?,
+    sortColumn: VolumeSortColumn,
+    sortDirection: SortDirection,
+    onSort: (VolumeSortColumn) -> Unit,
+    onCheckAll: (Boolean) -> Unit,
+    onCheckedChange: (String, Boolean) -> Unit,
+    onSelect: (String) -> Unit,
+    onRemove: (Volume) -> Unit,
+    nameWeight: Float,
+    driverWeight: Float,
+    mountpointWeight: Float,
+    onResizeName: (Float) -> Unit,
+    onResizeDriver: (Float) -> Unit,
+    isCompactMode: Boolean,
+) {
+    if (volumes.isEmpty()) return
+    item(key = "$keyPrefix-header") {
+        SectionHeader(
+            title = title,
+            count = volumes.size,
+            expanded = expanded,
+            onToggle = onToggleExpanded,
+        )
+    }
+    if (!expanded) return
+    item(key = "$keyPrefix-table-header") {
+        VolumeTableHeader(
+            allSelected = volumes.all { it.name in checkedVolumeNames },
+            onSelectAllChange = onCheckAll,
+            hasItems = true,
+            sortColumn = sortColumn,
+            sortDirection = sortDirection,
+            onSort = onSort,
+            nameWeight = nameWeight,
+            driverWeight = driverWeight,
+            mountpointWeight = mountpointWeight,
+            onResizeName = onResizeName,
+            onResizeDriver = onResizeDriver,
+            isCompactMode = isCompactMode,
+        )
+    }
+    items(volumes, key = { "$keyPrefix-${it.name}" }) { volume ->
+        VolumeRow(
+            volume = volume,
+            isSelected = selectedVolume == volume.name,
+            isChecked = volume.name in checkedVolumeNames,
+            onCheckedChange = { onCheckedChange(volume.name, it) },
+            onClick = { onSelect(volume.name) },
+            onRemove = { onRemove(volume) },
+            nameWeight = nameWeight,
+            driverWeight = driverWeight,
+            mountpointWeight = mountpointWeight,
+            isCompactMode = isCompactMode,
+        )
     }
 }
