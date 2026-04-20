@@ -29,5 +29,10 @@ data class Volume(
         get() = usageData?.let { DockerImage.formatBytes(it.size) } ?: "N/A"
 
     val isAnonymous: Boolean
-        get() = labels?.containsKey("com.docker.volume.anonymous") == true
+        get() = labels?.containsKey(ANON_LABEL) == true
+
+    companion object {
+        /** Docker writes this label (empty value) on every volume it creates implicitly. */
+        const val ANON_LABEL: String = "com.docker.volume.anonymous"
+    }
 }

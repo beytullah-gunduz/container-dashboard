@@ -1,6 +1,7 @@
 package com.containerdashboard.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -834,23 +835,32 @@ private fun LazyListScope.volumeSection(
         }
     }
     items(volumes, key = { "$keyPrefix-${it.name}" }) { volume ->
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+        Column(
+            modifier =
+                Modifier.animateItem(
+                    fadeInSpec = tween(600),
+                    fadeOutSpec = tween(800),
+                    placementSpec = tween(500),
+                ),
         ) {
-            VolumeRow(
-                volume = volume,
-                isSelected = selectedVolume == volume.name,
-                isChecked = volume.name in checkedVolumeNames,
-                onCheckedChange = { onCheckedChange(volume.name, it) },
-                onClick = { onSelect(volume.name) },
-                onRemove = { onRemove(volume) },
-                nameWeight = nameWeight,
-                driverWeight = driverWeight,
-                mountpointWeight = mountpointWeight,
-                isCompactMode = isCompactMode,
-            )
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically(),
+            ) {
+                VolumeRow(
+                    volume = volume,
+                    isSelected = selectedVolume == volume.name,
+                    isChecked = volume.name in checkedVolumeNames,
+                    onCheckedChange = { onCheckedChange(volume.name, it) },
+                    onClick = { onSelect(volume.name) },
+                    onRemove = { onRemove(volume) },
+                    nameWeight = nameWeight,
+                    driverWeight = driverWeight,
+                    mountpointWeight = mountpointWeight,
+                    isCompactMode = isCompactMode,
+                )
+            }
         }
     }
 }
