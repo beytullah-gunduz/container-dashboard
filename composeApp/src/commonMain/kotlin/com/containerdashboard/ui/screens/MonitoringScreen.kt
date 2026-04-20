@@ -86,8 +86,9 @@ fun MonitoringScreen(
 ) {
     val statsOrNull by viewModel.derivedStats.collectAsState(null)
     val stats = statsOrNull.orEmpty()
-    val hasLoaded by viewModel.hasLoaded.collectAsState()
-    val isLoading = !hasLoaded && statsOrNull == null
+    // null before the first emission — covers first-open and re-entry while
+    // hasLoaded's 5s cache is still stale-true.
+    val isLoading = statsOrNull == null
     val error by viewModel.error.collectAsState()
     val history by viewModel.usageHistory.collectAsState(UsageHistory())
     val refreshRate by viewModel.refreshRate.collectAsState()

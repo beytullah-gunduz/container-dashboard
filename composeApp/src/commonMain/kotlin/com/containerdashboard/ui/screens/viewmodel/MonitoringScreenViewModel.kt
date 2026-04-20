@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
@@ -142,7 +142,8 @@ class MonitoringScreenViewModel : ViewModel() {
                         )
                     }
                 DerivedState(derived, newPrevious)
-            }.map { it.derived }
+            }.drop(1)
+            .map { it.derived }
 
     /**
      * Aggregate history across all containers. CPU and memory follow the
@@ -171,13 +172,6 @@ class MonitoringScreenViewModel : ViewModel() {
                 )
             }
         }
-
-    /** Emits `false` until the first stats snapshot has been delivered. */
-    val hasLoaded: StateFlow<Boolean> =
-        rawStats
-            .map { true }
-            .onStart { emit(false) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
