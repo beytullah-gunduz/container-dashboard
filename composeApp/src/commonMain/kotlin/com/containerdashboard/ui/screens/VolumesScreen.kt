@@ -440,6 +440,7 @@ fun VolumesScreen(
                         onResizeName = onResizeName,
                         onResizeDriver = onResizeDriver,
                         isCompactMode = isCompactMode,
+                        precedingSpacer = namedVolumes.isNotEmpty(),
                     )
                 }
             }
@@ -796,9 +797,13 @@ private fun LazyListScope.volumeSection(
     onResizeName: (Float) -> Unit,
     onResizeDriver: (Float) -> Unit,
     isCompactMode: Boolean,
+    precedingSpacer: Boolean = false,
 ) {
     if (volumes.isEmpty()) return
     item(key = "$keyPrefix-header") {
+        if (precedingSpacer) {
+            Spacer(modifier = Modifier.height(Spacing.lg))
+        }
         SectionHeader(
             title = title,
             count = volumes.size,

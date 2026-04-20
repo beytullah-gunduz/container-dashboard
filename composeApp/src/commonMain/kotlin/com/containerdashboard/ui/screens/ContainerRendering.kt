@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.ContainerColumnWidths
+import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.ResourceDetailsDialog
@@ -190,62 +191,74 @@ internal fun ComposeProjectHeader(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(
-                    onClick = onViewGroupLogs,
-                    modifier = Modifier.size(24.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.Article,
-                        contentDescription = "View group logs",
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                AppTooltip(label = "View group logs") {
+                    IconButton(
+                        onClick = onViewGroupLogs,
+                        modifier = Modifier.size(24.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Article,
+                            contentDescription = "View group logs",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 if (hasRunning) {
-                    IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Outlined.Pause,
-                            contentDescription = "Pause all",
-                            modifier = Modifier.size(14.dp),
-                            tint = AppColors.Paused,
-                        )
+                    AppTooltip(label = "Pause all") {
+                        IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Outlined.Pause,
+                                contentDescription = "Pause all",
+                                modifier = Modifier.size(14.dp),
+                                tint = AppColors.Paused,
+                            )
+                        }
                     }
                 } else if (hasPaused) {
-                    IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Outlined.PlayArrow,
-                            contentDescription = "Unpause all",
-                            modifier = Modifier.size(14.dp),
-                            tint = AppColors.Running,
-                        )
+                    AppTooltip(label = "Unpause all") {
+                        IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Outlined.PlayArrow,
+                                contentDescription = "Unpause all",
+                                modifier = Modifier.size(14.dp),
+                                tint = AppColors.Running,
+                            )
+                        }
                     }
                 }
                 if (hasRunning) {
-                    IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Outlined.Stop,
-                            contentDescription = "Stop all",
-                            modifier = Modifier.size(14.dp),
-                            tint = AppColors.Stopped,
-                        )
+                    AppTooltip(label = "Stop all") {
+                        IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Outlined.Stop,
+                                contentDescription = "Stop all",
+                                modifier = Modifier.size(14.dp),
+                                tint = AppColors.Stopped,
+                            )
+                        }
                     }
                 } else {
-                    IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Outlined.PlayArrow,
-                            contentDescription = "Start all",
-                            modifier = Modifier.size(14.dp),
-                            tint = AppColors.Running,
-                        )
+                    AppTooltip(label = "Start all") {
+                        IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Outlined.PlayArrow,
+                                contentDescription = "Start all",
+                                modifier = Modifier.size(14.dp),
+                                tint = AppColors.Running,
+                            )
+                        }
                     }
                 }
-                IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.Outlined.Delete,
-                        contentDescription = "Delete all",
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                AppTooltip(label = "Delete all") {
+                    IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = "Delete all",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -1065,7 +1078,7 @@ internal fun ExpandedContainerRow(
                             Icons.Outlined.Delete,
                             contentDescription = "Delete",
                             modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

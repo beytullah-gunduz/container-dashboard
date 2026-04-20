@@ -65,6 +65,8 @@ import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.SemiDonutGauge
 import com.containerdashboard.ui.screens.viewmodel.DerivedContainerStats
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.MonitoringSort
+import com.containerdashboard.ui.screens.viewmodel.MonitoringSortDirection
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
@@ -74,10 +76,6 @@ import com.containerdashboard.ui.theme.Spacing
 // UsageHistoryGraph and IoHistoryGraph line up vertically when the
 // graphs are stacked. Sized for the widest expected label ("999 MB/s").
 private val GRAPH_Y_AXIS_PADDING = 72.dp
-
-private enum class MonitoringSort { NAME, CPU, MEM, DISK_R, DISK_W, NET_RX, NET_TX }
-
-private enum class MonitoringSortDirection { ASC, DESC }
 
 @Composable
 fun MonitoringScreen(
@@ -96,20 +94,9 @@ fun MonitoringScreen(
     val scrollState = rememberScrollState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var sortColumn by remember { mutableStateOf(MonitoringSort.NAME) }
-    var sortDirection by remember { mutableStateOf(MonitoringSortDirection.ASC) }
-
-    val onSortChange: (MonitoringSort) -> Unit = { column ->
-        if (sortColumn == column) {
-            sortDirection =
-                if (sortDirection == MonitoringSortDirection.ASC) MonitoringSortDirection.DESC else MonitoringSortDirection.ASC
-        } else {
-            sortColumn = column
-            // Sort by name ascending by default; metrics descending so
-            // the busiest container is at the top on first click.
-            sortDirection = if (column == MonitoringSort.NAME) MonitoringSortDirection.ASC else MonitoringSortDirection.DESC
-        }
-    }
+    val sortColumn by viewModel.sortColumn.collectAsState()
+    val sortDirection by viewModel.sortDirection.collectAsState()
+    val onSortChange: (MonitoringSort) -> Unit = { column -> viewModel.toggleSort(column) }
 
     val filteredStats =
         remember(stats, searchQuery, sortColumn, sortDirection) {

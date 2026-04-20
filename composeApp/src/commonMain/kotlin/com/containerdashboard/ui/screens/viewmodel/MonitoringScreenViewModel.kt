@@ -35,6 +35,10 @@ enum class MonitoringAggregation {
     CONTAINER_AVG,
 }
 
+enum class MonitoringSort { NAME, CPU, MEM, DISK_R, DISK_W, NET_RX, NET_TX }
+
+enum class MonitoringSortDirection { ASC, DESC }
+
 /**
  * Snapshot in the per-metric history ring buffer. Disk and network values
  * are aggregate (sum across running containers) byte-per-second rates.
@@ -175,6 +179,33 @@ class MonitoringScreenViewModel : ViewModel() {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _sortColumn = MutableStateFlow(MonitoringSort.NAME)
+    val sortColumn: StateFlow<MonitoringSort> = _sortColumn.asStateFlow()
+
+    private val _sortDirection = MutableStateFlow(MonitoringSortDirection.ASC)
+    val sortDirection: StateFlow<MonitoringSortDirection> = _sortDirection.asStateFlow()
+
+    fun toggleSort(column: MonitoringSort) {
+        if (_sortColumn.value == column) {
+            _sortDirection.value =
+                if (_sortDirection.value == MonitoringSortDirection.ASC) {
+                    MonitoringSortDirection.DESC
+                } else {
+                    MonitoringSortDirection.ASC
+                }
+        } else {
+            _sortColumn.value = column
+            // Sort by name ascending by default; metrics descending so
+            // the busiest container is at the top on first click.
+            _sortDirection.value =
+                if (column == MonitoringSort.NAME) {
+                    MonitoringSortDirection.ASC
+                } else {
+                    MonitoringSortDirection.DESC
+                }
+        }
+    }
 
     fun setRefreshRate(seconds: Float) {
         _refreshRate.value = seconds
