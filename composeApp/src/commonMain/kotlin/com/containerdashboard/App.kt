@@ -266,7 +266,10 @@ fun App(
                                             label = "DetailPaneScreenTransition",
                                         ) { route ->
                                             when (route) {
-                                                Screen.Dashboard.route -> DashboardScreen()
+                                                Screen.Dashboard.route ->
+                                                    DashboardScreen(
+                                                        onNavigate = { screen -> viewModel.navigate(screen.route) },
+                                                    )
                                                 Screen.Containers.route ->
                                                     ContainersScreen(
                                                         onShowLogs = { container ->

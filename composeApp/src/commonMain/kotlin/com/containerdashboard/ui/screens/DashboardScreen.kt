@@ -47,6 +47,7 @@ import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.components.toContainerStatus
+import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
@@ -56,6 +57,7 @@ import com.containerdashboard.ui.util.formatBytes
 @Composable
 fun DashboardScreen(
     modifier: Modifier = Modifier,
+    onNavigate: (Screen) -> Unit = {},
     viewModel: DashboardScreenViewModel = viewModel { DashboardScreenViewModel() },
 ) {
     val scrollState = rememberScrollState()
@@ -147,6 +149,7 @@ fun DashboardScreen(
                     icon = Icons.Outlined.ViewInAr,
                     iconTint = AppColors.AccentBlue,
                     isLoading = !hasLoaded,
+                    onClick = { onNavigate(Screen.Containers) },
                     modifier = m,
                 )
             }
@@ -158,6 +161,7 @@ fun DashboardScreen(
                     icon = Icons.Outlined.Layers,
                     iconTint = AppColors.Running,
                     isLoading = !hasLoaded,
+                    onClick = { onNavigate(Screen.Images) },
                     modifier = m,
                 )
             }
@@ -169,6 +173,7 @@ fun DashboardScreen(
                     icon = Icons.Outlined.Storage,
                     iconTint = AppColors.Warning,
                     isLoading = !hasLoaded,
+                    onClick = { onNavigate(Screen.Volumes) },
                     modifier = m,
                 )
             }
@@ -180,6 +185,7 @@ fun DashboardScreen(
                     icon = Icons.Outlined.Hub,
                     iconTint = AppColors.AccentBlueDark,
                     isLoading = !hasLoaded,
+                    onClick = { onNavigate(Screen.Networks) },
                     modifier = m,
                 )
             }
@@ -495,6 +501,7 @@ private fun MaybeSkeletonStatsCard(
     icon: ImageVector,
     iconTint: androidx.compose.ui.graphics.Color,
     isLoading: Boolean,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     if (!isLoading) {
@@ -504,20 +511,19 @@ private fun MaybeSkeletonStatsCard(
             subtitle = subtitle,
             icon = icon,
             iconTint = iconTint,
+            onClick = onClick,
             modifier = modifier,
         )
         return
     }
 
     val alpha = rememberSkeletonAlpha()
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(Radius.lg),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            ),
-    ) {
+    val shape = RoundedCornerShape(Radius.lg)
+    val colors =
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        )
+    val content: @Composable () -> Unit = {
         Row(
             modifier =
                 Modifier
@@ -552,5 +558,10 @@ private fun MaybeSkeletonStatsCard(
                 )
             }
         }
+    }
+    if (onClick != null) {
+        Card(onClick = onClick, modifier = modifier, shape = shape, colors = colors) { content() }
+    } else {
+        Card(modifier = modifier, shape = shape, colors = colors) { content() }
     }
 }

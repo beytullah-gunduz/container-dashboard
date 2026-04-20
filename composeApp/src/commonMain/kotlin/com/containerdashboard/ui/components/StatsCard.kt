@@ -33,16 +33,15 @@ fun StatsCard(
     subtitle: String? = null,
     icon: ImageVector,
     iconTint: Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(Radius.lg),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            ),
-    ) {
+    val shape = RoundedCornerShape(Radius.lg)
+    val colors =
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        )
+    val content: @Composable () -> Unit = {
         Row(
             modifier =
                 Modifier
@@ -89,6 +88,11 @@ fun StatsCard(
                 }
             }
         }
+    }
+    if (onClick != null) {
+        Card(onClick = onClick, modifier = modifier, shape = shape, colors = colors) { content() }
+    } else {
+        Card(modifier = modifier, shape = shape, colors = colors) { content() }
     }
 }
 
