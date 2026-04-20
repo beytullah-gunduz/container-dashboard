@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.CreateResourceDialog
@@ -475,6 +476,7 @@ private fun VolumeTableHeader(
     onResizeName: (Float) -> Unit,
     onResizeDriver: (Float) -> Unit,
     isCompactMode: Boolean,
+    selectAllTooltip: String = "Select all",
 ) {
     Column {
         if (isCompactMode) {
@@ -487,11 +489,13 @@ private fun VolumeTableHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                CompactCheckbox(
-                    checked = allSelected && hasItems,
-                    onCheckedChange = onSelectAllChange,
-                    enabled = hasItems,
-                )
+                AppTooltip(label = selectAllTooltip) {
+                    CompactCheckbox(
+                        checked = allSelected && hasItems,
+                        onCheckedChange = onSelectAllChange,
+                        enabled = hasItems,
+                    )
+                }
                 VolumeSortableHeaderCell("VOLUME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(1f))
                 Spacer(modifier = Modifier.width(Spacing.xl))
             }
@@ -510,11 +514,13 @@ private fun VolumeTableHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    CompactCheckbox(
-                        checked = allSelected && hasItems,
-                        onCheckedChange = onSelectAllChange,
-                        enabled = hasItems,
-                    )
+                    AppTooltip(label = selectAllTooltip) {
+                        CompactCheckbox(
+                            checked = allSelected && hasItems,
+                            onCheckedChange = onSelectAllChange,
+                            enabled = hasItems,
+                        )
+                    }
                     VolumeSortableHeaderCell("NAME", VolumeSortColumn.NAME, sortColumn, sortDirection, onSort, Modifier.weight(nameWeight))
                     ColumnResizeHandle { delta -> onResizeName(delta / pxPerWeight) }
                     VolumeSortableHeaderCell(
@@ -831,6 +837,7 @@ private fun LazyListScope.volumeSection(
                 onResizeName = onResizeName,
                 onResizeDriver = onResizeDriver,
                 isCompactMode = isCompactMode,
+                selectAllTooltip = "Select all $title",
             )
         }
     }

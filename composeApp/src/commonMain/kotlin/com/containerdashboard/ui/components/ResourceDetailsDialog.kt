@@ -45,6 +45,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -439,6 +440,7 @@ private fun <T : Enum<T>> rememberTabMemory(
 private fun ContainerTabs(inspect: ContainerInspect) {
     var selected by rememberTabMemory("container", ContainerTab.entries)
     val tabs = ContainerTab.entries
+    val saveableStateHolder = rememberSaveableStateHolder()
 
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
@@ -461,14 +463,16 @@ private fun ContainerTabs(inspect: ContainerInspect) {
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (selected) {
-                ContainerTab.OVERVIEW -> OverviewTab(inspect)
-                ContainerTab.ENVIRONMENT -> EnvironmentTab(inspect.environment)
-                ContainerTab.MOUNTS -> MountsTab(inspect.mounts)
-                ContainerTab.PORTS -> PortsTab(inspect.ports)
-                ContainerTab.NETWORKS -> NetworksTab(inspect.networks)
-                ContainerTab.LABELS -> LabelsTab(inspect.labels)
-                ContainerTab.RAW -> RawJsonTab(inspect.rawJson)
+            saveableStateHolder.SaveableStateProvider(selected.name) {
+                when (selected) {
+                    ContainerTab.OVERVIEW -> OverviewTab(inspect)
+                    ContainerTab.ENVIRONMENT -> EnvironmentTab(inspect.environment)
+                    ContainerTab.MOUNTS -> MountsTab(inspect.mounts)
+                    ContainerTab.PORTS -> PortsTab(inspect.ports)
+                    ContainerTab.NETWORKS -> NetworksTab(inspect.networks)
+                    ContainerTab.LABELS -> LabelsTab(inspect.labels)
+                    ContainerTab.RAW -> RawJsonTab(inspect.rawJson)
+                }
             }
         }
     }
@@ -509,6 +513,7 @@ private enum class VolumeTab(
 @Composable
 private fun ImageTabs(inspect: ImageInspect) {
     var selected by rememberTabMemory("image", ImageTab.entries)
+    val saveableStateHolder = rememberSaveableStateHolder()
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
@@ -526,13 +531,15 @@ private fun ImageTabs(inspect: ImageInspect) {
             }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (selected) {
-                ImageTab.OVERVIEW -> ImageOverviewTab(inspect)
-                ImageTab.LAYERS -> ImageLayersTab(inspect.layers)
-                ImageTab.ENVIRONMENT -> EnvironmentTab(inspect.environment)
-                ImageTab.CONFIG -> ImageConfigTab(inspect)
-                ImageTab.LABELS -> LabelsTab(inspect.labels)
-                ImageTab.RAW -> RawJsonTab(inspect.rawJson)
+            saveableStateHolder.SaveableStateProvider(selected.name) {
+                when (selected) {
+                    ImageTab.OVERVIEW -> ImageOverviewTab(inspect)
+                    ImageTab.LAYERS -> ImageLayersTab(inspect.layers)
+                    ImageTab.ENVIRONMENT -> EnvironmentTab(inspect.environment)
+                    ImageTab.CONFIG -> ImageConfigTab(inspect)
+                    ImageTab.LABELS -> LabelsTab(inspect.labels)
+                    ImageTab.RAW -> RawJsonTab(inspect.rawJson)
+                }
             }
         }
     }
@@ -542,6 +549,7 @@ private fun ImageTabs(inspect: ImageInspect) {
 @Composable
 private fun NetworkTabs(inspect: NetworkInspect) {
     var selected by rememberTabMemory("network", NetworkTab.entries)
+    val saveableStateHolder = rememberSaveableStateHolder()
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
@@ -559,13 +567,15 @@ private fun NetworkTabs(inspect: NetworkInspect) {
             }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (selected) {
-                NetworkTab.OVERVIEW -> NetworkOverviewTab(inspect)
-                NetworkTab.ATTACHED -> NetworkAttachedTab(inspect.attachedContainers)
-                NetworkTab.IPAM -> NetworkIpamTab(inspect.ipamDriver, inspect.ipamConfig)
-                NetworkTab.OPTIONS -> OptionsTab(inspect.options)
-                NetworkTab.LABELS -> LabelsTab(inspect.labels)
-                NetworkTab.RAW -> RawJsonTab(inspect.rawJson)
+            saveableStateHolder.SaveableStateProvider(selected.name) {
+                when (selected) {
+                    NetworkTab.OVERVIEW -> NetworkOverviewTab(inspect)
+                    NetworkTab.ATTACHED -> NetworkAttachedTab(inspect.attachedContainers)
+                    NetworkTab.IPAM -> NetworkIpamTab(inspect.ipamDriver, inspect.ipamConfig)
+                    NetworkTab.OPTIONS -> OptionsTab(inspect.options)
+                    NetworkTab.LABELS -> LabelsTab(inspect.labels)
+                    NetworkTab.RAW -> RawJsonTab(inspect.rawJson)
+                }
             }
         }
     }
@@ -575,6 +585,7 @@ private fun NetworkTabs(inspect: NetworkInspect) {
 @Composable
 private fun VolumeTabs(inspect: VolumeInspect) {
     var selected by rememberTabMemory("volume", VolumeTab.entries)
+    val saveableStateHolder = rememberSaveableStateHolder()
     Column(modifier = Modifier.fillMaxSize()) {
         SecondaryTabRow(
             selectedTabIndex = selected.ordinal,
@@ -592,11 +603,13 @@ private fun VolumeTabs(inspect: VolumeInspect) {
             }
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (selected) {
-                VolumeTab.OVERVIEW -> VolumeOverviewTab(inspect)
-                VolumeTab.OPTIONS -> OptionsTab(inspect.options)
-                VolumeTab.LABELS -> LabelsTab(inspect.labels)
-                VolumeTab.RAW -> RawJsonTab(inspect.rawJson)
+            saveableStateHolder.SaveableStateProvider(selected.name) {
+                when (selected) {
+                    VolumeTab.OVERVIEW -> VolumeOverviewTab(inspect)
+                    VolumeTab.OPTIONS -> OptionsTab(inspect.options)
+                    VolumeTab.LABELS -> LabelsTab(inspect.labels)
+                    VolumeTab.RAW -> RawJsonTab(inspect.rawJson)
+                }
             }
         }
     }
