@@ -1,5 +1,8 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -803,35 +806,46 @@ private fun LazyListScope.volumeSection(
             onToggle = onToggleExpanded,
         )
     }
-    if (!expanded) return
     item(key = "$keyPrefix-table-header") {
-        VolumeTableHeader(
-            allSelected = volumes.all { it.name in checkedVolumeNames },
-            onSelectAllChange = onCheckAll,
-            hasItems = true,
-            sortColumn = sortColumn,
-            sortDirection = sortDirection,
-            onSort = onSort,
-            nameWeight = nameWeight,
-            driverWeight = driverWeight,
-            mountpointWeight = mountpointWeight,
-            onResizeName = onResizeName,
-            onResizeDriver = onResizeDriver,
-            isCompactMode = isCompactMode,
-        )
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            VolumeTableHeader(
+                allSelected = volumes.all { it.name in checkedVolumeNames },
+                onSelectAllChange = onCheckAll,
+                hasItems = true,
+                sortColumn = sortColumn,
+                sortDirection = sortDirection,
+                onSort = onSort,
+                nameWeight = nameWeight,
+                driverWeight = driverWeight,
+                mountpointWeight = mountpointWeight,
+                onResizeName = onResizeName,
+                onResizeDriver = onResizeDriver,
+                isCompactMode = isCompactMode,
+            )
+        }
     }
     items(volumes, key = { "$keyPrefix-${it.name}" }) { volume ->
-        VolumeRow(
-            volume = volume,
-            isSelected = selectedVolume == volume.name,
-            isChecked = volume.name in checkedVolumeNames,
-            onCheckedChange = { onCheckedChange(volume.name, it) },
-            onClick = { onSelect(volume.name) },
-            onRemove = { onRemove(volume) },
-            nameWeight = nameWeight,
-            driverWeight = driverWeight,
-            mountpointWeight = mountpointWeight,
-            isCompactMode = isCompactMode,
-        )
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically(),
+        ) {
+            VolumeRow(
+                volume = volume,
+                isSelected = selectedVolume == volume.name,
+                isChecked = volume.name in checkedVolumeNames,
+                onCheckedChange = { onCheckedChange(volume.name, it) },
+                onClick = { onSelect(volume.name) },
+                onRemove = { onRemove(volume) },
+                nameWeight = nameWeight,
+                driverWeight = driverWeight,
+                mountpointWeight = mountpointWeight,
+                isCompactMode = isCompactMode,
+            )
+        }
     }
 }
