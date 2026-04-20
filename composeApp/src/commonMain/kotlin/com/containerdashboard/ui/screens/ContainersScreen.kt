@@ -1,6 +1,9 @@
 package com.containerdashboard.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
@@ -8,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewSidebar
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -38,11 +43,14 @@ import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -121,6 +129,7 @@ private fun groupContainers(
     return items
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ContainersScreen(
     onShowLogs: (Container) -> Unit = {},
@@ -295,220 +304,298 @@ fun ContainersScreen(
                     )
                 }
 
+                val toolbarSpacing by animateDpAsState(
+                    targetValue = if (iconOnly) 4.dp else 12.dp,
+                    animationSpec = tween(durationMillis = 200),
+                )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(if (iconOnly) 4.dp else 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(toolbarSpacing),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val hasSelection = selectedContainerIds.isNotEmpty()
 
-                    // Clear selection button (leftmost, animates last)
-                    AnimatedVisibility(
-                        visible = hasSelection,
-                        enter =
-                            expandHorizontally(
-                                animationSpec = tween(durationMillis = 200, delayMillis = 100),
-                                expandFrom = Alignment.Start,
-                            ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 100)),
-                        exit =
-                            shrinkHorizontally(
-                                animationSpec = tween(durationMillis = 150),
-                                shrinkTowards = Alignment.Start,
-                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
-                    ) {
-                        if (iconOnly) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(
-                                    Icons.Outlined.RemoveDone,
-                                    contentDescription = "Clear selection",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        } else {
-                            OutlinedButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Outlined.RemoveDone, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Text("Clear")
-                            }
+                    // Connected button-group shapes. The visible set shifts with
+                    // selection state, so leading/trailing are computed dynamically
+                    // against whatever is actually showing right now.
+                    val showClear = hasSelection
+                    val showStop = hasSelection && runningSelectedCount > 0
+                    val showDelSel = hasSelection
+                    val showDelAll = containers.isNotEmpty()
+                    val order =
+                        buildList {
+                            if (showClear) add("clear")
+                            if (showStop) add("stop")
+                            if (showDelSel) add("delSel")
+                            if (showDelAll) add("delAll")
+                        }
+                    val solo = order.size <= 1
+                    val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShape
+                    val trailingShape = ButtonGroupDefaults.connectedTrailingButtonShape
+                    val middleShape = RoundedCornerShape(6.dp)
+                    val soloShape = RoundedCornerShape(20.dp)
+                    val shapeFor: (String) -> androidx.compose.ui.graphics.Shape = { name ->
+                        when {
+                            solo -> soloShape
+                            order.firstOrNull() == name -> leadingShape
+                            order.lastOrNull() == name -> trailingShape
+                            else -> middleShape
                         }
                     }
 
-                    // Stop button for running containers (middle, animates second)
-                    AnimatedVisibility(
-                        visible = hasSelection && runningSelectedCount > 0,
-                        enter =
-                            expandHorizontally(
-                                animationSpec = tween(durationMillis = 200, delayMillis = 50),
-                                expandFrom = Alignment.Start,
-                            ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 50)),
-                        exit =
-                            shrinkHorizontally(
-                                animationSpec = tween(durationMillis = 150),
-                                shrinkTowards = Alignment.Start,
-                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                    ButtonGroup(
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                     ) {
-                        if (iconOnly) {
-                            AppTooltip(label = "Stop $runningSelectedCount selected") {
-                                IconButton(
-                                    onClick = {
-                                        val runningIds =
-                                            selectedContainerIds.filter { id ->
-                                                containers.find { it.id == id }?.isRunning == true
+                        // Clear selection button (leftmost, animates last)
+                        AnimatedVisibility(
+                            visible = hasSelection,
+                            enter =
+                                expandHorizontally(
+                                    animationSpec = tween(durationMillis = 200, delayMillis = 100),
+                                    expandFrom = Alignment.Start,
+                                ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 100)),
+                            exit =
+                                shrinkHorizontally(
+                                    animationSpec = tween(durationMillis = 150),
+                                    shrinkTowards = Alignment.Start,
+                                ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        ) {
+                            AnimatedContent(
+                                targetState = iconOnly,
+                                transitionSpec = {
+                                    (fadeIn(tween(200)) togetherWith fadeOut(tween(150)))
+                                        .using(SizeTransform(clip = false))
+                                },
+                                label = "ClearButtonCompactToggle",
+                            ) { compact ->
+                                if (compact) {
+                                    IconButton(onClick = { viewModel.clearSelection() }) {
+                                        Icon(
+                                            Icons.Outlined.RemoveDone,
+                                            contentDescription = "Clear selection",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { viewModel.clearSelection() },
+                                        shape = shapeFor("clear"),
+                                    ) {
+                                        Icon(Icons.Outlined.RemoveDone, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
+                                        Text("Clear")
+                                    }
+                                }
+                            }
+                        }
+
+                        // Stop button for running containers (middle, animates second)
+                        AnimatedVisibility(
+                            visible = hasSelection && runningSelectedCount > 0,
+                            enter =
+                                expandHorizontally(
+                                    animationSpec = tween(durationMillis = 200, delayMillis = 50),
+                                    expandFrom = Alignment.Start,
+                                ) + fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 50)),
+                            exit =
+                                shrinkHorizontally(
+                                    animationSpec = tween(durationMillis = 150),
+                                    shrinkTowards = Alignment.Start,
+                                ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        ) {
+                            AnimatedContent(
+                                targetState = iconOnly,
+                                transitionSpec = {
+                                    (fadeIn(tween(200)) togetherWith fadeOut(tween(150)))
+                                        .using(SizeTransform(clip = false))
+                                },
+                                label = "StopButtonCompactToggle",
+                            ) { compact ->
+                                if (compact) {
+                                    AppTooltip(label = "Stop $runningSelectedCount selected") {
+                                        IconButton(
+                                            onClick = {
+                                                val runningIds =
+                                                    selectedContainerIds.filter { id ->
+                                                        containers.find { it.id == id }?.isRunning == true
+                                                    }
+                                                viewModel.stopSelectedContainers(runningIds)
+                                            },
+                                            enabled = !isStoppingSelected,
+                                        ) {
+                                            if (isStoppingSelected) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            } else {
+                                                Icon(
+                                                    Icons.Outlined.Stop,
+                                                    contentDescription = "Stop $runningSelectedCount selected",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
                                             }
-                                        viewModel.stopSelectedContainers(runningIds)
-                                    },
-                                    enabled = !isStoppingSelected,
-                                ) {
-                                    if (isStoppingSelected) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Outlined.Stop,
-                                            contentDescription = "Stop $runningSelectedCount selected",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    val runningIds =
-                                        selectedContainerIds.filter { id ->
-                                            containers.find { it.id == id }?.isRunning == true
                                         }
-                                    viewModel.stopSelectedContainers(runningIds)
-                                },
-                                enabled = !isStoppingSelected,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                    ),
-                            ) {
-                                if (isStoppingSelected) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onError,
-                                    )
+                                    }
                                 } else {
-                                    Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Text("Stop $runningSelectedCount selected")
-                            }
-                        }
-                    }
-
-                    // Delete button (rightmost selection button, animates first)
-                    AnimatedVisibility(
-                        visible = hasSelection,
-                        enter =
-                            expandHorizontally(
-                                animationSpec = tween(durationMillis = 200),
-                                expandFrom = Alignment.Start,
-                            ) + fadeIn(animationSpec = tween(durationMillis = 200)),
-                        exit =
-                            shrinkHorizontally(
-                                animationSpec = tween(durationMillis = 150),
-                                shrinkTowards = Alignment.Start,
-                            ) + fadeOut(animationSpec = tween(durationMillis = 150)),
-                    ) {
-                        if (iconOnly) {
-                            AppTooltip(label = "Delete ${selectedContainerIds.size} selected") {
-                                IconButton(
-                                    onClick = {
-                                        askConfirm(
-                                            "Delete selected containers?",
-                                            "This will force-stop and delete ${selectedContainerIds.size} container(s).",
-                                        ) { viewModel.deleteSelectedContainers() }
-                                    },
-                                    enabled = !isDeletingSelected,
-                                ) {
-                                    if (isDeletingSelected) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Outlined.Delete,
-                                            contentDescription = "Delete ${selectedContainerIds.size} selected",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
+                                    Button(
+                                        onClick = {
+                                            val runningIds =
+                                                selectedContainerIds.filter { id ->
+                                                    containers.find { it.id == id }?.isRunning == true
+                                                }
+                                            viewModel.stopSelectedContainers(runningIds)
+                                        },
+                                        enabled = !isStoppingSelected,
+                                        shape = shapeFor("stop"),
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                            ),
+                                    ) {
+                                        if (isStoppingSelected) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onError,
+                                            )
+                                        } else {
+                                            Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
+                                        Text("Stop $runningSelectedCount selected")
                                     }
                                 }
                             }
-                        } else {
-                            Button(
-                                onClick = {
-                                    askConfirm(
-                                        "Delete selected containers?",
-                                        "This will force-stop and delete ${selectedContainerIds.size} container(s).",
-                                    ) { viewModel.deleteSelectedContainers() }
-                                },
-                                enabled = !isDeletingSelected,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                    ),
-                            ) {
-                                if (isDeletingSelected) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onError,
-                                    )
-                                } else {
-                                    Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Text("Delete ${selectedContainerIds.size} selected")
-                            }
                         }
-                    }
 
-                    // Delete All Button
-                    if (containers.isNotEmpty()) {
-                        if (iconOnly) {
-                            AppTooltip(label = "Delete all containers") {
-                                IconButton(
-                                    onClick = { showDeleteAllDialog = true },
-                                    enabled = !isDeletingAll && !isDeletingSelected,
-                                ) {
-                                    if (isDeletingAll) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Outlined.DeleteForever,
-                                            contentDescription = "Delete All",
-                                            tint = MaterialTheme.colorScheme.error,
-                                        )
+                        // Delete button (rightmost selection button, animates first)
+                        AnimatedVisibility(
+                            visible = hasSelection,
+                            enter =
+                                expandHorizontally(
+                                    animationSpec = tween(durationMillis = 200),
+                                    expandFrom = Alignment.Start,
+                                ) + fadeIn(animationSpec = tween(durationMillis = 200)),
+                            exit =
+                                shrinkHorizontally(
+                                    animationSpec = tween(durationMillis = 150),
+                                    shrinkTowards = Alignment.Start,
+                                ) + fadeOut(animationSpec = tween(durationMillis = 150)),
+                        ) {
+                            AnimatedContent(
+                                targetState = iconOnly,
+                                transitionSpec = {
+                                    (fadeIn(tween(200)) togetherWith fadeOut(tween(150)))
+                                        .using(SizeTransform(clip = false))
+                                },
+                                label = "DeleteSelectedCompactToggle",
+                            ) { compact ->
+                                if (compact) {
+                                    AppTooltip(label = "Delete ${selectedContainerIds.size} selected") {
+                                        IconButton(
+                                            onClick = {
+                                                askConfirm(
+                                                    "Delete selected containers?",
+                                                    "This will force-stop and delete ${selectedContainerIds.size} container(s).",
+                                                ) { viewModel.deleteSelectedContainers() }
+                                            },
+                                            enabled = !isDeletingSelected,
+                                        ) {
+                                            if (isDeletingSelected) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            } else {
+                                                Icon(
+                                                    Icons.Outlined.Delete,
+                                                    contentDescription = "Delete ${selectedContainerIds.size} selected",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            askConfirm(
+                                                "Delete selected containers?",
+                                                "This will force-stop and delete ${selectedContainerIds.size} container(s).",
+                                            ) { viewModel.deleteSelectedContainers() }
+                                        },
+                                        enabled = !isDeletingSelected,
+                                        shape = shapeFor("delSel"),
+                                        colors =
+                                            ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error,
+                                            ),
+                                    ) {
+                                        if (isDeletingSelected) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onError,
+                                            )
+                                        } else {
+                                            Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
+                                        Text("Delete ${selectedContainerIds.size} selected")
                                     }
                                 }
                             }
-                        } else {
-                            Button(
-                                onClick = { showDeleteAllDialog = true },
-                                enabled = !isDeletingAll && !isDeletingSelected,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                            ) {
-                                if (isDeletingAll) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onError,
-                                    )
+                        }
+
+                        // Delete All Button
+                        if (containers.isNotEmpty()) {
+                            AnimatedContent(
+                                targetState = iconOnly,
+                                transitionSpec = {
+                                    (fadeIn(tween(200)) togetherWith fadeOut(tween(150)))
+                                        .using(SizeTransform(clip = false))
+                                },
+                                label = "DeleteAllCompactToggle",
+                            ) { compact ->
+                                if (compact) {
+                                    AppTooltip(label = "Delete all containers") {
+                                        IconButton(
+                                            onClick = { showDeleteAllDialog = true },
+                                            enabled = !isDeletingAll && !isDeletingSelected,
+                                        ) {
+                                            if (isDeletingAll) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            } else {
+                                                Icon(
+                                                    Icons.Outlined.DeleteForever,
+                                                    contentDescription = "Delete All",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                )
+                                            }
+                                        }
+                                    }
                                 } else {
-                                    Icon(Icons.Outlined.DeleteForever, null, modifier = Modifier.size(18.dp))
+                                    Button(
+                                        onClick = { showDeleteAllDialog = true },
+                                        enabled = !isDeletingAll && !isDeletingSelected,
+                                        shape = shapeFor("delAll"),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                    ) {
+                                        if (isDeletingAll) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onError,
+                                            )
+                                        } else {
+                                            Icon(Icons.Outlined.DeleteForever, null, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
+                                        Text("Delete All")
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(Spacing.sm))
-                                Text("Delete All")
                             }
                         }
                     }
