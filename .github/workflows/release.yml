@@ -23,6 +23,14 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Use bash on every runner (including windows-latest, which defaults to
+# PowerShell). PowerShell mangles `-Papp.version=...` because its argument
+# parser splits on the dot, sending `.version=1.0.0` to Gradle as a task
+# name. Bash on Windows uses git-bash and parses identically to macOS/Linux.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     strategy:
@@ -50,7 +58,6 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        shell: bash
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 17
@@ -73,7 +80,6 @@ jobs:
         run: ./gradlew :composeApp:${{ matrix.task }} -Papp.version=${{ steps.version.outputs.version }}
 
       - name: Generate SHA256 checksum
-        shell: bash
         run: |
           for f in ${{ matrix.artifact-glob }}; do
             shasum -a 256 "$f" > "$f.sha256"
