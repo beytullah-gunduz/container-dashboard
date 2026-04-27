@@ -80,9 +80,18 @@ jobs:
         run: ./gradlew :composeApp:${{ matrix.task }} -Papp.version=${{ steps.version.outputs.version }}
 
       - name: Generate SHA256 checksum
+        # `sha256sum` ships with coreutils (Linux + git-bash on Windows) but
+        # is missing on macOS by default. `shasum -a 256` ships with macOS
+        # by default but is not guaranteed elsewhere. Pick whichever is
+        # present — both produce the same `<hash>  <filename>` format.
         run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            HASH="sha256sum"
+          else
+            HASH="shasum -a 256"
+          fi
           for f in ${{ matrix.artifact-glob }}; do
-            shasum -a 256 "$f" > "$f.sha256"
+            $HASH "$f" > "$f.sha256"
           done
 
       - name: Upload artifact
