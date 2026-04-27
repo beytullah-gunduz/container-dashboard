@@ -9,7 +9,7 @@ plugins {
 
 allprojects {
     group = "com.dockerdashboard"
-    version = "1.0.0"
+    version = findProperty("app.version")?.toString()?.removeSuffix("-SNAPSHOT") ?: "0.0.0"
 }
 
 spotless {

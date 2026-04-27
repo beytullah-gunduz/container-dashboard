@@ -140,6 +140,24 @@ The `DockerRepository` interface in `data/repository/` defines all container ope
 2. Connect to the API via Unix socket or TCP
 3. Replace `MockDockerRepository` with your implementation
 
+## Releasing
+
+Releases are produced by pushing a semver-prefixed git tag. The tag is the single source of truth for the version — there is no version bookkeeping in source files.
+
+```bash
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
+```
+
+This triggers `.github/workflows/release.yml`, which:
+
+1. Strips the leading `v` from the tag and passes it to Gradle via `-Papp.version=`
+2. Builds `.dmg`, `.deb`, and `.msi` installers in parallel on macOS, Linux, and Windows runners
+3. Generates SHA256 checksums alongside each installer
+4. Creates a GitHub Release with auto-generated notes and attaches every artifact
+
+Tags containing a `-` (e.g. `v1.0.0-beta.1`) are automatically published as pre-releases.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
