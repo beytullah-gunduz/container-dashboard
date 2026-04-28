@@ -1,15 +1,9 @@
 package com.containerdashboard.ui.screens.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -19,6 +13,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.ui.icons.automirrored.filled.Article
+import com.containerdashboard.ui.icons.automirrored.outlined.Article
+import com.containerdashboard.ui.icons.outlined.ContentCopy
+import com.containerdashboard.ui.icons.outlined.Pause
+import com.containerdashboard.ui.icons.outlined.RestartAlt
+import com.containerdashboard.ui.icons.outlined.Stop
 import com.containerdashboard.ui.theme.AppColors
 
 @Composable

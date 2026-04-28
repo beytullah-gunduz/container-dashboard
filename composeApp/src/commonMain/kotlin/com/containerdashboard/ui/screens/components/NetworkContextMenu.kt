@@ -1,7 +1,6 @@
 package com.containerdashboard.ui.screens.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.DropdownMenu
@@ -12,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
+import com.containerdashboard.ui.icons.outlined.ContentCopy
 
 private val SystemNetworks = setOf("bridge", "host", "none")
 

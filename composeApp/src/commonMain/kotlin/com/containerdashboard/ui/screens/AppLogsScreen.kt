@@ -20,10 +20,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.VerticalAlignBottom
-import androidx.compose.material.icons.outlined.VerticalAlignCenter
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -54,6 +50,10 @@ import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.icons.automirrored.outlined.Article
+import com.containerdashboard.ui.icons.outlined.DeleteSweep
+import com.containerdashboard.ui.icons.outlined.VerticalAlignBottom
+import com.containerdashboard.ui.icons.outlined.VerticalAlignCenter
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme

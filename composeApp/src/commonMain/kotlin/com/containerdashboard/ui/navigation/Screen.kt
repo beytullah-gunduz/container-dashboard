@@ -1,23 +1,23 @@
 package com.containerdashboard.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.ViewInAr
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.containerdashboard.ui.icons.automirrored.filled.Article
+import com.containerdashboard.ui.icons.automirrored.outlined.Article
+import com.containerdashboard.ui.icons.filled.Dashboard
+import com.containerdashboard.ui.icons.filled.Hub
+import com.containerdashboard.ui.icons.filled.Layers
+import com.containerdashboard.ui.icons.filled.MonitorHeart
+import com.containerdashboard.ui.icons.filled.Storage
+import com.containerdashboard.ui.icons.filled.ViewInAr
+import com.containerdashboard.ui.icons.outlined.Dashboard
+import com.containerdashboard.ui.icons.outlined.Hub
+import com.containerdashboard.ui.icons.outlined.Layers
+import com.containerdashboard.ui.icons.outlined.MonitorHeart
+import com.containerdashboard.ui.icons.outlined.Storage
+import com.containerdashboard.ui.icons.outlined.ViewInAr
 
 enum class Screen(
     val route: String,

@@ -23,11 +23,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -77,6 +72,11 @@ import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.icons.outlined.ContentCopy
+import com.containerdashboard.ui.icons.outlined.Folder
+import com.containerdashboard.ui.icons.outlined.Hub
+import com.containerdashboard.ui.icons.outlined.Image
+import com.containerdashboard.ui.icons.outlined.Inventory2
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import kotlinx.coroutines.flow.MutableStateFlow

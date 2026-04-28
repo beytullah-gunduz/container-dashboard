@@ -22,9 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -70,6 +67,9 @@ import com.containerdashboard.ui.components.ErrorStateCard
 import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
+import com.containerdashboard.ui.icons.outlined.Error
+import com.containerdashboard.ui.icons.outlined.Hub
+import com.containerdashboard.ui.icons.outlined.SearchOff
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.theme.Radius

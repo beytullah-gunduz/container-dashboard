@@ -1,4 +1,14 @@
 # ---------------------------------------------------------------------------
+# Inlined Material Icons (replaces material-icons-extended).
+# The icon files in com.containerdashboard.ui.icons.* use the same
+# `private var _foo: ImageVector? = null` cache pattern as the original
+# library. Keeping the package whole ensures ProGuard doesn't drop the
+# private cache fields or rewrite the synthetic accessor bridges that
+# extension-property getters compile to.
+# ---------------------------------------------------------------------------
+-keep class com.containerdashboard.ui.icons.** { *; }
+
+# ---------------------------------------------------------------------------
 # kotlinx.serialization
 # The @Serializable models rely on synthetic `$serializer` classes and
 # `Companion.serializer()` methods that ProGuard cannot prove reachable.

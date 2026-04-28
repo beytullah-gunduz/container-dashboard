@@ -14,14 +14,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +39,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.icons.automirrored.outlined.Article
+import com.containerdashboard.ui.icons.outlined.Download
+import com.containerdashboard.ui.icons.outlined.Pause
+import com.containerdashboard.ui.icons.outlined.RestartAlt
+import com.containerdashboard.ui.icons.outlined.Terminal
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors

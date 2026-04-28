@@ -18,11 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.Hub
-import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -47,6 +42,11 @@ import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.components.toContainerStatus
+import com.containerdashboard.ui.icons.outlined.Error
+import com.containerdashboard.ui.icons.outlined.Hub
+import com.containerdashboard.ui.icons.outlined.Layers
+import com.containerdashboard.ui.icons.outlined.Storage
+import com.containerdashboard.ui.icons.outlined.ViewInAr
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors

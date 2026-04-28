@@ -26,14 +26,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.SearchOff
-import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -84,6 +79,11 @@ import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.SectionHeader
+import com.containerdashboard.ui.icons.filled.ArrowDownward
+import com.containerdashboard.ui.icons.filled.ArrowUpward
+import com.containerdashboard.ui.icons.outlined.Error
+import com.containerdashboard.ui.icons.outlined.SearchOff
+import com.containerdashboard.ui.icons.outlined.Storage
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
