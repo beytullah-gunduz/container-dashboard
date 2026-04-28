@@ -25,10 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -79,11 +75,6 @@ import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.SectionHeader
-import com.containerdashboard.ui.icons.filled.ArrowDownward
-import com.containerdashboard.ui.icons.filled.ArrowUpward
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.SearchOff
-import com.containerdashboard.ui.icons.outlined.Storage
 import com.containerdashboard.ui.screens.components.VolumeContextMenu
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
@@ -92,6 +83,16 @@ import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.add
+import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
+import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.search_off
+import com.dockerdashboard.composeapp.generated.resources.storage
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun VolumesScreen(
@@ -261,19 +262,19 @@ fun VolumesScreen(
                                     color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
-                                Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
+                                Icon(painterResource(Res.drawable.delete), null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedVolumeNames.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                            Icon(Icons.Outlined.Close, null, modifier = Modifier.size(18.dp))
+                            Icon(painterResource(Res.drawable.close), null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
                     Button(onClick = { viewModel.setShowCreateDialog(true) }) {
-                        Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(Res.drawable.add), null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create volume")
                     }
@@ -296,11 +297,11 @@ fun VolumesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -332,7 +333,7 @@ fun VolumesScreen(
             } else if (filteredVolumes.isEmpty()) {
                 if (searchQuery.isNotEmpty()) {
                     EmptyState(
-                        icon = Icons.Outlined.SearchOff,
+                        icon = Res.drawable.search_off,
                         title = "No matches",
                         body = "Nothing matched \"$searchQuery\".",
                         action =
@@ -342,7 +343,7 @@ fun VolumesScreen(
                     )
                 } else {
                     EmptyState(
-                        icon = Icons.Outlined.Storage,
+                        icon = Res.drawable.storage,
                         title = "No volumes",
                         body = "Volumes persist container data. Create one to get started.",
                         action =
@@ -605,7 +606,16 @@ private fun VolumeSortableHeaderCell(
         )
         if (isActive) {
             Icon(
-                imageVector = if (sortDirection == SortDirection.ASC) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                painter =
+                    painterResource(
+                        if (sortDirection ==
+                            SortDirection.ASC
+                        ) {
+                            Res.drawable.arrow_upward_filled
+                        } else {
+                            Res.drawable.arrow_downward_filled
+                        },
+                    ),
                 contentDescription = if (sortDirection == SortDirection.ASC) "Ascending" else "Descending",
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -676,7 +686,7 @@ private fun VolumeRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(
-                            Icons.Outlined.Storage,
+                            painterResource(Res.drawable.storage),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -712,7 +722,7 @@ private fun VolumeRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Icon(
-                        Icons.Outlined.Storage,
+                        painterResource(Res.drawable.storage),
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -753,7 +763,7 @@ private fun VolumeRow(
                 modifier = Modifier.size(24.dp),
             ) {
                 Icon(
-                    Icons.Outlined.Delete,
+                    painterResource(Res.drawable.delete),
                     contentDescription = "Delete",
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

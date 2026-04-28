@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -50,14 +49,16 @@ import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
 import com.containerdashboard.ui.components.SearchBar
-import com.containerdashboard.ui.icons.automirrored.outlined.Article
-import com.containerdashboard.ui.icons.outlined.DeleteSweep
-import com.containerdashboard.ui.icons.outlined.VerticalAlignBottom
-import com.containerdashboard.ui.icons.outlined.VerticalAlignCenter
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.article
+import com.dockerdashboard.composeapp.generated.resources.delete_sweep
+import com.dockerdashboard.composeapp.generated.resources.vertical_align_bottom
+import com.dockerdashboard.composeapp.generated.resources.vertical_align_center
+import org.jetbrains.compose.resources.painterResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -115,12 +116,14 @@ fun AppLogsScreen(
                 ) {
                     IconButton(onClick = { viewModel.toggleAutoScroll() }) {
                         Icon(
-                            imageVector =
-                                if (autoScroll) {
-                                    Icons.Outlined.VerticalAlignBottom
-                                } else {
-                                    Icons.Outlined.VerticalAlignCenter
-                                },
+                            painter =
+                                painterResource(
+                                    if (autoScroll) {
+                                        Res.drawable.vertical_align_bottom
+                                    } else {
+                                        Res.drawable.vertical_align_center
+                                    },
+                                ),
                             contentDescription = "Toggle auto-scroll",
                             tint =
                                 if (autoScroll) {
@@ -135,7 +138,7 @@ fun AppLogsScreen(
                 // Clear logs
                 OutlinedButton(onClick = { viewModel.clearLogs() }) {
                     Icon(
-                        Icons.Outlined.DeleteSweep,
+                        painterResource(Res.drawable.delete_sweep),
                         null,
                         modifier = Modifier.size(18.dp),
                     )
@@ -187,7 +190,7 @@ fun AppLogsScreen(
                 ) {
                     val isFiltering = searchQuery.isNotEmpty() || levelFilter != null
                     EmptyState(
-                        icon = Icons.AutoMirrored.Outlined.Article,
+                        icon = Res.drawable.article,
                         title =
                             if (isFiltering) {
                                 "No matching log entries"

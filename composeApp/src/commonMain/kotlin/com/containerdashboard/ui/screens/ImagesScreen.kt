@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -66,13 +63,6 @@ import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.TruncatingText
-import com.containerdashboard.ui.icons.filled.ArrowDownward
-import com.containerdashboard.ui.icons.filled.ArrowUpward
-import com.containerdashboard.ui.icons.filled.ChevronRight
-import com.containerdashboard.ui.icons.filled.ExpandMore
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.Layers
-import com.containerdashboard.ui.icons.outlined.SearchOff
 import com.containerdashboard.ui.screens.components.ImageContextMenu
 import com.containerdashboard.ui.screens.viewmodel.ImageSortColumn
 import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
@@ -82,6 +72,17 @@ import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.formatBytes
 import com.containerdashboard.ui.util.hoverHighlight
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
+import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
+import com.dockerdashboard.composeapp.generated.resources.chevron_right_filled
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.expand_more_filled
+import com.dockerdashboard.composeapp.generated.resources.layers
+import com.dockerdashboard.composeapp.generated.resources.search_off
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ImagesScreen(
@@ -208,13 +209,13 @@ fun ImagesScreen(
                                     color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
-                                Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
+                                Icon(painterResource(Res.drawable.delete), null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedImageIds.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                            Icon(Icons.Outlined.Close, null, modifier = Modifier.size(18.dp))
+                            Icon(painterResource(Res.drawable.close), null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
@@ -238,11 +239,11 @@ fun ImagesScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -274,7 +275,7 @@ fun ImagesScreen(
             } else if (filteredImages.isEmpty()) {
                 if (searchQuery.isNotEmpty()) {
                     EmptyState(
-                        icon = Icons.Outlined.SearchOff,
+                        icon = Res.drawable.search_off,
                         title = "No matches",
                         body = "Nothing matched \"$searchQuery\".",
                         action =
@@ -284,7 +285,7 @@ fun ImagesScreen(
                     )
                 } else {
                     EmptyState(
-                        icon = Icons.Outlined.Layers,
+                        icon = Res.drawable.layers,
                         title = "No images",
                         body = "Pull an image or build one to see it here.",
                     )
@@ -440,7 +441,7 @@ private fun ImageSectionHeader(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
-            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            painter = painterResource(if (expanded) Res.drawable.expand_more_filled else Res.drawable.chevron_right_filled),
             contentDescription = if (expanded) "Collapse" else "Expand",
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -531,7 +532,16 @@ private fun SortableHeaderCell(
         )
         if (isActive) {
             Icon(
-                imageVector = if (sortDirection == SortDirection.ASC) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                painter =
+                    painterResource(
+                        if (sortDirection ==
+                            SortDirection.ASC
+                        ) {
+                            Res.drawable.arrow_upward_filled
+                        } else {
+                            Res.drawable.arrow_downward_filled
+                        },
+                    ),
                 contentDescription = if (sortDirection == SortDirection.ASC) "Ascending" else "Descending",
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -685,7 +695,7 @@ private fun ImageRow(
                 modifier = Modifier.size(24.dp),
             ) {
                 Icon(
-                    Icons.Outlined.Delete,
+                    painterResource(Res.drawable.delete),
                     contentDescription = "Delete",
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

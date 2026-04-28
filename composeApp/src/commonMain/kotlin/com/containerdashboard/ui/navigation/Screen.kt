@@ -1,77 +1,77 @@
 package com.containerdashboard.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.graphics.vector.ImageVector
-import com.containerdashboard.ui.icons.automirrored.filled.Article
-import com.containerdashboard.ui.icons.automirrored.outlined.Article
-import com.containerdashboard.ui.icons.filled.Dashboard
-import com.containerdashboard.ui.icons.filled.Hub
-import com.containerdashboard.ui.icons.filled.Layers
-import com.containerdashboard.ui.icons.filled.MonitorHeart
-import com.containerdashboard.ui.icons.filled.Storage
-import com.containerdashboard.ui.icons.filled.ViewInAr
-import com.containerdashboard.ui.icons.outlined.Dashboard
-import com.containerdashboard.ui.icons.outlined.Hub
-import com.containerdashboard.ui.icons.outlined.Layers
-import com.containerdashboard.ui.icons.outlined.MonitorHeart
-import com.containerdashboard.ui.icons.outlined.Storage
-import com.containerdashboard.ui.icons.outlined.ViewInAr
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.article
+import com.dockerdashboard.composeapp.generated.resources.article_filled
+import com.dockerdashboard.composeapp.generated.resources.dashboard
+import com.dockerdashboard.composeapp.generated.resources.dashboard_filled
+import com.dockerdashboard.composeapp.generated.resources.hub
+import com.dockerdashboard.composeapp.generated.resources.hub_filled
+import com.dockerdashboard.composeapp.generated.resources.layers
+import com.dockerdashboard.composeapp.generated.resources.layers_filled
+import com.dockerdashboard.composeapp.generated.resources.monitor_heart
+import com.dockerdashboard.composeapp.generated.resources.monitor_heart_filled
+import com.dockerdashboard.composeapp.generated.resources.settings
+import com.dockerdashboard.composeapp.generated.resources.settings_filled
+import com.dockerdashboard.composeapp.generated.resources.storage
+import com.dockerdashboard.composeapp.generated.resources.storage_filled
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar_filled
+import org.jetbrains.compose.resources.DrawableResource
 
 enum class Screen(
     val route: String,
     val title: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector,
+    val icon: DrawableResource,
+    val selectedIcon: DrawableResource,
 ) {
     Dashboard(
         route = "dashboard",
         title = "Dashboard",
-        icon = Icons.Outlined.Dashboard,
-        selectedIcon = Icons.Filled.Dashboard,
+        icon = Res.drawable.dashboard,
+        selectedIcon = Res.drawable.dashboard_filled,
     ),
     Containers(
         route = "containers",
         title = "Containers",
-        icon = Icons.Outlined.ViewInAr,
-        selectedIcon = Icons.Filled.ViewInAr,
+        icon = Res.drawable.view_in_ar,
+        selectedIcon = Res.drawable.view_in_ar_filled,
     ),
     Images(
         route = "images",
         title = "Images",
-        icon = Icons.Outlined.Layers,
-        selectedIcon = Icons.Filled.Layers,
+        icon = Res.drawable.layers,
+        selectedIcon = Res.drawable.layers_filled,
     ),
     Volumes(
         route = "volumes",
         title = "Volumes",
-        icon = Icons.Outlined.Storage,
-        selectedIcon = Icons.Filled.Storage,
+        icon = Res.drawable.storage,
+        selectedIcon = Res.drawable.storage_filled,
     ),
     Networks(
         route = "networks",
         title = "Networks",
-        icon = Icons.Outlined.Hub,
-        selectedIcon = Icons.Filled.Hub,
+        icon = Res.drawable.hub,
+        selectedIcon = Res.drawable.hub_filled,
     ),
     Monitoring(
         route = "monitoring",
         title = "Monitoring",
-        icon = Icons.Outlined.MonitorHeart,
-        selectedIcon = Icons.Filled.MonitorHeart,
+        icon = Res.drawable.monitor_heart,
+        selectedIcon = Res.drawable.monitor_heart_filled,
     ),
     AppLogs(
         route = "app_logs",
         title = "App Logs",
-        icon = Icons.AutoMirrored.Outlined.Article,
-        selectedIcon = Icons.AutoMirrored.Filled.Article,
+        icon = Res.drawable.article,
+        selectedIcon = Res.drawable.article_filled,
     ),
     Settings(
         route = "settings",
         title = "Settings",
-        icon = Icons.Outlined.Settings,
-        selectedIcon = Icons.Filled.Settings,
+        icon = Res.drawable.settings,
+        selectedIcon = Res.drawable.settings_filled,
     ),
     ;
 

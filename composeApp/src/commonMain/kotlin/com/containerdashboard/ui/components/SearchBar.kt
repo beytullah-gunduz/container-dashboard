@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Clear
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.search
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun SearchBar(
@@ -62,7 +63,7 @@ fun SearchBar(
             horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             Icon(
-                imageVector = Icons.Outlined.Search,
+                painter = painterResource(Res.drawable.search),
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(iconSize),
@@ -103,7 +104,7 @@ fun SearchBar(
                         modifier = Modifier.size(clearButtonSize),
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Clear,
+                            painter = painterResource(Res.drawable.close),
                             contentDescription = "Clear",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(clearIconSize),

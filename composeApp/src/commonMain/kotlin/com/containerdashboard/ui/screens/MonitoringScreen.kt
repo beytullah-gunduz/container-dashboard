@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,7 +39,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -55,14 +52,6 @@ import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.SemiDonutGauge
-import com.containerdashboard.ui.icons.filled.ArrowDownward
-import com.containerdashboard.ui.icons.filled.ArrowUpward
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.Memory
-import com.containerdashboard.ui.icons.outlined.MonitorHeart
-import com.containerdashboard.ui.icons.outlined.NetworkCheck
-import com.containerdashboard.ui.icons.outlined.Storage
-import com.containerdashboard.ui.icons.outlined.ViewInAr
 import com.containerdashboard.ui.screens.viewmodel.DerivedContainerStats
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.MonitoringSort
@@ -71,6 +60,18 @@ import com.containerdashboard.ui.screens.viewmodel.UsageHistory
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
+import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.memory
+import com.dockerdashboard.composeapp.generated.resources.monitor_heart
+import com.dockerdashboard.composeapp.generated.resources.network_check
+import com.dockerdashboard.composeapp.generated.resources.storage
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 // Shared left-padding for history-graph canvases so the bar areas of
 // UsageHistoryGraph and IoHistoryGraph line up vertically when the
@@ -185,7 +186,7 @@ fun MonitoringScreen(
                 val cpuGraph: @Composable (Modifier) -> Unit = { m ->
                     UsageHistoryGraph(
                         title = "CPU Usage",
-                        icon = Icons.Outlined.Memory,
+                        icon = Res.drawable.memory,
                         iconTint = AppColors.AccentBlue,
                         history = history.cpuHistory,
                         maxHistorySize = 60,
@@ -196,7 +197,7 @@ fun MonitoringScreen(
                 val memGraph: @Composable (Modifier) -> Unit = { m ->
                     UsageHistoryGraph(
                         title = "Memory Usage",
-                        icon = Icons.Outlined.Storage,
+                        icon = Res.drawable.storage,
                         iconTint = AppColors.AccentBlueDark,
                         history = history.memoryHistory,
                         maxHistorySize = 60,
@@ -207,7 +208,7 @@ fun MonitoringScreen(
                 val diskGraph: @Composable (Modifier) -> Unit = { m ->
                     IoHistoryGraph(
                         title = "Disk IO",
-                        icon = Icons.Outlined.Storage,
+                        icon = Res.drawable.storage,
                         iconTint = AppColors.AccentBlue,
                         seriesA = history.diskReadHistory,
                         seriesB = history.diskWriteHistory,
@@ -224,7 +225,7 @@ fun MonitoringScreen(
                 val netGraph: @Composable (Modifier) -> Unit = { m ->
                     IoHistoryGraph(
                         title = "Network IO",
-                        icon = Icons.Outlined.NetworkCheck,
+                        icon = Res.drawable.network_check,
                         iconTint = AppColors.AccentBlueLight,
                         seriesA = history.networkRxHistory,
                         seriesB = history.networkTxHistory,
@@ -279,11 +280,11 @@ fun MonitoringScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -303,7 +304,7 @@ fun MonitoringScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         EmptyState(
-                            icon = Icons.Outlined.MonitorHeart,
+                            icon = Res.drawable.monitor_heart,
                             title = "Collecting data…",
                             body = "Waiting for the first stats snapshot from the container engine.",
                         )
@@ -326,7 +327,7 @@ fun MonitoringScreen(
                         ),
                 ) {
                     EmptyState(
-                        icon = Icons.Outlined.MonitorHeart,
+                        icon = Res.drawable.monitor_heart,
                         title = "No running containers",
                         body = "Start some containers to see CPU, memory, disk, and network usage.",
                     )
@@ -350,7 +351,7 @@ fun MonitoringScreen(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Icon(
-                                Icons.Outlined.Memory,
+                                painterResource(Res.drawable.memory),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                                 tint = AppColors.AccentBlue,
@@ -392,7 +393,7 @@ fun MonitoringScreen(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             Icon(
-                                Icons.Outlined.Memory,
+                                painterResource(Res.drawable.memory),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
                                 tint = AppColors.AccentBlueDark,
@@ -586,12 +587,14 @@ private fun SortableHeader(
         )
         if (isActive) {
             Icon(
-                imageVector =
-                    if (direction == MonitoringSortDirection.ASC) {
-                        Icons.Default.ArrowUpward
-                    } else {
-                        Icons.Default.ArrowDownward
-                    },
+                painter =
+                    painterResource(
+                        if (direction == MonitoringSortDirection.ASC) {
+                            Res.drawable.arrow_upward_filled
+                        } else {
+                            Res.drawable.arrow_downward_filled
+                        },
+                    ),
                 contentDescription = null,
                 modifier = Modifier.size(10.dp),
                 tint = MaterialTheme.colorScheme.onSurface,
@@ -653,12 +656,14 @@ private fun SortChip(
             )
             if (isActive) {
                 Icon(
-                    imageVector =
-                        if (direction == MonitoringSortDirection.ASC) {
-                            Icons.Default.ArrowUpward
-                        } else {
-                            Icons.Default.ArrowDownward
-                        },
+                    painter =
+                        painterResource(
+                            if (direction == MonitoringSortDirection.ASC) {
+                                Res.drawable.arrow_upward_filled
+                            } else {
+                                Res.drawable.arrow_downward_filled
+                            },
+                        ),
                     contentDescription = null,
                     modifier = Modifier.size(10.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
@@ -749,7 +754,7 @@ private fun StatsTableRow(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
-                            Icons.Outlined.ViewInAr,
+                            painterResource(Res.drawable.view_in_ar),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint = AppColors.Running,
@@ -821,7 +826,7 @@ private fun StatsTableRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Icon(
-                        Icons.Outlined.ViewInAr,
+                        painterResource(Res.drawable.view_in_ar),
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint = AppColors.Running,
@@ -928,7 +933,7 @@ private fun IoLabel(
 @Composable
 private fun UsageHistoryGraph(
     title: String,
-    icon: ImageVector,
+    icon: DrawableResource,
     iconTint: Color,
     history: List<Double>,
     maxHistorySize: Int,
@@ -965,7 +970,7 @@ private fun UsageHistoryGraph(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Icon(
-                        icon,
+                        painterResource(icon),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = iconTint,
@@ -1061,7 +1066,7 @@ private fun UsageHistoryGraph(
 @Composable
 private fun IoHistoryGraph(
     title: String,
-    icon: ImageVector,
+    icon: DrawableResource,
     iconTint: Color,
     seriesA: List<Long>,
     seriesB: List<Long>,
@@ -1123,7 +1128,7 @@ private fun IoHistoryGraph(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Icon(
-                        icon,
+                        painterResource(icon),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = iconTint,

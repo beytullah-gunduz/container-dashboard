@@ -27,10 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -74,20 +70,25 @@ import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.TruncatingText
 import com.containerdashboard.ui.components.toContainerStatus
-import com.containerdashboard.ui.icons.automirrored.filled.Article
-import com.containerdashboard.ui.icons.automirrored.outlined.Article
-import com.containerdashboard.ui.icons.filled.ArrowDownward
-import com.containerdashboard.ui.icons.filled.ArrowUpward
-import com.containerdashboard.ui.icons.filled.ChevronRight
-import com.containerdashboard.ui.icons.filled.ExpandMore
-import com.containerdashboard.ui.icons.outlined.Pause
-import com.containerdashboard.ui.icons.outlined.Stop
 import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
+import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
+import com.dockerdashboard.composeapp.generated.resources.article
+import com.dockerdashboard.composeapp.generated.resources.article_filled
+import com.dockerdashboard.composeapp.generated.resources.chevron_right_filled
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.expand_more_filled
+import com.dockerdashboard.composeapp.generated.resources.more_vert
+import com.dockerdashboard.composeapp.generated.resources.pause
+import com.dockerdashboard.composeapp.generated.resources.play_arrow
+import com.dockerdashboard.composeapp.generated.resources.stop
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun ComposeProjectHeader(
@@ -131,7 +132,7 @@ internal fun ComposeProjectHeader(
                 onCheckedChange = onSelectAll,
             )
             Icon(
-                imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                painter = painterResource(if (expanded) Res.drawable.expand_more_filled else Res.drawable.chevron_right_filled),
                 contentDescription = if (expanded) "Collapse" else "Expand",
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -197,7 +198,7 @@ internal fun ComposeProjectHeader(
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Outlined.Article,
+                            painterResource(Res.drawable.article),
                             contentDescription = "View group logs",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -208,7 +209,7 @@ internal fun ComposeProjectHeader(
                     AppTooltip(label = "Pause all") {
                         IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
                             Icon(
-                                Icons.Outlined.Pause,
+                                painterResource(Res.drawable.pause),
                                 contentDescription = "Pause all",
                                 modifier = Modifier.size(14.dp),
                                 tint = AppColors.Paused,
@@ -219,7 +220,7 @@ internal fun ComposeProjectHeader(
                     AppTooltip(label = "Unpause all") {
                         IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
                             Icon(
-                                Icons.Outlined.PlayArrow,
+                                painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Unpause all",
                                 modifier = Modifier.size(14.dp),
                                 tint = AppColors.Running,
@@ -231,7 +232,7 @@ internal fun ComposeProjectHeader(
                     AppTooltip(label = "Stop all") {
                         IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
                             Icon(
-                                Icons.Outlined.Stop,
+                                painterResource(Res.drawable.stop),
                                 contentDescription = "Stop all",
                                 modifier = Modifier.size(14.dp),
                                 tint = AppColors.Stopped,
@@ -242,7 +243,7 @@ internal fun ComposeProjectHeader(
                     AppTooltip(label = "Start all") {
                         IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
                             Icon(
-                                Icons.Outlined.PlayArrow,
+                                painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Start all",
                                 modifier = Modifier.size(14.dp),
                                 tint = AppColors.Running,
@@ -253,7 +254,7 @@ internal fun ComposeProjectHeader(
                 AppTooltip(label = "Delete all") {
                     IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
                         Icon(
-                            Icons.Outlined.Delete,
+                            painterResource(Res.drawable.delete),
                             contentDescription = "Delete all",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -512,8 +513,16 @@ internal fun SortableHeaderCell(
         )
         if (isActive) {
             Icon(
-                imageVector =
-                    if (sortDirection == SortDirection.ASCENDING) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                painter =
+                    painterResource(
+                        if (sortDirection ==
+                            SortDirection.ASCENDING
+                        ) {
+                            Res.drawable.arrow_upward_filled
+                        } else {
+                            Res.drawable.arrow_downward_filled
+                        },
+                    ),
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -675,7 +684,7 @@ internal fun CompactContainerRow(
                     modifier = Modifier.size(24.dp),
                 ) {
                     Icon(
-                        Icons.Outlined.MoreVert,
+                        painterResource(Res.drawable.more_vert),
                         contentDescription = "Actions",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -694,7 +703,7 @@ internal fun CompactContainerRow(
                         },
                         leadingIcon = {
                             Icon(
-                                if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
+                                painterResource(if (isViewingLogs) Res.drawable.article_filled else Res.drawable.article),
                                 contentDescription = null,
                                 tint =
                                     if (isViewingLogs) {
@@ -716,7 +725,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onPause()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.Pause, null) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.pause), null) },
                             )
                             DropdownMenuItem(
                                 text = { Text("Stop") },
@@ -724,7 +733,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStop()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = AppColors.Stopped) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
                             )
                         }
                         container.isPaused -> {
@@ -734,7 +743,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onUnpause()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                             )
                         }
                         else -> {
@@ -744,7 +753,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStart()
                                 },
-                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                             )
                         }
                     }
@@ -769,7 +778,7 @@ internal fun CompactContainerRow(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Outlined.Delete,
+                                painterResource(Res.drawable.delete),
                                 null,
                                 tint = MaterialTheme.colorScheme.error,
                             )
@@ -1018,7 +1027,7 @@ internal fun ExpandedContainerRow(
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
-                            if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
+                            painterResource(if (isViewingLogs) Res.drawable.article_filled else Res.drawable.article),
                             contentDescription = "View Logs",
                             modifier = Modifier.size(14.dp),
                             tint =
@@ -1034,7 +1043,7 @@ internal fun ExpandedContainerRow(
                         container.isRunning -> {
                             IconButton(onClick = onPause, modifier = Modifier.size(24.dp)) {
                                 Icon(
-                                    Icons.Outlined.Pause,
+                                    painterResource(Res.drawable.pause),
                                     contentDescription = "Pause",
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1042,7 +1051,7 @@ internal fun ExpandedContainerRow(
                             }
                             IconButton(onClick = onStop, modifier = Modifier.size(24.dp)) {
                                 Icon(
-                                    Icons.Outlined.Stop,
+                                    painterResource(Res.drawable.stop),
                                     contentDescription = "Stop",
                                     modifier = Modifier.size(14.dp),
                                     tint = AppColors.Stopped,
@@ -1052,7 +1061,7 @@ internal fun ExpandedContainerRow(
                         container.isPaused -> {
                             IconButton(onClick = onUnpause, modifier = Modifier.size(24.dp)) {
                                 Icon(
-                                    Icons.Outlined.PlayArrow,
+                                    painterResource(Res.drawable.play_arrow),
                                     contentDescription = "Resume",
                                     modifier = Modifier.size(14.dp),
                                     tint = AppColors.Running,
@@ -1062,7 +1071,7 @@ internal fun ExpandedContainerRow(
                         else -> {
                             IconButton(onClick = onStart, modifier = Modifier.size(24.dp)) {
                                 Icon(
-                                    Icons.Outlined.PlayArrow,
+                                    painterResource(Res.drawable.play_arrow),
                                     contentDescription = "Start",
                                     modifier = Modifier.size(14.dp),
                                     tint = AppColors.Running,
@@ -1075,7 +1084,7 @@ internal fun ExpandedContainerRow(
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
-                            Icons.Outlined.Delete,
+                            painterResource(Res.drawable.delete),
                             contentDescription = "Delete",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.error,

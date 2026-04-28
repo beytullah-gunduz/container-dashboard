@@ -13,10 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -37,18 +33,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.containerdashboard.ui.icons.automirrored.outlined.Article
-import com.containerdashboard.ui.icons.outlined.Download
-import com.containerdashboard.ui.icons.outlined.Pause
-import com.containerdashboard.ui.icons.outlined.RestartAlt
-import com.containerdashboard.ui.icons.outlined.Terminal
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.article
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.download
+import com.dockerdashboard.composeapp.generated.resources.pause
+import com.dockerdashboard.composeapp.generated.resources.play_arrow
+import com.dockerdashboard.composeapp.generated.resources.restart_alt
+import com.dockerdashboard.composeapp.generated.resources.terminal
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ContainerExtraPane(
@@ -125,7 +126,7 @@ fun ContainerExtraPane(
                     }
                 } else {
                     PaneActionButton(
-                        icon = Icons.Outlined.Download,
+                        icon = Res.drawable.download,
                         contentDescription = "Save all logs",
                         enabled = container != null,
                         onClick = onSaveLogs,
@@ -149,7 +150,7 @@ fun ContainerExtraPane(
                     }
                 } else if (container?.isPaused == true) {
                     PaneActionButton(
-                        icon = Icons.Outlined.PlayArrow,
+                        icon = Res.drawable.play_arrow,
                         contentDescription = "Resume container",
                         tint = AppColors.Running,
                         enabled = true,
@@ -157,20 +158,20 @@ fun ContainerExtraPane(
                     )
                 } else {
                     PaneActionButton(
-                        icon = Icons.Outlined.Pause,
+                        icon = Res.drawable.pause,
                         contentDescription = "Pause container",
                         enabled = container?.isRunning == true,
                         onClick = onPauseContainer,
                     )
                 }
                 PaneActionButton(
-                    icon = Icons.Outlined.RestartAlt,
+                    icon = Res.drawable.restart_alt,
                     contentDescription = "Restart container",
                     enabled = container != null,
                     onClick = onRestartContainer,
                 )
                 PaneActionButton(
-                    icon = Icons.Outlined.Delete,
+                    icon = Res.drawable.delete,
                     contentDescription = "Delete container",
                     tint = MaterialTheme.colorScheme.error,
                     enabled = container != null,
@@ -182,7 +183,7 @@ fun ContainerExtraPane(
                 AppTooltip(label = "Close logs pane", shortcut = "Esc") {
                     IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            Icons.Outlined.Close,
+                            painterResource(Res.drawable.close),
                             contentDescription = "Close",
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -214,7 +215,7 @@ fun ContainerExtraPane(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    Icons.AutoMirrored.Outlined.Article,
+                                    painterResource(Res.drawable.article),
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
                                 )
@@ -236,7 +237,7 @@ fun ContainerExtraPane(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box {
                                     Icon(
-                                        Icons.Outlined.Terminal,
+                                        painterResource(Res.drawable.terminal),
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                     )
@@ -294,7 +295,7 @@ fun ContainerExtraPane(
 
 @Composable
 internal fun PaneActionButton(
-    icon: ImageVector,
+    icon: DrawableResource,
     contentDescription: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -307,7 +308,7 @@ internal fun PaneActionButton(
             modifier = Modifier.size(32.dp),
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(icon),
                 contentDescription = contentDescription,
                 modifier = Modifier.size(18.dp),
                 tint = if (enabled) tint else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),

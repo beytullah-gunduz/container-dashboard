@@ -1,7 +1,5 @@
 package com.containerdashboard.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -15,6 +13,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.add
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Shared wrapper for resource-creation dialogs (Create Volume, Create Network, …).
@@ -59,7 +60,7 @@ fun CreateResourceDialog(
             },
         icon = {
             Icon(
-                imageVector = Icons.Outlined.Add,
+                painter = painterResource(Res.drawable.add),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )

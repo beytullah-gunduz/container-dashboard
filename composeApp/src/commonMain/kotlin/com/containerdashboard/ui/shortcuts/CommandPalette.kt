@@ -18,8 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -50,7 +47,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.search
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 data class PaletteAction(
     val id: String,
@@ -58,7 +59,7 @@ data class PaletteAction(
     val subtitle: String? = null,
     val section: String,
     val keyboardHint: String? = null,
-    val icon: ImageVector? = null,
+    val icon: DrawableResource? = null,
     val onRun: () -> Unit,
 )
 
@@ -179,7 +180,7 @@ fun CommandPalette(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Search,
+                            painter = painterResource(Res.drawable.search),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(IconSize.lg),
@@ -299,7 +300,7 @@ private fun PaletteRow(
     ) {
         if (action.icon != null) {
             Icon(
-                imageVector = action.icon,
+                painter = painterResource(action.icon),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(IconSize.md),

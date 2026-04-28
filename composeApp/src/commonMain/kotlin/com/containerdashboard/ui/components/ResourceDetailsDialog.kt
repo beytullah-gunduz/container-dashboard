@@ -21,8 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -72,17 +69,21 @@ import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.di.AppModule
-import com.containerdashboard.ui.icons.outlined.ContentCopy
-import com.containerdashboard.ui.icons.outlined.Folder
-import com.containerdashboard.ui.icons.outlined.Hub
-import com.containerdashboard.ui.icons.outlined.Image
-import com.containerdashboard.ui.icons.outlined.Inventory2
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.content_copy
+import com.dockerdashboard.composeapp.generated.resources.folder
+import com.dockerdashboard.composeapp.generated.resources.hub
+import com.dockerdashboard.composeapp.generated.resources.image
+import com.dockerdashboard.composeapp.generated.resources.inventory_2
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import com.containerdashboard.ui.util.formatBytes as sharedFormatBytes
 
 /**
@@ -275,23 +276,23 @@ private fun DetailsHeader(
     target: DetailsTarget,
     onClose: () -> Unit,
 ) {
-    val icon: ImageVector
+    val icon: DrawableResource
     val subtitle: String
     when (target) {
         is DetailsTarget.ContainerTarget -> {
-            icon = Icons.Outlined.Inventory2
+            icon = Res.drawable.inventory_2
             subtitle = "Container details"
         }
         is DetailsTarget.ImageTarget -> {
-            icon = Icons.Outlined.Image
+            icon = Res.drawable.image
             subtitle = "Image details"
         }
         is DetailsTarget.NetworkTarget -> {
-            icon = Icons.Outlined.Hub
+            icon = Res.drawable.hub
             subtitle = "Network details"
         }
         is DetailsTarget.VolumeTarget -> {
-            icon = Icons.Outlined.Folder
+            icon = Res.drawable.folder
             subtitle = "Volume details"
         }
     }
@@ -315,7 +316,7 @@ private fun DetailsHeader(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(icon),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
@@ -337,7 +338,7 @@ private fun DetailsHeader(
         }
         IconButton(onClick = onClose) {
             Icon(
-                imageVector = Icons.Outlined.Close,
+                painter = painterResource(Res.drawable.close),
                 contentDescription = "Close",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -702,7 +703,7 @@ private fun CopyIconButton(
 ) {
     IconButton(onClick = onClick, modifier = Modifier.size(20.dp)) {
         Icon(
-            imageVector = Icons.Outlined.ContentCopy,
+            painter = painterResource(Res.drawable.content_copy),
             contentDescription = tooltip,
             modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

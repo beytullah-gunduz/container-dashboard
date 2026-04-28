@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -67,15 +63,20 @@ import com.containerdashboard.ui.components.ErrorStateCard
 import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.Hub
-import com.containerdashboard.ui.icons.outlined.SearchOff
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.add
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.hub
+import com.dockerdashboard.composeapp.generated.resources.search_off
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun NetworksScreen(
@@ -210,19 +211,19 @@ fun NetworksScreen(
                                     color = MaterialTheme.colorScheme.onError,
                                 )
                             } else {
-                                Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
+                                Icon(painterResource(Res.drawable.delete), null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedNetworkIds.size} selected")
                         }
                         OutlinedButton(onClick = { viewModel.clearChecked() }) {
-                            Icon(Icons.Outlined.Close, null, modifier = Modifier.size(18.dp))
+                            Icon(painterResource(Res.drawable.close), null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
                     Button(onClick = { viewModel.setShowCreateDialog(true) }) {
-                        Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(Res.drawable.add), null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create network")
                     }
@@ -245,11 +246,11 @@ fun NetworksScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -280,7 +281,7 @@ fun NetworksScreen(
                 }
             } else if (networks.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Outlined.Hub,
+                    icon = Res.drawable.hub,
                     title = "No networks",
                     body = "Custom networks show up here. Create one to get started.",
                     action =
@@ -291,7 +292,7 @@ fun NetworksScreen(
             } else if (filteredNetworks.isEmpty()) {
                 // Search produced no hits
                 EmptyState(
-                    icon = Icons.Outlined.SearchOff,
+                    icon = Res.drawable.search_off,
                     title = "No matches",
                     body = "Nothing matched \"$searchQuery\".",
                     action =
@@ -329,7 +330,7 @@ fun NetworksScreen(
                     }
                     item(key = "networks-only-defaults-empty") {
                         EmptyState(
-                            icon = Icons.Outlined.Hub,
+                            icon = Res.drawable.hub,
                             title = "Only default networks",
                             body = "Custom networks show up here. Create one to get started.",
                             action =
@@ -539,7 +540,7 @@ private fun NetworkRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(
-                            Icons.Outlined.Hub,
+                            painterResource(Res.drawable.hub),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint =
@@ -608,7 +609,7 @@ private fun NetworkRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Icon(
-                        Icons.Outlined.Hub,
+                        painterResource(Res.drawable.hub),
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
                         tint =
@@ -709,7 +710,7 @@ private fun NetworkRow(
                 enabled = !isSystem,
             ) {
                 Icon(
-                    Icons.Outlined.Delete,
+                    painterResource(Res.drawable.delete),
                     contentDescription = "Delete",
                     modifier = Modifier.size(14.dp),
                     tint =

@@ -17,12 +17,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 private val IconHaloSize = 64.dp
 private val HeroIconSize = 40.dp
@@ -42,7 +43,7 @@ data class EmptyStateAction(
  */
 @Composable
 fun EmptyState(
-    icon: ImageVector,
+    icon: DrawableResource,
     title: String,
     body: String? = null,
     action: EmptyStateAction? = null,
@@ -63,7 +64,7 @@ fun EmptyState(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = icon,
+                        painter = painterResource(icon),
                         contentDescription = null,
                         modifier = Modifier.size(HeroIconSize),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,

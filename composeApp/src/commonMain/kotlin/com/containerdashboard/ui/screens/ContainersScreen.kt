@@ -27,11 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroup
@@ -74,19 +69,25 @@ import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.components.SectionHeader
-import com.containerdashboard.ui.icons.automirrored.outlined.ViewSidebar
-import com.containerdashboard.ui.icons.outlined.AutoAwesome
-import com.containerdashboard.ui.icons.outlined.DeleteForever
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.RemoveDone
-import com.containerdashboard.ui.icons.outlined.SearchOff
-import com.containerdashboard.ui.icons.outlined.Stop
-import com.containerdashboard.ui.icons.outlined.ViewAgenda
-import com.containerdashboard.ui.icons.outlined.ViewInAr
 import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_drop_down_filled
+import com.dockerdashboard.composeapp.generated.resources.auto_awesome
+import com.dockerdashboard.composeapp.generated.resources.check
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.delete_forever
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.remove_done
+import com.dockerdashboard.composeapp.generated.resources.search_off
+import com.dockerdashboard.composeapp.generated.resources.stop
+import com.dockerdashboard.composeapp.generated.resources.view_agenda
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import com.dockerdashboard.composeapp.generated.resources.view_sidebar
+import org.jetbrains.compose.resources.painterResource
 
 internal enum class SortColumn {
     NAME,
@@ -370,7 +371,7 @@ fun ContainersScreen(
                                 if (compact) {
                                     IconButton(onClick = { viewModel.clearSelection() }) {
                                         Icon(
-                                            Icons.Outlined.RemoveDone,
+                                            painterResource(Res.drawable.remove_done),
                                             contentDescription = "Clear selection",
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -380,7 +381,7 @@ fun ContainersScreen(
                                         onClick = { viewModel.clearSelection() },
                                         shape = shapeFor("clear"),
                                     ) {
-                                        Icon(Icons.Outlined.RemoveDone, null, modifier = Modifier.size(18.dp))
+                                        Icon(painterResource(Res.drawable.remove_done), null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(Spacing.sm))
                                         Text("Clear")
                                     }
@@ -429,7 +430,7 @@ fun ContainersScreen(
                                                 )
                                             } else {
                                                 Icon(
-                                                    Icons.Outlined.Stop,
+                                                    painterResource(Res.drawable.stop),
                                                     contentDescription = "Stop $runningSelectedCount selected",
                                                     tint = MaterialTheme.colorScheme.error,
                                                 )
@@ -459,7 +460,7 @@ fun ContainersScreen(
                                                 color = MaterialTheme.colorScheme.onError,
                                             )
                                         } else {
-                                            Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                                            Icon(painterResource(Res.drawable.stop), null, modifier = Modifier.size(18.dp))
                                         }
                                         Spacer(modifier = Modifier.width(Spacing.sm))
                                         Text("Stop $runningSelectedCount selected")
@@ -508,7 +509,7 @@ fun ContainersScreen(
                                                 )
                                             } else {
                                                 Icon(
-                                                    Icons.Outlined.Delete,
+                                                    painterResource(Res.drawable.delete),
                                                     contentDescription = "Delete ${selectedContainerIds.size} selected",
                                                     tint = MaterialTheme.colorScheme.error,
                                                 )
@@ -537,7 +538,7 @@ fun ContainersScreen(
                                                 color = MaterialTheme.colorScheme.onError,
                                             )
                                         } else {
-                                            Icon(Icons.Outlined.Delete, null, modifier = Modifier.size(18.dp))
+                                            Icon(painterResource(Res.drawable.delete), null, modifier = Modifier.size(18.dp))
                                         }
                                         Spacer(modifier = Modifier.width(Spacing.sm))
                                         Text("Delete ${selectedContainerIds.size} selected")
@@ -569,7 +570,7 @@ fun ContainersScreen(
                                                 )
                                             } else {
                                                 Icon(
-                                                    Icons.Outlined.DeleteForever,
+                                                    painterResource(Res.drawable.delete_forever),
                                                     contentDescription = "Delete All",
                                                     tint = MaterialTheme.colorScheme.error,
                                                 )
@@ -590,7 +591,7 @@ fun ContainersScreen(
                                                 color = MaterialTheme.colorScheme.onError,
                                             )
                                         } else {
-                                            Icon(Icons.Outlined.DeleteForever, null, modifier = Modifier.size(18.dp))
+                                            Icon(painterResource(Res.drawable.delete_forever), null, modifier = Modifier.size(18.dp))
                                         }
                                         Spacer(modifier = Modifier.width(Spacing.sm))
                                         Text("Delete All")
@@ -609,9 +610,9 @@ fun ContainersScreen(
                         var showLayoutMenu by remember { mutableStateOf(false) }
                         val layoutIcon =
                             when (logsPaneLayout) {
-                                LogsPaneLayout.RIGHT -> Icons.AutoMirrored.Outlined.ViewSidebar
-                                LogsPaneLayout.BOTTOM -> Icons.Outlined.ViewAgenda
-                                LogsPaneLayout.AUTO -> Icons.Outlined.AutoAwesome
+                                LogsPaneLayout.RIGHT -> Res.drawable.view_sidebar
+                                LogsPaneLayout.BOTTOM -> Res.drawable.view_agenda
+                                LogsPaneLayout.AUTO -> Res.drawable.auto_awesome
                             }
                         AppTooltip(label = "Log panel layout") {
                             IconButton(
@@ -619,13 +620,13 @@ fun ContainersScreen(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        layoutIcon,
+                                        painterResource(layoutIcon),
                                         contentDescription = "Log panel layout",
                                         modifier = Modifier.size(18.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Icon(
-                                        Icons.Default.ArrowDropDown,
+                                        painterResource(Res.drawable.arrow_drop_down_filled),
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -645,7 +646,7 @@ fun ContainersScreen(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.AutoMirrored.Outlined.ViewSidebar,
+                                        painterResource(Res.drawable.view_sidebar),
                                         null,
                                         tint =
                                             if (logsPaneLayout == LogsPaneLayout.RIGHT) {
@@ -664,7 +665,7 @@ fun ContainersScreen(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Outlined.ViewAgenda,
+                                        painterResource(Res.drawable.view_agenda),
                                         null,
                                         tint =
                                             if (logsPaneLayout == LogsPaneLayout.BOTTOM) {
@@ -683,7 +684,7 @@ fun ContainersScreen(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Outlined.AutoAwesome,
+                                        painterResource(Res.drawable.auto_awesome),
                                         null,
                                         tint =
                                             if (logsPaneLayout == LogsPaneLayout.AUTO) {
@@ -715,11 +716,11 @@ fun ContainersScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        Icon(Icons.Outlined.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -746,7 +747,7 @@ fun ContainersScreen(
                     label = { Text("All") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.ALL) {
-                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(painterResource(Res.drawable.check), null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },
@@ -758,7 +759,7 @@ fun ContainersScreen(
                     label = { Text("Running") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.RUNNING) {
-                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(painterResource(Res.drawable.check), null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },
@@ -770,7 +771,7 @@ fun ContainersScreen(
                     label = { Text("Stopped") },
                     leadingIcon =
                         if (containerFilter == ContainerFilter.STOPPED) {
-                            { Icon(Icons.Outlined.Check, null, modifier = Modifier.size(16.dp)) }
+                            { Icon(painterResource(Res.drawable.check), null, modifier = Modifier.size(16.dp)) }
                         } else {
                             null
                         },
@@ -806,7 +807,7 @@ fun ContainersScreen(
             } else if (filteredContainers.isEmpty()) {
                 if (searchQuery.isNotEmpty()) {
                     EmptyState(
-                        icon = Icons.Outlined.SearchOff,
+                        icon = Res.drawable.search_off,
                         title = "No matches",
                         body = "Nothing matched \"$searchQuery\".",
                         action =
@@ -822,7 +823,7 @@ fun ContainersScreen(
                             ContainerFilter.ALL -> "" // unreachable
                         }
                     EmptyState(
-                        icon = Icons.Outlined.ViewInAr,
+                        icon = Res.drawable.view_in_ar,
                         title = "No $label containers",
                         body = "No containers match the \"$label\" filter right now.",
                         action =
@@ -832,7 +833,7 @@ fun ContainersScreen(
                     )
                 } else {
                     EmptyState(
-                        icon = Icons.Outlined.ViewInAr,
+                        icon = Res.drawable.view_in_ar,
                         title = "No containers",
                         body = "Run a container from the Images tab to see it here.",
                     )

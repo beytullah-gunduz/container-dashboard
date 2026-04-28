@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -46,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,16 +54,6 @@ import com.containerdashboard.data.engine.EngineActionStatus
 import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.ui.components.AppBrandMark
 import com.containerdashboard.ui.components.ConfirmActionDialog
-import com.containerdashboard.ui.icons.outlined.BrightnessAuto
-import com.containerdashboard.ui.icons.outlined.CleaningServices
-import com.containerdashboard.ui.icons.outlined.DarkMode
-import com.containerdashboard.ui.icons.outlined.LightMode
-import com.containerdashboard.ui.icons.outlined.MonitorHeart
-import com.containerdashboard.ui.icons.outlined.NetworkCheck
-import com.containerdashboard.ui.icons.outlined.RestartAlt
-import com.containerdashboard.ui.icons.outlined.Save
-import com.containerdashboard.ui.icons.outlined.Stop
-import com.containerdashboard.ui.icons.outlined.ViewInAr
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
@@ -75,6 +62,20 @@ import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.brightness_auto
+import com.dockerdashboard.composeapp.generated.resources.cleaning_services
+import com.dockerdashboard.composeapp.generated.resources.dark_mode
+import com.dockerdashboard.composeapp.generated.resources.light_mode
+import com.dockerdashboard.composeapp.generated.resources.monitor_heart
+import com.dockerdashboard.composeapp.generated.resources.network_check
+import com.dockerdashboard.composeapp.generated.resources.play_arrow
+import com.dockerdashboard.composeapp.generated.resources.restart_alt
+import com.dockerdashboard.composeapp.generated.resources.save
+import com.dockerdashboard.composeapp.generated.resources.stop
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun SettingsScreen(
@@ -184,7 +185,7 @@ fun SettingsScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Icon(Icons.Outlined.NetworkCheck, null, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(Res.drawable.network_check), null, modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text(if (isTesting) "Testing…" else "Test Connection")
@@ -193,7 +194,7 @@ fun SettingsScreen(
                     onClick = { viewModel.saveAndReconnect(dockerHost) },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Outlined.Save, null, modifier = Modifier.size(18.dp))
+                    Icon(painterResource(Res.drawable.save), null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Save & Reconnect")
                 }
@@ -384,7 +385,7 @@ fun SettingsScreen(
                         ),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Outlined.CleaningServices, null, modifier = Modifier.size(18.dp))
+                    Icon(painterResource(Res.drawable.cleaning_services), null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Prune All Unused")
                 }
@@ -398,7 +399,7 @@ fun SettingsScreen(
                         ),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                    Icon(painterResource(Res.drawable.stop), null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Stop All Containers")
                 }
@@ -681,7 +682,7 @@ private fun EngineManagementSection(
                         ),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Outlined.Stop, null, modifier = Modifier.size(18.dp))
+                    Icon(painterResource(Res.drawable.stop), null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Stop")
                 }
@@ -700,7 +701,7 @@ private fun EngineManagementSection(
                         enabled = !isBusy && quotasValid,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Icon(Icons.Outlined.RestartAlt, null, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(Res.drawable.restart_alt), null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Restart")
                     }
@@ -725,7 +726,7 @@ private fun EngineManagementSection(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
+                        Icon(painterResource(Res.drawable.play_arrow), null, modifier = Modifier.size(18.dp))
                     }
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Start")
@@ -764,11 +765,11 @@ private fun ThemeModeSelector(
     selected: ThemeMode,
     onSelect: (ThemeMode) -> Unit,
 ) {
-    val options: List<Triple<ThemeMode, String, ImageVector>> =
+    val options: List<Triple<ThemeMode, String, DrawableResource>> =
         listOf(
-            Triple(ThemeMode.AUTO, "Auto", Icons.Outlined.BrightnessAuto),
-            Triple(ThemeMode.LIGHT, "Light", Icons.Outlined.LightMode),
-            Triple(ThemeMode.DARK, "Dark", Icons.Outlined.DarkMode),
+            Triple(ThemeMode.AUTO, "Auto", Res.drawable.brightness_auto),
+            Triple(ThemeMode.LIGHT, "Light", Res.drawable.light_mode),
+            Triple(ThemeMode.DARK, "Dark", Res.drawable.dark_mode),
         )
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -799,7 +800,7 @@ private fun ThemeModeSelector(
                     selected = selected == mode,
                     icon = {
                         Icon(
-                            imageVector = icon,
+                            painter = painterResource(icon),
                             contentDescription = null,
                             modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
                         )
@@ -816,10 +817,10 @@ private fun MonitoringAggregationSelector(
     selected: MonitoringAggregation,
     onSelect: (MonitoringAggregation) -> Unit,
 ) {
-    val options: List<Triple<MonitoringAggregation, String, ImageVector>> =
+    val options: List<Triple<MonitoringAggregation, String, DrawableResource>> =
         listOf(
-            Triple(MonitoringAggregation.ENGINE, "Engine", Icons.Outlined.MonitorHeart),
-            Triple(MonitoringAggregation.CONTAINER_AVG, "Per container", Icons.Outlined.ViewInAr),
+            Triple(MonitoringAggregation.ENGINE, "Engine", Res.drawable.monitor_heart),
+            Triple(MonitoringAggregation.CONTAINER_AVG, "Per container", Res.drawable.view_in_ar),
         )
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -850,7 +851,7 @@ private fun MonitoringAggregationSelector(
                     selected = selected == mode,
                     icon = {
                         Icon(
-                            imageVector = icon,
+                            painter = painterResource(icon),
                             contentDescription = null,
                             modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
                         )

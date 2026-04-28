@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.window.WindowDraggableArea
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -36,7 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
-import com.containerdashboard.ui.icons.filled.Minimize
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.close_filled
+import com.dockerdashboard.composeapp.generated.resources.minimize_filled
+import org.jetbrains.compose.resources.painterResource
 
 private const val DOUBLE_CLICK_MS = 350L
 
@@ -234,10 +235,10 @@ private fun WindowControls(
         horizontalArrangement = Arrangement.End,
     ) {
         TitleBarButton(onClick = onMinimize) {
-            Icon(Icons.Filled.Minimize, contentDescription = "Minimize", modifier = Modifier.size(16.dp))
+            Icon(painterResource(Res.drawable.minimize_filled), contentDescription = "Minimize", modifier = Modifier.size(16.dp))
         }
         TitleBarButton(onClick = onClose, isClose = true) {
-            Icon(Icons.Filled.Close, contentDescription = "Close", modifier = Modifier.size(16.dp))
+            Icon(painterResource(Res.drawable.close_filled), contentDescription = "Close", modifier = Modifier.size(16.dp))
         }
     }
 }

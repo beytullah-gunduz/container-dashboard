@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.containerdashboard.ui.icons.filled.ChevronRight
-import com.containerdashboard.ui.icons.filled.ExpandMore
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.hoverHighlight
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.chevron_right_filled
+import com.dockerdashboard.composeapp.generated.resources.expand_more_filled
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun SectionHeader(
@@ -43,7 +44,7 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Icon(
-            imageVector = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+            painter = painterResource(if (expanded) Res.drawable.expand_more_filled else Res.drawable.chevron_right_filled),
             contentDescription = if (expanded) "Collapse" else "Expand",
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,

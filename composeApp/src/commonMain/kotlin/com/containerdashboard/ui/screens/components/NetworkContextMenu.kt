@@ -1,8 +1,5 @@
 package com.containerdashboard.ui.screens.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -11,7 +8,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
-import com.containerdashboard.ui.icons.outlined.ContentCopy
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.content_copy
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.info
+import org.jetbrains.compose.resources.painterResource
 
 private val SystemNetworks = setOf("bridge", "host", "none")
 
@@ -37,7 +38,7 @@ fun NetworkContextMenu(
                 onDismiss()
                 onInspect()
             },
-            leadingIcon = { Icon(Icons.Outlined.Info, null) },
+            leadingIcon = { Icon(painterResource(Res.drawable.info), null) },
         )
         DropdownMenuItem(
             text = { Text("Copy ID") },
@@ -45,7 +46,7 @@ fun NetworkContextMenu(
                 onDismiss()
                 onCopyId()
             },
-            leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
+            leadingIcon = { Icon(painterResource(Res.drawable.content_copy), null) },
         )
         HorizontalDivider()
         DropdownMenuItem(
@@ -67,7 +68,7 @@ fun NetworkContextMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Delete,
+                    painterResource(Res.drawable.delete),
                     null,
                     tint =
                         if (canDelete) {

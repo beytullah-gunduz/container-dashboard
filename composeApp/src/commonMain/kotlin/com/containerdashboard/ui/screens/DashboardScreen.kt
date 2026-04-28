@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -31,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,17 +39,21 @@ import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
 import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.components.toContainerStatus
-import com.containerdashboard.ui.icons.outlined.Error
-import com.containerdashboard.ui.icons.outlined.Hub
-import com.containerdashboard.ui.icons.outlined.Layers
-import com.containerdashboard.ui.icons.outlined.Storage
-import com.containerdashboard.ui.icons.outlined.ViewInAr
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.formatBytes
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.hub
+import com.dockerdashboard.composeapp.generated.resources.layers
+import com.dockerdashboard.composeapp.generated.resources.storage
+import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun DashboardScreen(
@@ -121,7 +122,7 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            Icons.Outlined.Error,
+                            painterResource(Res.drawable.error),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -131,7 +132,7 @@ fun DashboardScreen(
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(Icons.Outlined.Close, null)
+                            Icon(painterResource(Res.drawable.close), null)
                         }
                     }
                 }
@@ -146,7 +147,7 @@ fun DashboardScreen(
                     title = "Containers",
                     value = containers.size.toString(),
                     subtitle = "$runningContainers running",
-                    icon = Icons.Outlined.ViewInAr,
+                    icon = Res.drawable.view_in_ar,
                     iconTint = AppColors.AccentBlue,
                     isLoading = !hasLoaded,
                     onClick = { onNavigate(Screen.Containers) },
@@ -158,7 +159,7 @@ fun DashboardScreen(
                     title = "Images",
                     value = images.size.toString(),
                     subtitle = formatBytes(totalImageSize),
-                    icon = Icons.Outlined.Layers,
+                    icon = Res.drawable.layers,
                     iconTint = AppColors.Running,
                     isLoading = !hasLoaded,
                     onClick = { onNavigate(Screen.Images) },
@@ -170,7 +171,7 @@ fun DashboardScreen(
                     title = "Volumes",
                     value = volumes.size.toString(),
                     subtitle = "${volumes.size} total",
-                    icon = Icons.Outlined.Storage,
+                    icon = Res.drawable.storage,
                     iconTint = AppColors.Warning,
                     isLoading = !hasLoaded,
                     onClick = { onNavigate(Screen.Volumes) },
@@ -182,7 +183,7 @@ fun DashboardScreen(
                     title = "Networks",
                     value = networks.size.toString(),
                     subtitle = "${networks.count { it.driver == "bridge" }} bridge",
-                    icon = Icons.Outlined.Hub,
+                    icon = Res.drawable.hub,
                     iconTint = AppColors.AccentBlueDark,
                     isLoading = !hasLoaded,
                     onClick = { onNavigate(Screen.Networks) },
@@ -498,7 +499,7 @@ private fun MaybeSkeletonStatsCard(
     title: String,
     value: String,
     subtitle: String?,
-    icon: ImageVector,
+    icon: DrawableResource,
     iconTint: androidx.compose.ui.graphics.Color,
     isLoading: Boolean,
     onClick: (() -> Unit)? = null,
@@ -551,7 +552,7 @@ private fun MaybeSkeletonStatsCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(icon),
                     contentDescription = null,
                     tint = iconTint,
                     modifier = Modifier.size(24.dp),

@@ -33,6 +33,7 @@ import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun Sidebar(
@@ -146,7 +147,7 @@ private fun SidebarItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Icon(
-                imageVector = if (isSelected) screen.selectedIcon else screen.icon,
+                painter = painterResource(if (isSelected) screen.selectedIcon else screen.icon),
                 contentDescription = screen.title,
                 tint = contentColor,
                 modifier = Modifier.size(20.dp),

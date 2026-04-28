@@ -21,10 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Clear
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -48,14 +44,19 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.PreferenceRepository
-import com.containerdashboard.ui.icons.automirrored.outlined.WrapText
-import com.containerdashboard.ui.icons.outlined.VerticalAlignBottom
 import com.containerdashboard.ui.state.LogsFilterState
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.monospaceMedium
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_drop_down_filled
+import com.dockerdashboard.composeapp.generated.resources.close
+import com.dockerdashboard.composeapp.generated.resources.search
+import com.dockerdashboard.composeapp.generated.resources.vertical_align_bottom
+import com.dockerdashboard.composeapp.generated.resources.wrap_text
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun LogsTabContent(
@@ -168,7 +169,7 @@ internal fun LogsTabContent(
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Icon(
-                                        Icons.Filled.ArrowDropDown,
+                                        painterResource(Res.drawable.arrow_drop_down_filled),
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -229,7 +230,7 @@ internal fun LogsTabContent(
                         }
 
                         Icon(
-                            Icons.Outlined.Search,
+                            painterResource(Res.drawable.search),
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -266,7 +267,7 @@ internal fun LogsTabContent(
                                     modifier = Modifier.size(18.dp),
                                 ) {
                                     Icon(
-                                        Icons.Outlined.Clear,
+                                        painterResource(Res.drawable.close),
                                         contentDescription = "Clear filter",
                                         modifier = Modifier.size(12.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -319,7 +320,7 @@ internal fun LogsTabContent(
                                     modifier = Modifier.size(20.dp),
                                 ) {
                                     Icon(
-                                        Icons.AutoMirrored.Outlined.WrapText,
+                                        painterResource(Res.drawable.wrap_text),
                                         contentDescription = if (wordWrap) "Disable word wrap" else "Enable word wrap",
                                         modifier = Modifier.size(14.dp),
                                         tint =
@@ -341,7 +342,7 @@ internal fun LogsTabContent(
                                     modifier = Modifier.size(20.dp),
                                 ) {
                                     Icon(
-                                        Icons.Outlined.VerticalAlignBottom,
+                                        painterResource(Res.drawable.vertical_align_bottom),
                                         contentDescription = "Scroll to bottom",
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,

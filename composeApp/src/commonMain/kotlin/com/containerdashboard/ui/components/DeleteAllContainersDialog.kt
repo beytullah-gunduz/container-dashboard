@@ -3,8 +3,6 @@ package com.containerdashboard.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -15,6 +13,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.warning
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun DeleteAllContainersDialog(
@@ -26,7 +27,7 @@ fun DeleteAllContainersDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                Icons.Outlined.Warning,
+                painterResource(Res.drawable.warning),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
             )

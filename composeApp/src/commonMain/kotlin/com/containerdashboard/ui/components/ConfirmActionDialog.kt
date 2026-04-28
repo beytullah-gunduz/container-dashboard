@@ -1,7 +1,5 @@
 package com.containerdashboard.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -16,6 +14,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.warning
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ConfirmActionDialog(
@@ -47,7 +48,7 @@ fun ConfirmActionDialog(
             if (destructive) {
                 {
                     Icon(
-                        imageVector = Icons.Outlined.Warning,
+                        painter = painterResource(Res.drawable.warning),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                     )

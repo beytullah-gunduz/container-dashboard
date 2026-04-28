@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,7 +69,12 @@ import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
 import com.containerdashboard.ui.util.isMacHost
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.arrow_back_filled
+import com.dockerdashboard.composeapp.generated.resources.settings
+import com.dockerdashboard.composeapp.generated.resources.warning
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun App(
@@ -129,7 +130,7 @@ fun App(
                                     modifier = Modifier.padding(Spacing.sm),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        painter = painterResource(Res.drawable.arrow_back_filled),
                                         contentDescription = "Back",
                                     )
                                 }
@@ -145,7 +146,7 @@ fun App(
                                     verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Warning,
+                                        painter = painterResource(Res.drawable.warning),
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -168,7 +169,7 @@ fun App(
                                         onClick = { viewModel.navigate(Screen.Settings.route) },
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Settings,
+                                            painter = painterResource(Res.drawable.settings),
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp),
                                         )

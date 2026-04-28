@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -17,6 +15,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.check
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * 14dp desktop-sized checkbox. Replacement for Material3 `Checkbox` in dense
@@ -55,7 +56,7 @@ internal fun CompactCheckbox(
     ) {
         if (checked) {
             Icon(
-                Icons.Outlined.Check,
+                painterResource(Res.drawable.check),
                 contentDescription = null,
                 modifier = Modifier.size(11.dp),
                 tint = MaterialTheme.colorScheme.onPrimary,

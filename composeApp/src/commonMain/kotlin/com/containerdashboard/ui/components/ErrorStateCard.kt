@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -24,10 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.containerdashboard.ui.icons.outlined.ErrorOutline
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.refresh
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * A prominent error card used when an entire list could not be fetched. Stays
@@ -61,7 +62,7 @@ fun ErrorStateCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.ErrorOutline,
+                    painter = painterResource(Res.drawable.error),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(40.dp),
@@ -94,7 +95,7 @@ fun ErrorStateCard(
                     ),
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Refresh,
+                    painter = painterResource(Res.drawable.refresh),
                     contentDescription = null,
                     modifier = Modifier.size(IconSize.md),
                 )

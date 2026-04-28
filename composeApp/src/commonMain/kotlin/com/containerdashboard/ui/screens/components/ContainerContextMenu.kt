@@ -1,9 +1,5 @@
 package com.containerdashboard.ui.screens.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -13,13 +9,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.ui.icons.automirrored.filled.Article
-import com.containerdashboard.ui.icons.automirrored.outlined.Article
-import com.containerdashboard.ui.icons.outlined.ContentCopy
-import com.containerdashboard.ui.icons.outlined.Pause
-import com.containerdashboard.ui.icons.outlined.RestartAlt
-import com.containerdashboard.ui.icons.outlined.Stop
 import com.containerdashboard.ui.theme.AppColors
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.article
+import com.dockerdashboard.composeapp.generated.resources.article_filled
+import com.dockerdashboard.composeapp.generated.resources.content_copy
+import com.dockerdashboard.composeapp.generated.resources.delete
+import com.dockerdashboard.composeapp.generated.resources.info
+import com.dockerdashboard.composeapp.generated.resources.pause
+import com.dockerdashboard.composeapp.generated.resources.play_arrow
+import com.dockerdashboard.composeapp.generated.resources.restart_alt
+import com.dockerdashboard.composeapp.generated.resources.stop
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ContainerContextMenu(
@@ -51,7 +52,7 @@ fun ContainerContextMenu(
             },
             leadingIcon = {
                 Icon(
-                    if (isViewingLogs) Icons.AutoMirrored.Filled.Article else Icons.AutoMirrored.Outlined.Article,
+                    painterResource(if (isViewingLogs) Res.drawable.article_filled else Res.drawable.article),
                     contentDescription = null,
                     tint =
                         if (isViewingLogs) {
@@ -73,7 +74,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onRestart()
                     },
-                    leadingIcon = { Icon(Icons.Outlined.RestartAlt, null) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.restart_alt), null) },
                 )
                 DropdownMenuItem(
                     text = { Text("Pause") },
@@ -81,7 +82,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onPause()
                     },
-                    leadingIcon = { Icon(Icons.Outlined.Pause, null) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.pause), null) },
                 )
                 DropdownMenuItem(
                     text = { Text("Stop") },
@@ -89,7 +90,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onStop()
                     },
-                    leadingIcon = { Icon(Icons.Outlined.Stop, null, tint = AppColors.Stopped) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
                 )
             }
             container.isPaused -> {
@@ -99,7 +100,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onUnpause()
                     },
-                    leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                 )
             }
             else -> {
@@ -109,7 +110,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onStart()
                     },
-                    leadingIcon = { Icon(Icons.Outlined.PlayArrow, null, tint = AppColors.Running) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                 )
             }
         }
@@ -122,7 +123,7 @@ fun ContainerContextMenu(
                 onDismiss()
                 onInspect()
             },
-            leadingIcon = { Icon(Icons.Outlined.Info, null) },
+            leadingIcon = { Icon(painterResource(Res.drawable.info), null) },
         )
         DropdownMenuItem(
             text = { Text("Copy ID") },
@@ -130,7 +131,7 @@ fun ContainerContextMenu(
                 onDismiss()
                 onCopyId()
             },
-            leadingIcon = { Icon(Icons.Outlined.ContentCopy, null) },
+            leadingIcon = { Icon(painterResource(Res.drawable.content_copy), null) },
         )
 
         HorizontalDivider()
@@ -153,7 +154,7 @@ fun ContainerContextMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Delete,
+                    painterResource(Res.drawable.delete),
                     null,
                     tint = MaterialTheme.colorScheme.error,
                 )
