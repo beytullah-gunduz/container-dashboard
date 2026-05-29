@@ -27,13 +27,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-class AppViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class AppViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val isConnected: StateFlow<Boolean> =
-        AppModule
-            .dockerRepositoryFlow
+        repoFlow
             .flatMapLatest { it.isDockerAvailable() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
@@ -55,7 +57,7 @@ class AppViewModel : ViewModel() {
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val containers: StateFlow<List<Container>> =
-        AppModule.dockerRepositoryFlow
+        repoFlow
             .flatMapLatest { it.getContainers(all = true) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

@@ -28,8 +28,10 @@ enum class SortDirection {
     DESC,
 }
 
-class ImagesScreenViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class ImagesScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     val images: Flow<List<DockerImage>> = repo.getImages()
 

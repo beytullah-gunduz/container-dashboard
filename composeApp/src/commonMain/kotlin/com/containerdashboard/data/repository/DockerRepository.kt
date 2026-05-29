@@ -14,12 +14,10 @@ import com.containerdashboard.data.models.VolumeInspect
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Platform-specific Docker repository.
- * Each target provides its own actual implementation.
+ * Platform-agnostic Docker repository interface.
+ * Use [createDockerRepository] to obtain an instance.
  */
-expect class DockerRepository(
-    dockerHost: String,
-) {
+interface DockerRepository {
     // Availability
     fun isDockerAvailable(checkIntervalMillis: Long = 5000L): Flow<Boolean>
 

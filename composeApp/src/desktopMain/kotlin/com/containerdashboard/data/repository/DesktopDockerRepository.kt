@@ -68,10 +68,10 @@ import com.github.dockerjava.api.model.Container as DockerContainer
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
 
-actual class DockerRepository actual constructor(
+class DesktopDockerRepository(
     private val dockerHost: String,
-) {
-    private val logger = LoggerFactory.getLogger(DockerRepository::class.java)
+) : DockerRepository {
+    private val logger = LoggerFactory.getLogger(DesktopDockerRepository::class.java)
 
     private val config =
         DefaultDockerClientConfig
@@ -134,7 +134,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
+    override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
             while (true) {
                 val available =
@@ -227,7 +227,7 @@ actual class DockerRepository actual constructor(
         }.shareIn(scope, SharingStarted.Lazily)
 
     // System
-    actual suspend fun getSystemInfo(): Result<SystemInfo> =
+    override suspend fun getSystemInfo(): Result<SystemInfo> =
         withContext(Dispatchers.IO) {
             try {
                 val info = dockerClient.infoCmd().exec()
@@ -257,7 +257,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun getVersion(): Result<DockerVersion> =
+    override suspend fun getVersion(): Result<DockerVersion> =
         withContext(Dispatchers.IO) {
             try {
                 val version = dockerClient.versionCmd().exec()
@@ -284,19 +284,19 @@ actual class DockerRepository actual constructor(
     private val volumesRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     private val networksRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
 
-    actual suspend fun refreshContainers() {
+    override suspend fun refreshContainers() {
         containerRefreshTrigger.emit(Unit)
     }
 
-    actual suspend fun refreshImages() {
+    override suspend fun refreshImages() {
         imagesRefreshTrigger.emit(Unit)
     }
 
-    actual suspend fun refreshVolumes() {
+    override suspend fun refreshVolumes() {
         volumesRefreshTrigger.emit(Unit)
     }
 
-    actual suspend fun refreshNetworks() {
+    override suspend fun refreshNetworks() {
         networksRefreshTrigger.emit(Unit)
     }
 
@@ -348,7 +348,7 @@ actual class DockerRepository actual constructor(
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
-    actual fun getContainers(all: Boolean): Flow<List<Container>> =
+    override fun getContainers(all: Boolean): Flow<List<Container>> =
         if (all) {
             containersSharedAll
         } else {
@@ -372,7 +372,7 @@ actual class DockerRepository actual constructor(
             }.flowOn(Dispatchers.IO)
         }
 
-    actual suspend fun getContainer(id: String): Result<Container> =
+    override suspend fun getContainer(id: String): Result<Container> =
         withContext(Dispatchers.IO) {
             try {
                 val container =
@@ -391,7 +391,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun inspectContainer(id: String): Result<ContainerInspect> =
+    override suspend fun inspectContainer(id: String): Result<ContainerInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
@@ -405,7 +405,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun inspectImage(id: String): Result<ImageInspect> =
+    override suspend fun inspectImage(id: String): Result<ImageInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
@@ -419,7 +419,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun inspectVolume(name: String): Result<VolumeInspect> =
+    override suspend fun inspectVolume(name: String): Result<VolumeInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
@@ -433,7 +433,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun inspectNetwork(id: String): Result<NetworkInspect> =
+    override suspend fun inspectNetwork(id: String): Result<NetworkInspect> =
         withContext(Dispatchers.IO) {
             try {
                 val response =
@@ -447,7 +447,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun getContainerLogs(
+    override suspend fun getContainerLogs(
         id: String,
         tail: Int,
         timestamps: Boolean,
@@ -482,7 +482,7 @@ actual class DockerRepository actual constructor(
         }
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
-    actual fun followContainerLogs(
+    override fun followContainerLogs(
         id: String,
         tail: Int,
     ): Flow<List<String>> =
@@ -541,7 +541,7 @@ actual class DockerRepository actual constructor(
         }.conflate().sample(100).flowOn(Dispatchers.IO)
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
-    actual fun followMultipleContainerLogs(
+    override fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int,
     ): Flow<List<String>> =
@@ -608,7 +608,7 @@ actual class DockerRepository actual constructor(
             jobs.forEach { it.join() }
         }.conflate().sample(100).flowOn(Dispatchers.IO)
 
-    actual suspend fun startContainer(id: String): Result<Unit> =
+    override suspend fun startContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.startContainerCmd(id).exec()
@@ -620,7 +620,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun stopContainer(id: String): Result<Unit> =
+    override suspend fun stopContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.stopContainerCmd(id).exec()
@@ -632,7 +632,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun restartContainer(id: String): Result<Unit> =
+    override suspend fun restartContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.restartContainerCmd(id).exec()
@@ -644,7 +644,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun pauseContainer(id: String): Result<Unit> =
+    override suspend fun pauseContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pauseContainerCmd(id).exec()
@@ -656,7 +656,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun unpauseContainer(id: String): Result<Unit> =
+    override suspend fun unpauseContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.unpauseContainerCmd(id).exec()
@@ -668,7 +668,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun removeContainer(
+    override suspend fun removeContainer(
         id: String,
         force: Boolean,
     ): Result<Unit> =
@@ -729,9 +729,9 @@ actual class DockerRepository actual constructor(
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
-    actual fun getImages(): Flow<List<DockerImage>> = imagesShared
+    override fun getImages(): Flow<List<DockerImage>> = imagesShared
 
-    actual suspend fun getImage(id: String): Result<DockerImage> =
+    override suspend fun getImage(id: String): Result<DockerImage> =
         withContext(Dispatchers.IO) {
             try {
                 val image =
@@ -749,7 +749,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun pullImage(
+    override suspend fun pullImage(
         name: String,
         tag: String,
     ): Flow<String> =
@@ -770,7 +770,7 @@ actual class DockerRepository actual constructor(
             }
         }.flowOn(Dispatchers.IO)
 
-    actual suspend fun removeImage(
+    override suspend fun removeImage(
         id: String,
         force: Boolean,
     ): Result<Unit> =
@@ -849,9 +849,9 @@ actual class DockerRepository actual constructor(
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
-    actual fun getVolumes(): Flow<List<Volume>> = volumesShared
+    override fun getVolumes(): Flow<List<Volume>> = volumesShared
 
-    actual suspend fun getVolume(name: String): Result<Volume> =
+    override suspend fun getVolume(name: String): Result<Volume> =
         withContext(Dispatchers.IO) {
             try {
                 val volume = dockerClient.inspectVolumeCmd(name).exec()
@@ -869,7 +869,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun createVolume(
+    override suspend fun createVolume(
         name: String,
         driver: String,
     ): Result<Volume> =
@@ -895,7 +895,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun removeVolume(name: String): Result<Unit> =
+    override suspend fun removeVolume(name: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeVolumeCmd(name).exec()
@@ -951,9 +951,9 @@ actual class DockerRepository actual constructor(
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
-    actual fun getNetworks(): Flow<List<DockerNetwork>> = networksShared
+    override fun getNetworks(): Flow<List<DockerNetwork>> = networksShared
 
-    actual suspend fun getNetwork(id: String): Result<DockerNetwork> =
+    override suspend fun getNetwork(id: String): Result<DockerNetwork> =
         withContext(Dispatchers.IO) {
             try {
                 val network = dockerClient.inspectNetworkCmd().withNetworkId(id).exec()
@@ -971,7 +971,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun createNetwork(
+    override suspend fun createNetwork(
         name: String,
         driver: String,
     ): Result<DockerNetwork> =
@@ -997,7 +997,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun removeNetwork(id: String): Result<Unit> =
+    override suspend fun removeNetwork(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.removeNetworkCmd(id).exec()
@@ -1090,7 +1090,7 @@ actual class DockerRepository actual constructor(
             }.shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
-    actual fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
+    override fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     private fun singleContainerStats(
@@ -1198,7 +1198,7 @@ actual class DockerRepository actual constructor(
     }
 
     // Prune operations
-    actual suspend fun pruneContainers(): Result<PruneResult> =
+    override suspend fun pruneContainers(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.CONTAINERS).exec()
@@ -1215,7 +1215,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun pruneImages(): Result<PruneResult> =
+    override suspend fun pruneImages(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.IMAGES).exec()
@@ -1232,7 +1232,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun pruneVolumes(): Result<PruneResult> =
+    override suspend fun pruneVolumes(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.VOLUMES).exec()
@@ -1249,7 +1249,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun pruneNetworks(): Result<PruneResult> =
+    override suspend fun pruneNetworks(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
                 dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.NETWORKS).exec()
@@ -1276,7 +1276,7 @@ actual class DockerRepository actual constructor(
 
     private val execSessions = mutableMapOf<String, ExecResources>()
 
-    actual suspend fun createExecSession(
+    override suspend fun createExecSession(
         containerId: String,
         cmd: List<String>,
     ): Result<ExecSession> =
@@ -1353,7 +1353,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun sendExecInput(
+    override suspend fun sendExecInput(
         session: ExecSession,
         input: String,
     ): Result<Unit> =
@@ -1371,7 +1371,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual suspend fun closeExecSession(session: ExecSession): Result<Unit> =
+    override suspend fun closeExecSession(session: ExecSession): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 val resources = execSessions.remove(session.execId)
@@ -1388,7 +1388,7 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    actual fun close() {
+    override fun close() {
         try {
             scope.cancel()
             dockerClient.close()

@@ -22,8 +22,10 @@ enum class VolumeSortColumn {
     MOUNTPOINT,
 }
 
-class VolumesScreenViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class VolumesScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     val volumes: Flow<List<Volume>> = repo.getVolumes()
 

@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class NetworksScreenViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class NetworksScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
 

@@ -8,7 +8,9 @@ import com.containerdashboard.data.engine.EngineOperations
 import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.data.engine.colimaProfileFromHost
 import com.containerdashboard.data.engine.engineTypeFromHost
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.data.repository.createDockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
@@ -21,8 +23,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SettingsScreenViewModel : ViewModel() {
-    private val repo get() = AppModule.dockerRepository
+class SettingsScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     fun engineHost(): Flow<String> = PreferenceRepository.engineHost()
 
@@ -129,8 +133,7 @@ class SettingsScreenViewModel : ViewModel() {
             _connectionTestResult.value = ConnectionTestState.Testing
             try {
                 val testRepo =
-                    com.containerdashboard.data.repository
-                        .DockerRepository(host)
+                    createDockerRepository(host)
                 val result = testRepo.getVersion()
                 testRepo.close()
                 result.fold(

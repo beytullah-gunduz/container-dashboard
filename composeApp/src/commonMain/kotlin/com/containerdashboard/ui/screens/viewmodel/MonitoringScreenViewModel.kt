@@ -82,8 +82,10 @@ private data class DerivedState(
     val previous: Map<String, PreviousSample>,
 )
 
-class MonitoringScreenViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class MonitoringScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     private val maxHistorySize = 60
 
@@ -232,7 +234,7 @@ class MonitoringScreenViewModel : ViewModel() {
         _error.value = null
     }
 
-    private fun rate(
+    internal fun rate(
         previous: Long?,
         current: Long,
         elapsedSec: Double,
@@ -246,7 +248,7 @@ class MonitoringScreenViewModel : ViewModel() {
     private fun currentTimeMillis(): Long = System.currentTimeMillis()
 }
 
-private fun aggregateCpu(
+internal fun aggregateCpu(
     stats: List<DerivedContainerStats>,
     mode: MonitoringAggregation,
     sysInfo: SystemInfo?,
@@ -261,7 +263,7 @@ private fun aggregateCpu(
     }
 }
 
-private fun aggregateMemory(
+internal fun aggregateMemory(
     stats: List<DerivedContainerStats>,
     mode: MonitoringAggregation,
     sysInfo: SystemInfo?,

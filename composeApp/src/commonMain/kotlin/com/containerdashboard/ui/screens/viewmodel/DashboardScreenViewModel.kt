@@ -20,8 +20,11 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class DashboardScreenViewModel : ViewModel() {
-    private val repo: DockerRepository get() = AppModule.dockerRepository
+class DashboardScreenViewModel(
+    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
+) : ViewModel() {
+    private val repo: DockerRepository get() = repoProvider()
 
     private val _systemInfo = MutableStateFlow<SystemInfo?>(null)
     val systemInfo: StateFlow<SystemInfo?> = _systemInfo.asStateFlow()
@@ -61,8 +64,7 @@ class DashboardScreenViewModel : ViewModel() {
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val isConnected: StateFlow<Boolean> =
-        AppModule
-            .dockerRepositoryFlow
+        repoFlow
             .flatMapLatest { it.isDockerAvailable() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 

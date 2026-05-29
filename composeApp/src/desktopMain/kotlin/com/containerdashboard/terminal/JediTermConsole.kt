@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.theme.AppColors
@@ -54,7 +55,7 @@ fun JediTermConsole(
                 val conn =
                     withContext(Dispatchers.IO) {
                         DockerExecTtyConnector(
-                            dockerClient = AppModule.dockerRepository.client,
+                            dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
                             containerId = containerId,
                         ).also { it.start() }
                     }

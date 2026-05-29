@@ -38,6 +38,7 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
 import com.containerdashboard.di.AppModule
@@ -130,7 +131,7 @@ private fun trayStatsFlow(refreshRateSeconds: Int): Flow<TrayStats> =
     flow {
         while (true) {
             try {
-                val repo = AppModule.dockerRepository
+                val repo = AppModule.dockerRepository as DesktopDockerRepository
                 val containers = repo.listContainersOnce(all = true)
                 val running = containers.filter { it.isRunning }
                 val stats =
