@@ -37,21 +37,13 @@ class NetworksScreenViewModel(
         driver: String,
     ) {
         viewModelScope.launch {
-            try {
-                repo.createNetwork(name, driver)
-            } catch (e: Exception) {
-                setError(e.message)
-            }
+            repo.createNetwork(name, driver).onFailure { setError(it.message) }
         }
     }
 
     fun removeNetwork(id: String) {
         viewModelScope.launch {
-            try {
-                repo.removeNetwork(id)
-            } catch (e: Exception) {
-                setError(e.message)
-            }
+            repo.removeNetwork(id).onFailure { setError(it.message) }
         }
     }
 

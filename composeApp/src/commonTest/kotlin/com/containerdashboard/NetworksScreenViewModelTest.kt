@@ -13,6 +13,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -235,4 +236,68 @@ class NetworksScreenViewModelTest {
         vm.setSelectedNetwork(null)
         assertNull(vm.selectedNetworkId.value)
     }
+
+    // -------------------------------------------------------------------------
+    // createNetwork
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createNetwork success leaves error null`() =
+        runTest {
+            val fake = FakeDockerRepository()
+            val vm = makeVm(fake)
+
+            vm.createNetwork("my-net", "bridge")
+            advanceUntilIdle()
+
+            assertNull(vm.error.value)
+        }
+
+    @Test
+    fun `createNetwork failure sets error`() =
+        runTest {
+            val fake =
+                FakeDockerRepository(
+                    createNetworkResult = Result.failure(RuntimeException("create failed")),
+                )
+            val vm = makeVm(fake)
+
+            vm.createNetwork("bad-net", "bridge")
+            advanceUntilIdle()
+
+            assertNotNull(vm.error.value)
+            assertEquals("create failed", vm.error.value)
+        }
+
+    // -------------------------------------------------------------------------
+    // removeNetwork
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `removeNetwork success leaves error null`() =
+        runTest {
+            val fake = FakeDockerRepository(removeNetworkResult = Result.success(Unit))
+            val vm = makeVm(fake)
+
+            vm.removeNetwork("net1")
+            advanceUntilIdle()
+
+            assertNull(vm.error.value)
+        }
+
+    @Test
+    fun `removeNetwork failure sets error`() =
+        runTest {
+            val fake =
+                FakeDockerRepository(
+                    removeNetworkResult = Result.failure(RuntimeException("remove failed")),
+                )
+            val vm = makeVm(fake)
+
+            vm.removeNetwork("net1")
+            advanceUntilIdle()
+
+            assertNotNull(vm.error.value)
+            assertEquals("remove failed", vm.error.value)
+        }
 }

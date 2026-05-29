@@ -15,6 +15,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -287,4 +288,68 @@ class VolumesScreenViewModelTest {
         val vm = makeVm()
         assertEquals(SortDirection.ASC, vm.sortDirection.value)
     }
+
+    // -------------------------------------------------------------------------
+    // createVolume
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `createVolume success leaves error null`() =
+        runTest {
+            val fake = FakeDockerRepository()
+            val vm = makeVm(fake)
+
+            vm.createVolume("my-vol")
+            advanceUntilIdle()
+
+            assertNull(vm.error.value)
+        }
+
+    @Test
+    fun `createVolume failure sets error`() =
+        runTest {
+            val fake =
+                FakeDockerRepository(
+                    createVolumeResult = Result.failure(RuntimeException("create failed")),
+                )
+            val vm = makeVm(fake)
+
+            vm.createVolume("bad-vol")
+            advanceUntilIdle()
+
+            assertNotNull(vm.error.value)
+            assertEquals("create failed", vm.error.value)
+        }
+
+    // -------------------------------------------------------------------------
+    // removeVolume
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `removeVolume success leaves error null`() =
+        runTest {
+            val fake = FakeDockerRepository(removeVolumeResult = Result.success(Unit))
+            val vm = makeVm(fake)
+
+            vm.removeVolume("vol1")
+            advanceUntilIdle()
+
+            assertNull(vm.error.value)
+        }
+
+    @Test
+    fun `removeVolume failure sets error`() =
+        runTest {
+            val fake =
+                FakeDockerRepository(
+                    removeVolumeResult = Result.failure(RuntimeException("remove failed")),
+                )
+            val vm = makeVm(fake)
+
+            vm.removeVolume("vol1")
+            advanceUntilIdle()
+
+            assertNotNull(vm.error.value)
+            assertEquals("remove failed", vm.error.value)
+        }
 }

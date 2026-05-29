@@ -41,21 +41,13 @@ class VolumesScreenViewModel(
 
     fun createVolume(name: String) {
         viewModelScope.launch {
-            try {
-                repo.createVolume(name, "local")
-            } catch (e: Exception) {
-                setError(e.message)
-            }
+            repo.createVolume(name, "local").onFailure { setError(it.message) }
         }
     }
 
     fun removeVolume(name: String) {
         viewModelScope.launch {
-            try {
-                repo.removeVolume(name)
-            } catch (e: Exception) {
-                setError(e.message)
-            }
+            repo.removeVolume(name).onFailure { setError(it.message) }
         }
     }
 

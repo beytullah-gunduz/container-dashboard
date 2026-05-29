@@ -12,10 +12,8 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.data.repository.DockerRepository
-import com.containerdashboard.data.repository.ExecSession
 import com.containerdashboard.data.repository.PruneResult
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 
 /**
@@ -43,6 +41,8 @@ class FakeDockerRepository(
     var removeImageResult: Result<Unit> = Result.success(Unit),
     var removeVolumeResult: Result<Unit> = Result.success(Unit),
     var removeNetworkResult: Result<Unit> = Result.success(Unit),
+    var createVolumeResult: Result<Volume>? = null,
+    var createNetworkResult: Result<DockerNetwork>? = null,
 ) : DockerRepository {
     // --- Availability ---
 
@@ -203,7 +203,7 @@ class FakeDockerRepository(
     override suspend fun createVolume(
         name: String,
         driver: String,
-    ): Result<Volume> = Result.success(Volume(name = name, driver = driver))
+    ): Result<Volume> = createVolumeResult ?: Result.success(Volume(name = name, driver = driver))
 
     override suspend fun removeVolume(name: String): Result<Unit> = removeVolumeResult
 
@@ -242,7 +242,7 @@ class FakeDockerRepository(
     override suspend fun createNetwork(
         name: String,
         driver: String,
-    ): Result<DockerNetwork> = Result.success(DockerNetwork(id = "fake-id", name = name, driver = driver))
+    ): Result<DockerNetwork> = createNetworkResult ?: Result.success(DockerNetwork(id = "fake-id", name = name, driver = driver))
 
     override suspend fun removeNetwork(id: String): Result<Unit> = removeNetworkResult
 
@@ -259,20 +259,6 @@ class FakeDockerRepository(
     override suspend fun pruneVolumes(): Result<PruneResult> = Result.success(PruneResult(0))
 
     override suspend fun pruneNetworks(): Result<PruneResult> = Result.success(PruneResult(0))
-
-    // --- Exec ---
-
-    override suspend fun createExecSession(
-        containerId: String,
-        cmd: List<String>,
-    ): Result<ExecSession> = Result.success(ExecSession(execId = "fake-exec", containerId = containerId, output = emptyFlow()))
-
-    override suspend fun sendExecInput(
-        session: ExecSession,
-        input: String,
-    ): Result<Unit> = Result.success(Unit)
-
-    override suspend fun closeExecSession(session: ExecSession): Result<Unit> = Result.success(Unit)
 
     // --- Lifecycle ---
 
