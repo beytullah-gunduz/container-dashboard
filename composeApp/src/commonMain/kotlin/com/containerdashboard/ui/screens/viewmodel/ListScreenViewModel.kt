@@ -123,7 +123,7 @@ abstract class ListScreenViewModel<T>(
 
 /**
  * Extension of [ListScreenViewModel] for screens that also expose sortable
- * columns. Images and Volumes use this; Networks does not.
+ * columns. Images, Volumes, and Networks use this.
  */
 abstract class SortableListScreenViewModel<T, C : Enum<C>>(
     repoProvider: () -> DockerRepository,

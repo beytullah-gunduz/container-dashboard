@@ -10,11 +10,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class NetworkSortColumn {
+    NAME,
+    DRIVER,
+    SCOPE,
+}
+
 class NetworksScreenViewModel(
     repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
-) : ListScreenViewModel<DockerNetwork>(
+) : SortableListScreenViewModel<DockerNetwork, NetworkSortColumn>(
         repoProvider = repoProvider,
         items = repoProvider().getNetworks(),
+        initialColumn = NetworkSortColumn.NAME,
     ) {
     val networks: Flow<List<DockerNetwork>> get() = items
 

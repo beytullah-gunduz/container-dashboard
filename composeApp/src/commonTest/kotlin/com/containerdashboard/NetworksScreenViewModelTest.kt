@@ -1,6 +1,8 @@
 package com.containerdashboard
 
+import com.containerdashboard.ui.screens.viewmodel.NetworkSortColumn
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -235,6 +237,56 @@ class NetworksScreenViewModelTest {
         vm.setSelectedNetwork("net-abc")
         vm.setSelectedNetwork(null)
         assertNull(vm.selectedNetworkId.value)
+    }
+
+    // -------------------------------------------------------------------------
+    // toggleSort
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `toggleSort new column sets that column with ASC`() {
+        val vm = makeVm()
+        vm.toggleSort(NetworkSortColumn.DRIVER)
+        assertEquals(NetworkSortColumn.DRIVER, vm.sortColumn.value)
+        assertEquals(SortDirection.ASC, vm.sortDirection.value)
+    }
+
+    @Test
+    fun `toggleSort same column flips ASC to DESC`() {
+        val vm = makeVm()
+        // Default column is NAME with ASC
+        vm.toggleSort(NetworkSortColumn.NAME)
+        assertEquals(NetworkSortColumn.NAME, vm.sortColumn.value)
+        assertEquals(SortDirection.DESC, vm.sortDirection.value)
+    }
+
+    @Test
+    fun `toggleSort same column flips DESC back to ASC`() {
+        val vm = makeVm()
+        vm.toggleSort(NetworkSortColumn.NAME) // ASC → DESC
+        vm.toggleSort(NetworkSortColumn.NAME) // DESC → ASC
+        assertEquals(SortDirection.ASC, vm.sortDirection.value)
+    }
+
+    @Test
+    fun `toggleSort different column resets direction to ASC`() {
+        val vm = makeVm()
+        vm.toggleSort(NetworkSortColumn.NAME) // ASC → DESC
+        vm.toggleSort(NetworkSortColumn.DRIVER) // different column → ASC
+        assertEquals(NetworkSortColumn.DRIVER, vm.sortColumn.value)
+        assertEquals(SortDirection.ASC, vm.sortDirection.value)
+    }
+
+    @Test
+    fun `default sortColumn is NAME`() {
+        val vm = makeVm()
+        assertEquals(NetworkSortColumn.NAME, vm.sortColumn.value)
+    }
+
+    @Test
+    fun `default sortDirection is ASC`() {
+        val vm = makeVm()
+        assertEquals(SortDirection.ASC, vm.sortDirection.value)
     }
 
     // -------------------------------------------------------------------------

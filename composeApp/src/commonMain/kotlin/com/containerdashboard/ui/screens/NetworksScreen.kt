@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -64,13 +65,17 @@ import com.containerdashboard.ui.components.ListRowSkeleton
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.components.NetworkContextMenu
+import com.containerdashboard.ui.screens.viewmodel.NetworkSortColumn
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.add
+import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
+import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.delete
 import com.dockerdashboard.composeapp.generated.resources.error
@@ -88,6 +93,8 @@ fun NetworksScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
+    val sortColumn by viewModel.sortColumn.collectAsState()
+    val sortDirection by viewModel.sortDirection.collectAsState()
     val error by viewModel.error.collectAsState()
     val checkedNetworkIds by viewModel.checkedNetworkIds.collectAsState()
     val isDeletingSelected by viewModel.isDeletingSelected.collectAsState()
@@ -112,9 +119,32 @@ fun NetworksScreen(
     }
 
     val filteredNetworks =
-        networks.filter { network ->
-            searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
-        }
+        networks
+            .filter { network ->
+                searchQuery.isEmpty() || network.name.contains(searchQuery, ignoreCase = true)
+            }.let { list ->
+                val ascending = sortDirection == SortDirection.ASC
+                when (sortColumn) {
+                    NetworkSortColumn.NAME ->
+                        if (ascending) {
+                            list.sortedBy { it.name.lowercase() }
+                        } else {
+                            list.sortedByDescending { it.name.lowercase() }
+                        }
+                    NetworkSortColumn.DRIVER ->
+                        if (ascending) {
+                            list.sortedBy { it.driver.lowercase() }
+                        } else {
+                            list.sortedByDescending { it.driver.lowercase() }
+                        }
+                    NetworkSortColumn.SCOPE ->
+                        if (ascending) {
+                            list.sortedBy { it.scope.lowercase() }
+                        } else {
+                            list.sortedByDescending { it.scope.lowercase() }
+                        }
+                }
+            }
 
     val systemNetworks = listOf("bridge", "host", "none")
     val customNetworks = filteredNetworks.filter { it.name !in systemNetworks }
@@ -306,6 +336,9 @@ fun NetworksScreen(
                     allSelected = false,
                     onSelectAllChange = {},
                     hasItems = false,
+                    sortColumn = sortColumn,
+                    sortDirection = sortDirection,
+                    onSort = { viewModel.toggleSort(it) },
                     isCompactMode = isCompactMode,
                 )
                 LazyColumn(
@@ -352,6 +385,9 @@ fun NetworksScreen(
                         }
                     },
                     hasItems = customNetworks.isNotEmpty(),
+                    sortColumn = sortColumn,
+                    sortDirection = sortDirection,
+                    onSort = { viewModel.toggleSort(it) },
                     isCompactMode = isCompactMode,
                 )
                 // Network List
@@ -398,6 +434,9 @@ private fun NetworkTableHeader(
     allSelected: Boolean,
     onSelectAllChange: (Boolean) -> Unit,
     hasItems: Boolean,
+    sortColumn: NetworkSortColumn,
+    sortDirection: SortDirection,
+    onSort: (NetworkSortColumn) -> Unit,
     isCompactMode: Boolean,
 ) {
     Column {
@@ -416,20 +455,22 @@ private fun NetworkTableHeader(
                 enabled = hasItems,
             )
             if (isCompactMode) {
-                Text(
-                    text = "NETWORK",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
+                NetworkSortableHeaderCell(
+                    "NETWORK",
+                    NetworkSortColumn.NAME,
+                    sortColumn,
+                    sortDirection,
+                    onSort,
+                    Modifier.weight(1f),
                 )
             } else {
-                Text(
-                    text = "NAME",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1.2f),
+                NetworkSortableHeaderCell(
+                    "NAME",
+                    NetworkSortColumn.NAME,
+                    sortColumn,
+                    sortDirection,
+                    onSort,
+                    Modifier.weight(1.2f),
                 )
                 Text(
                     text = "NETWORK ID",
@@ -438,19 +479,21 @@ private fun NetworkTableHeader(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(0.8f),
                 )
-                Text(
-                    text = "DRIVER",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(0.7f),
+                NetworkSortableHeaderCell(
+                    "DRIVER",
+                    NetworkSortColumn.DRIVER,
+                    sortColumn,
+                    sortDirection,
+                    onSort,
+                    Modifier.weight(0.7f),
                 )
-                Text(
-                    text = "SCOPE",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(0.5f),
+                NetworkSortableHeaderCell(
+                    "SCOPE",
+                    NetworkSortColumn.SCOPE,
+                    sortColumn,
+                    sortDirection,
+                    onSort,
+                    Modifier.weight(0.5f),
                 )
                 Text(
                     text = "SUBNET",
@@ -473,6 +516,51 @@ private fun NetworkTableHeader(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
             thickness = 1.dp,
         )
+    }
+}
+
+@Composable
+private fun NetworkSortableHeaderCell(
+    label: String,
+    column: NetworkSortColumn,
+    currentSort: NetworkSortColumn,
+    sortDirection: SortDirection,
+    onSort: (NetworkSortColumn) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isActive = currentSort == column
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(Radius.sm))
+                .clickable { onSort(column) }
+                .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (isActive) {
+            Icon(
+                painter =
+                    painterResource(
+                        if (sortDirection ==
+                            SortDirection.ASC
+                        ) {
+                            Res.drawable.arrow_upward_filled
+                        } else {
+                            Res.drawable.arrow_downward_filled
+                        },
+                    ),
+                contentDescription = if (sortDirection == SortDirection.ASC) "Ascending" else "Descending",
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
