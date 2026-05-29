@@ -1,89 +1,36 @@
 package com.containerdashboard.ui.screens.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class NetworksScreenViewModel(
-    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
-) : ViewModel() {
-    private val repo: DockerRepository get() = repoProvider()
+    repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+) : ListScreenViewModel<DockerNetwork>(
+        repoProvider = repoProvider,
+        items = repoProvider().getNetworks(),
+    ) {
+    val networks: Flow<List<DockerNetwork>> get() = items
 
-    val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
-
-    /** Emits `false` until the first list of networks has been delivered. */
-    val hasLoaded: StateFlow<Boolean> =
-        networks
-            .map { true }
-            .onStart { emit(false) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _selectedNetworkId = MutableStateFlow<String?>(null)
-    val selectedNetworkId: StateFlow<String?> = _selectedNetworkId.asStateFlow()
+    val checkedNetworkIds: StateFlow<Set<String>> get() = checkedKeys
+    val selectedNetworkId: StateFlow<String?> get() = selectedKey
 
     private val _showCreateDialog = MutableStateFlow(false)
     val showCreateDialog: StateFlow<Boolean> = _showCreateDialog.asStateFlow()
 
-    private val _checkedNetworkIds = MutableStateFlow(setOf<String>())
-    val checkedNetworkIds: StateFlow<Set<String>> = _checkedNetworkIds.asStateFlow()
+    fun setSelectedNetwork(networkId: String?) = setSelectedKey(networkId)
 
-    private val _isDeletingSelected = MutableStateFlow(false)
-    val isDeletingSelected: StateFlow<Boolean> = _isDeletingSelected.asStateFlow()
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
-
-    fun toggleChecked(
-        id: String,
-        checked: Boolean,
-    ) {
-        _checkedNetworkIds.update { if (checked) it + id else it - id }
+    fun setShowCreateDialog(show: Boolean) {
+        _showCreateDialog.value = show
     }
 
-    fun checkAll(ids: List<String>) {
-        _checkedNetworkIds.value = ids.toSet()
-    }
-
-    fun uncheckAll(ids: List<String>) {
-        _checkedNetworkIds.update { it - ids.toSet() }
-    }
-
-    fun clearChecked() {
-        _checkedNetworkIds.value = emptySet()
-    }
-
-    fun deleteSelectedNetworks() {
-        viewModelScope.launch {
-            _isDeletingSelected.value = true
-            val ids = _checkedNetworkIds.value.toList()
-            val errors = mutableListOf<String>()
-            for (id in ids) {
-                repo.removeNetwork(id).onFailure {
-                    errors.add(it.message ?: "Failed to delete network")
-                }
-            }
-            _checkedNetworkIds.value = emptySet()
-            _isDeletingSelected.value = false
-            if (errors.isNotEmpty()) {
-                _error.value = "Failed to delete ${errors.size} network(s)"
-            }
-        }
-    }
+    fun deleteSelectedNetworks() = deleteSelected("network") { repo.removeNetwork(it) }
 
     fun createNetwork(
         name: String,
@@ -93,7 +40,7 @@ class NetworksScreenViewModel(
             try {
                 repo.createNetwork(name, driver)
             } catch (e: Exception) {
-                _error.value = e.message
+                setError(e.message)
             }
         }
     }
@@ -103,28 +50,10 @@ class NetworksScreenViewModel(
             try {
                 repo.removeNetwork(id)
             } catch (e: Exception) {
-                _error.value = e.message
+                setError(e.message)
             }
         }
     }
 
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun setSelectedNetwork(networkId: String?) {
-        _selectedNetworkId.value = networkId
-    }
-
-    fun setShowCreateDialog(show: Boolean) {
-        _showCreateDialog.value = show
-    }
-
-    fun clearError() {
-        _error.value = null
-    }
-
-    fun refresh() {
-        viewModelScope.launch { repo.refreshNetworks() }
-    }
+    override suspend fun refreshItems() = repo.refreshNetworks()
 }
