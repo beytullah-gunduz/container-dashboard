@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +34,10 @@ import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.util.isMacHost
+import com.dockerdashboard.composeapp.generated.resources.Res
+import com.dockerdashboard.composeapp.generated.resources.info
+import com.dockerdashboard.composeapp.generated.resources.search
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -41,6 +46,9 @@ fun Sidebar(
     onNavigate: (Screen) -> Unit,
     isConnected: Boolean = false,
     engineName: String = "Container Engine",
+    // Issue 8 fix: optional hooks so callers can wire the discoverable palette/shortcuts affordance
+    onOpenPalette: (() -> Unit)? = null,
+    onShowShortcuts: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -75,6 +83,64 @@ fun Sidebar(
                 isSelected = currentRoute == Screen.Settings.route,
                 onClick = { onNavigate(Screen.Settings) },
             )
+
+            // Issue 8 fix: discoverable affordance for command palette and keyboard shortcuts
+            if (onOpenPalette != null || onShowShortcuts != null) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = Spacing.md),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (onOpenPalette != null) {
+                        val paletteHint = if (isMacHost) "⌘K" else "Ctrl K"
+                        AppTooltip(label = "Command palette ($paletteHint)") {
+                            IconButton(
+                                onClick = onOpenPalette,
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.search),
+                                    contentDescription = "Open command palette ($paletteHint)",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Text(
+                            text = paletteHint,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    if (onOpenPalette != null && onShowShortcuts != null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    if (onShowShortcuts != null) {
+                        AppTooltip(label = "Keyboard shortcuts (?)") {
+                            IconButton(
+                                onClick = onShowShortcuts,
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.info),
+                                    contentDescription = "Show keyboard shortcuts",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
 

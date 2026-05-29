@@ -3,6 +3,7 @@ package com.containerdashboard.logging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * Represents a single application log entry.
@@ -29,7 +30,8 @@ data class AppLogEntry(
  * can display them without depending on Logback directly.
  */
 object AppLogStore {
-    /** Maximum number of entries to keep in memory. */
+    /** Maximum number of entries to keep in memory. Volatile so cross-thread writes are visible. */
+    @Volatile
     var maxEntries: Int = 100
 
     private val _entries = MutableStateFlow<List<AppLogEntry>>(emptyList())
@@ -39,8 +41,7 @@ object AppLogStore {
 
     /** Appends a new log entry, evicting the oldest if the store is full. */
     fun addEntry(entry: AppLogEntry) {
-        val updated = (_entries.value + entry).takeLast(maxEntries)
-        _entries.value = updated
+        _entries.update { current -> (current + entry).takeLast(maxEntries) }
     }
 
     /** Clears all stored log entries. */

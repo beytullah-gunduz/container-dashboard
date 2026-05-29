@@ -9,18 +9,20 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import kotlin.math.max
 
 /**
@@ -89,21 +91,20 @@ class MonitoringScreenViewModel : ViewModel() {
 
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
-    private val systemInfo = MutableStateFlow<SystemInfo?>(null)
+    private val systemInfo: StateFlow<SystemInfo?> =
+        flow { emit(repo.getSystemInfo().getOrThrow()) }
+            .retryWhen { _, _ ->
+                delay(2_000)
+                true
+            }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val aggregation: StateFlow<MonitoringAggregation> =
         PreferenceRepository
             .monitoringAggregation()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonitoringAggregation.ENGINE)
 
-    init {
-        viewModelScope.launch {
-            systemInfo.value = repo.getSystemInfo().getOrNull()
-        }
-    }
-
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    private val rawStats: Flow<List<ContainerStats>> =
+    private val rawStats =
         _refreshRate
             .flatMapLatest { seconds ->
                 repo.getContainerStats().sample((seconds * 1000).toLong())
@@ -112,8 +113,16 @@ class MonitoringScreenViewModel : ViewModel() {
     /**
      * Per-container derived stats. Uses a rolling fold keyed by container id
      * to compute bytes/sec rates from cumulative docker-java counters.
+     *
+     * Hot [StateFlow] with [SharingStarted.WhileSubscribed] (5s stop timeout):
+     * the grace window keeps the fold's previous-sample map alive across brief
+     * re-subscription (recomposition restart, AnimatedContent swap), while the
+     * expensive per-container stats streams are torn down once the Monitoring
+     * screen has been off-composition for >5s. This matters because the VM is
+     * retained for the window's lifetime — [SharingStarted.Eagerly] would keep
+     * streaming stats from the daemon forever, even while on other screens.
      */
-    val derivedStats: Flow<List<DerivedContainerStats>> =
+    val derivedStats: StateFlow<List<DerivedContainerStats>> =
         rawStats
             .runningFold(DerivedState(emptyList(), emptyMap())) { acc, stats ->
                 val now = currentTimeMillis()
@@ -148,18 +157,26 @@ class MonitoringScreenViewModel : ViewModel() {
                 DerivedState(derived, newPrevious)
             }.drop(1)
             .map { it.derived }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
      * Aggregate history across all containers. CPU and memory follow the
      * selected [MonitoringAggregation] mode; disk/network are summed bytes/sec.
+     *
+     * Hot [StateFlow] with the same [SharingStarted.WhileSubscribed] policy as
+     * [derivedStats]; [combine] makes the fold reactive so a change to
+     * [aggregation] or arrival of [systemInfo] is applied on the next tick.
+     * Tradeoff: leaving Monitoring for >5s tears down the stream and the
+     * ~60-sample ring buffer rebuilds on return — acceptable for a real-time
+     * graph (persisting longer history would be a separate feature).
      */
-    val usageHistory: Flow<UsageHistory> =
-        derivedStats.runningFold(UsageHistory()) { acc, stats ->
+    val usageHistory: StateFlow<UsageHistory> =
+        combine(derivedStats, systemInfo, aggregation) { stats, sysInfo, mode ->
+            Triple(stats, sysInfo, mode)
+        }.runningFold(UsageHistory()) { acc, (stats, sysInfo, mode) ->
             if (stats.isEmpty()) {
                 acc
             } else {
-                val mode = aggregation.value
-                val sysInfo = systemInfo.value
                 val aggCpu = aggregateCpu(stats, mode, sysInfo)
                 val aggMem = aggregateMemory(stats, mode, sysInfo)
                 val totalDiskRead = stats.sumOf { it.diskReadBytesPerSec }
@@ -175,7 +192,7 @@ class MonitoringScreenViewModel : ViewModel() {
                     networkTxHistory = (acc.networkTxHistory + totalNetTx).takeLast(maxHistorySize),
                 )
             }
-        }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UsageHistory())
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

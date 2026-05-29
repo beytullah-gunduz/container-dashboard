@@ -60,23 +60,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
 import com.github.dockerjava.api.model.Container as DockerContainer
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
-
-private var cachedMaxLogLines: Int = 1000
-private var maxLogLinesLastRead: Long = 0
-
-private val maxLogLines: Int
-    get() {
-        val now = System.currentTimeMillis()
-        if (now - maxLogLinesLastRead > 5000) {
-            maxLogLinesLastRead = now
-            cachedMaxLogLines = PreferenceRepository.logsMaxLinesSync
-        }
-        return cachedMaxLogLines
-    }
 
 actual class DockerRepository actual constructor(
     private val dockerHost: String,
@@ -94,7 +84,11 @@ actual class DockerRepository actual constructor(
             .Builder()
             .dockerHost(config.dockerHost)
             .maxConnections(100)
-            .connectionTimeout(Duration.ofSeconds(30))
+            .connectionTimeout(Duration.ofSeconds(10))
+            // responseTimeout guards one-shot commands (ping, list, inspect, etc.) against
+            // half-open TCP connections. The builder explicitly zeroes the socket SO_TIMEOUT
+            // so that long-lived chunked streams (logs/stats/events) are not interrupted —
+            // we must not set a socket-level read timeout here or those streams will time out.
             .responseTimeout(Duration.ofSeconds(45))
             .build()
 
@@ -112,6 +106,19 @@ actual class DockerRepository actual constructor(
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Cached max-log-lines preference. Updated via a coroutine collect so the
+    // stream callbacks (which run on docker-java's HTTP reader thread) never
+    // need to runBlocking / touch DataStore themselves.
+    private val cachedMaxLogLines = AtomicInteger(1000)
+
+    init {
+        scope.launch {
+            PreferenceRepository.logsMaxLinesState.collect { value ->
+                cachedMaxLogLines.set(value)
+            }
+        }
+    }
 
     @Volatile private var lastAvailable = false
 
@@ -132,8 +139,36 @@ actual class DockerRepository actual constructor(
             while (true) {
                 val available =
                     try {
-                        val socketPath = dockerHost.removePrefix("unix://")
-                        if (!File(socketPath).exists()) {
+                        val reachable =
+                            when {
+                                dockerHost.startsWith("unix://") -> {
+                                    val socketPath = dockerHost.removePrefix("unix://")
+                                    File(socketPath).exists()
+                                }
+                                dockerHost.startsWith(
+                                    "tcp://",
+                                ) ||
+                                    dockerHost.startsWith("http://") ||
+                                    dockerHost.startsWith("https://") -> {
+                                    // Lightweight TCP reachability check — connect only, no data.
+                                    val uri = java.net.URI(dockerHost)
+                                    val host = uri.host ?: "localhost"
+                                    val port = if (uri.port > 0) uri.port else 2375
+                                    try {
+                                        Socket().use { socket ->
+                                            socket.connect(InetSocketAddress(host, port), 3_000)
+                                            true
+                                        }
+                                    } catch (_: Exception) {
+                                        false
+                                    }
+                                }
+                                else -> {
+                                    // Unknown scheme — fall back to ping only
+                                    true
+                                }
+                            }
+                        if (!reachable) {
                             false
                         } else {
                             if (!lastAvailable) {
@@ -463,7 +498,7 @@ actual class DockerRepository actual constructor(
                                     text.lineSequence().filter { l -> l.isNotEmpty() }.forEach { l ->
                                         lines.add(l)
                                     }
-                                    val cap = maxLogLines
+                                    val cap = cachedMaxLogLines.get()
                                     if (lines.size > cap) {
                                         val excess = lines.size - cap
                                         repeat(excess) { lines.removeFirst() }
@@ -558,7 +593,7 @@ actual class DockerRepository actual constructor(
                                 val snapshot =
                                     synchronized(lock) {
                                         lines.addAll(newLines)
-                                        val cap = maxLogLines
+                                        val cap = cachedMaxLogLines.get()
                                         if (lines.size > cap) {
                                             val excess = lines.size - cap
                                             repeat(excess) { lines.removeFirst() }
@@ -1231,8 +1266,15 @@ actual class DockerRepository actual constructor(
             }
         }
 
-    // Exec sessions
-    private val execSessions = mutableMapOf<String, java.io.OutputStream>()
+    // Exec sessions — track both the PipedOutputStream (for stdin writes) and the
+    // ResultCallback (for the HTTP stream) so both are closed on closeExecSession.
+    private data class ExecResources(
+        val stdin: java.io.OutputStream,
+        val callback: java.io.Closeable,
+        val pipedInput: java.io.PipedInputStream,
+    )
+
+    private val execSessions = mutableMapOf<String, ExecResources>()
 
     actual suspend fun createExecSession(
         containerId: String,
@@ -1253,6 +1295,16 @@ actual class DockerRepository actual constructor(
                 val execId = execCreate.id
                 val pipedOutput = java.io.PipedOutputStream()
                 val pipedInput = java.io.PipedInputStream(pipedOutput)
+
+                // Mutable holder so the callbackFlow block can update the registered callback
+                // reference after exec starts, while closeExecSession can always find resources.
+                var activeCallback: java.io.Closeable = java.io.Closeable { }
+                execSessions[execId] =
+                    ExecResources(
+                        stdin = pipedOutput,
+                        callback = java.io.Closeable { activeCallback.close() },
+                        pipedInput = pipedInput,
+                    )
 
                 val outputFlow =
                     callbackFlow {
@@ -1282,7 +1334,7 @@ actual class DockerRepository actual constructor(
                                 .withTty(true)
                                 .withStdIn(pipedInput)
 
-                        execStart.exec(callback)
+                        activeCallback = execStart.exec(callback)
 
                         awaitClose {
                             try {
@@ -1293,7 +1345,6 @@ actual class DockerRepository actual constructor(
                         }
                     }.flowOn(Dispatchers.IO)
 
-                execSessions[execId] = pipedOutput
                 logger.info("Created exec session {} for container {}", execId, containerId)
                 Result.success(ExecSession(execId = execId, containerId = containerId, output = outputFlow))
             } catch (e: Exception) {
@@ -1308,11 +1359,11 @@ actual class DockerRepository actual constructor(
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                val outputStream =
+                val resources =
                     execSessions[session.execId]
                         ?: return@withContext Result.failure(Exception("Exec session not found"))
-                outputStream.write(input.toByteArray())
-                outputStream.flush()
+                resources.stdin.write(input.toByteArray())
+                resources.stdin.flush()
                 Result.success(Unit)
             } catch (e: Exception) {
                 logger.error("Failed to send input to exec session {}", session.execId, e)
@@ -1323,7 +1374,12 @@ actual class DockerRepository actual constructor(
     actual suspend fun closeExecSession(session: ExecSession): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                execSessions.remove(session.execId)?.close()
+                val resources = execSessions.remove(session.execId)
+                if (resources != null) {
+                    runCatching { resources.callback.close() }
+                    runCatching { resources.pipedInput.close() }
+                    runCatching { resources.stdin.close() }
+                }
                 logger.info("Closed exec session {}", session.execId)
                 Result.success(Unit)
             } catch (e: Exception) {

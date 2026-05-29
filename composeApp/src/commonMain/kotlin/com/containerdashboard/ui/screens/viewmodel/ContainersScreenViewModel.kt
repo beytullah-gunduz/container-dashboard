@@ -27,7 +27,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 class ContainersScreenViewModel : ViewModel() {
     private val repo: DockerRepository get() = AppModule.dockerRepository
 
-    val containers: Flow<List<Container>> = repo.getContainers(all = true)
+    val containers: StateFlow<List<Container>> =
+        repo
+            .getContainers(all = true)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Emits `false` until the first list of containers has been delivered. */
     val hasLoaded: StateFlow<Boolean> =
@@ -37,10 +40,13 @@ class ContainersScreenViewModel : ViewModel() {
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     @OptIn(FlowPreview::class)
-    val statsById: Flow<Map<String, ContainerStats>> =
-        repo.getContainerStats().sample(3_000L).map { statsList ->
-            statsList.associateBy { it.containerId }
-        }
+    val statsById: StateFlow<Map<String, ContainerStats>> =
+        repo
+            .getContainerStats()
+            .sample(3_000L)
+            .map { statsList ->
+                statsList.associateBy { it.containerId }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

@@ -106,6 +106,11 @@ private fun configureLogging() {
     // ── Noisy libraries at WARN ─────────────────────────────
     loggerContext.getLogger("com.github.dockerjava").level = Level.WARN
     loggerContext.getLogger("org.apache.hc").level = Level.WARN
+    // ResultCallbackTemplate logs its own ERROR copy of every stream throwable,
+    // which for our streaming stats/logs is dominated by benign teardown races
+    // (e.g. 404 when a watched container is removed). Our own onError handlers
+    // already log these at DEBUG, so silence the library's duplicate.
+    loggerContext.getLogger("com.github.dockerjava.api.async.ResultCallbackTemplate").level = Level.OFF
 }
 
 data class TrayStats(

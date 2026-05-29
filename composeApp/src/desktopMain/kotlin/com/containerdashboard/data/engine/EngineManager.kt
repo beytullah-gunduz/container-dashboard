@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 @Serializable
 data class ColimaStatus(
@@ -53,20 +54,27 @@ object EngineManager {
 
     suspend fun getColimaStatus(profile: String = "default"): ColimaStatus? =
         withContext(Dispatchers.IO) {
+            var proc: Process? = null
             try {
                 val cmd = mutableListOf("colima", "status", "--json")
                 if (profile != "default") {
                     cmd.addAll(listOf("--profile", profile))
                 }
-                val proc =
+                proc =
                     ProcessBuilder(cmd)
                         .redirectErrorStream(true)
                         .start()
                 val text = proc.inputStream.bufferedReader().readText()
-                val exitCode = proc.waitFor()
-                if (exitCode != 0) return@withContext null
+                val finished = proc.waitFor(15, TimeUnit.SECONDS)
+                if (!finished) {
+                    proc.destroyForcibly()
+                    logger.warn("colima status timed out for profile '{}'", profile)
+                    return@withContext null
+                }
+                if (proc.exitValue() != 0) return@withContext null
                 json.decodeFromString<ColimaStatus>(text)
             } catch (e: Exception) {
+                proc?.destroyForcibly()
                 logger.debug("Failed to get Colima status: {}", e.message)
                 null
             }
@@ -187,6 +195,12 @@ object EngineManager {
             appendOutput(line)
         }
 
-        return proc.waitFor() == 0
+        val finished = proc.waitFor(15, TimeUnit.SECONDS)
+        if (!finished) {
+            proc.destroyForcibly()
+            logger.warn("Process timed out after 15s: {}", cmd.joinToString(" "))
+            return false
+        }
+        return proc.exitValue() == 0
     }
 }

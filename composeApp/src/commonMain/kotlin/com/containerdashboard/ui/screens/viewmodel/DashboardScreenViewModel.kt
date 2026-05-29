@@ -10,7 +10,6 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,13 +29,25 @@ class DashboardScreenViewModel : ViewModel() {
     private val _version = MutableStateFlow<DockerVersion?>(null)
     val version: StateFlow<DockerVersion?> = _version.asStateFlow()
 
-    val containers: Flow<List<Container>> = repo.getContainers(all = true)
+    val containers: StateFlow<List<Container>> =
+        repo
+            .getContainers(all = true)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val images: Flow<List<DockerImage>> = repo.getImages()
+    val images: StateFlow<List<DockerImage>> =
+        repo
+            .getImages()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val volumes: Flow<List<Volume>> = repo.getVolumes()
+    val volumes: StateFlow<List<Volume>> =
+        repo
+            .getVolumes()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val networks: Flow<List<DockerNetwork>> = repo.getNetworks()
+    val networks: StateFlow<List<DockerNetwork>> =
+        repo
+            .getNetworks()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Emits `false` until the first containers list has been delivered. */
     val hasLoaded: StateFlow<Boolean> =

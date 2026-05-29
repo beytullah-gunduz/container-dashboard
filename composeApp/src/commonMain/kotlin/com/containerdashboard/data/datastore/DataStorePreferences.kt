@@ -83,4 +83,4 @@ internal class DataStorePreferencesImpl internal constructor() :
             )
     }
 
-val dataStorePreferencesInstance get() = DataStorePreferencesImpl().instance
+val dataStorePreferencesInstance: DataStore<Preferences> by lazy { DataStorePreferencesImpl().instance }

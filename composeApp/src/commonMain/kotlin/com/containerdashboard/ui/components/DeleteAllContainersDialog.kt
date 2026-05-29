@@ -48,6 +48,12 @@ fun DeleteAllContainersDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "This action cannot be undone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         },
         confirmButton = {

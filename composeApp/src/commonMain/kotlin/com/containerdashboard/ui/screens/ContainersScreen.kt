@@ -960,10 +960,18 @@ fun ContainersScreen(
                                                 onStop = { viewModel.stopContainer(it) },
                                                 onPause = { viewModel.pauseContainer(it) },
                                                 onUnpause = { viewModel.unpauseContainer(it) },
-                                                onRemove = { viewModel.removeContainer(it) },
+                                                // P0 fix: route per-row Remove through askConfirm
+                                                onRemove = { id ->
+                                                    val name = item.containers.find { c -> c.id == id }?.displayName ?: id
+                                                    askConfirm(
+                                                        "Delete container?",
+                                                        "This will force-stop and remove \"$name\".",
+                                                    ) { viewModel.removeContainer(id) }
+                                                },
                                                 onViewLogs = { onShowLogs(it) },
                                                 onViewGroupLogs = { onShowGroupLogs(it) },
                                                 onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
+                                                // P0 fix: stopAll and removeAll go through askConfirm (dialog shown in ComposeProjectHeader)
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
                                                 onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
                                                 onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },
@@ -1123,10 +1131,18 @@ fun ContainersScreen(
                                                 onStop = { viewModel.stopContainer(it) },
                                                 onPause = { viewModel.pauseContainer(it) },
                                                 onUnpause = { viewModel.unpauseContainer(it) },
-                                                onRemove = { viewModel.removeContainer(it) },
+                                                // P0 fix: per-row remove goes through askConfirm
+                                                onRemove = { id ->
+                                                    val name = item.containers.find { c -> c.id == id }?.displayName ?: id
+                                                    askConfirm(
+                                                        "Delete container?",
+                                                        "This will force-stop and remove \"$name\".",
+                                                    ) { viewModel.removeContainer(id) }
+                                                },
                                                 onViewLogs = { onShowLogs(it) },
                                                 onViewGroupLogs = { onShowGroupLogs(it) },
                                                 onStartAll = { ids -> ids.forEach { viewModel.startContainer(it) } },
+                                                // P0 fix: stopAll and removeAll dialog shown in ComposeProjectHeader
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
                                                 onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
                                                 onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },

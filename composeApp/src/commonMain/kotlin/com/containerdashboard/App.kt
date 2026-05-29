@@ -44,6 +44,7 @@ import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.chrome.TopBarDragArea
 import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
@@ -189,6 +190,10 @@ fun App(
                     val searchFocus = remember { FocusRequester() }
                     val coroutineScope = rememberCoroutineScope()
 
+                    // P0 fix: palette-triggered delete confirmation state
+                    var pendingPaletteDeleteName by remember { mutableStateOf("") }
+                    var pendingPaletteDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
                     val paletteActions =
                         buildPaletteActions(
                             containers = containers,
@@ -201,6 +206,10 @@ fun App(
                             onStop = { id -> containersVm.stopContainer(id) },
                             onRestart = { id -> containersVm.restartContainer(id) },
                             onRemove = { id -> containersVm.removeContainer(id) },
+                            onAskConfirmRemove = { name, action ->
+                                pendingPaletteDeleteName = name
+                                pendingPaletteDeleteAction = action
+                            },
                         )
 
                     CompositionLocalProvider(LocalSearchFocusRequester provides searchFocus) {
@@ -249,6 +258,9 @@ fun App(
                                         onNavigate = { screen -> viewModel.navigate(screen.route) },
                                         isConnected = isConnected,
                                         engineName = engineName,
+                                        // Issue 8 fix: wire discoverable affordance
+                                        onOpenPalette = { showPalette = true },
+                                        onShowShortcuts = { showCheatsheet = true },
                                     )
                                 },
                                 detailPane = {
@@ -339,6 +351,21 @@ fun App(
                     if (showCheatsheet) {
                         KeyboardShortcutsOverlay(onDismiss = { showCheatsheet = false })
                     }
+
+                    // P0 fix: confirm dialog for palette-triggered deletes
+                    pendingPaletteDeleteAction?.let { action ->
+                        ConfirmActionDialog(
+                            title = "Delete container?",
+                            body = "This will force-stop and remove \"$pendingPaletteDeleteName\".",
+                            confirmLabel = "Delete",
+                            destructive = true,
+                            onConfirm = {
+                                action()
+                                pendingPaletteDeleteAction = null
+                            },
+                            onDismiss = { pendingPaletteDeleteAction = null },
+                        )
+                    }
                 }
             }
         }
@@ -378,6 +405,8 @@ private fun buildPaletteActions(
     onStop: (String) -> Unit,
     onRestart: (String) -> Unit,
     onRemove: (String) -> Unit,
+    // P0 fix: confirm callback — caller must show the dialog and call onRemove if user confirms
+    onAskConfirmRemove: (containerName: String, onConfirmed: () -> Unit) -> Unit,
 ): List<PaletteAction> {
     val actions = mutableListOf<PaletteAction>()
 
@@ -446,7 +475,8 @@ private fun buildPaletteActions(
                 id = "remove-${c.id}",
                 label = "Delete: $name",
                 section = "Containers",
-                onRun = { onRemove(c.id) },
+                // P0 fix: funnel through confirm dialog instead of calling removeContainer directly
+                onRun = { onAskConfirmRemove(name) { onRemove(c.id) } },
             ),
         )
     }

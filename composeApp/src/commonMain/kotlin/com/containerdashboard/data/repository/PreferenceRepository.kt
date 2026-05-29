@@ -11,9 +11,15 @@ import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
 import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.theme.ThemeMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
 
 data class ContainerColumnWidths(
@@ -49,6 +55,9 @@ data class WindowBounds(
 object PreferenceRepository {
     private val dataStore: DataStore<Preferences> by lazy { dataStorePreferencesInstance }
 
+    // Repository-owned scope for background cache collectors.
+    private val repoScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private val ENGINE_HOST by lazy { stringPreferencesKey("engine_host") }
     private val SHOW_SYSTEM_CONTAINERS by lazy { booleanPreferencesKey("show_system_containers") }
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
@@ -78,8 +87,11 @@ object PreferenceRepository {
     private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
 
     /**
-     * Synchronous read used only for initial app startup (AppModule lazy init).
-     * All other reads should use the Flow-based [engineHost] function.
+     * Synchronous one-time read for app startup (AppModule lazy init constructs the
+     * DockerRepository with this host). Must be synchronous: the persisted host has to
+     * be known before the repository is created, and an async StateFlow would hand back
+     * the default before the first DataStore emission lands, silently dropping a saved
+     * custom host on every launch. All other reads use the Flow-based [engineHost].
      */
     val initialEngineHost: String
         get() = runBlocking { dataStore.data.firstOrNull()?.get(ENGINE_HOST) ?: DEFAULT_ENGINE_HOST }
@@ -177,8 +189,20 @@ object PreferenceRepository {
         dataStore.edit { it[LOGS_MAX_LINES] = value }
     }
 
+    /** Hot StateFlow of the max-log-lines preference. Never blocks. */
+    val logsMaxLinesState: StateFlow<Int> by lazy {
+        dataStore.data
+            .map { it[LOGS_MAX_LINES] ?: 1000 }
+            .stateIn(
+                scope = repoScope,
+                started = SharingStarted.Eagerly,
+                initialValue = 1000,
+            )
+    }
+
+    /** Returns the cached max-log-lines value. Updated asynchronously; never blocks. */
     val logsMaxLinesSync: Int
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(LOGS_MAX_LINES) ?: 1000 }
+        get() = logsMaxLinesState.value
 
     fun containerColumnWidths(): Flow<ContainerColumnWidths> =
         dataStore.data.map { prefs ->
@@ -216,6 +240,8 @@ object PreferenceRepository {
         }
     }
 
+    // Synchronous one-time read at startup to place the window where the user left it.
+    // Needs the persisted value before the first frame, so it must not be async.
     val windowBoundsSync: WindowBounds?
         get() =
             runBlocking {
@@ -243,6 +269,7 @@ object PreferenceRepository {
         }
     }
 
+    // Synchronous one-time read at startup to restore the last-viewed screen.
     val lastRouteSync: String?
         get() = runBlocking { dataStore.data.firstOrNull()?.get(LAST_ROUTE) }
 

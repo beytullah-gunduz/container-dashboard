@@ -38,7 +38,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +67,7 @@ import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.ui.components.AppTooltip
 import com.containerdashboard.ui.components.CompactCheckbox
+import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
 import com.containerdashboard.ui.components.ResourceDetailsDialog
 import com.containerdashboard.ui.components.StatusBadge
@@ -88,6 +91,7 @@ import com.dockerdashboard.composeapp.generated.resources.more_vert
 import com.dockerdashboard.composeapp.generated.resources.pause
 import com.dockerdashboard.composeapp.generated.resources.play_arrow
 import com.dockerdashboard.composeapp.generated.resources.stop
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -109,6 +113,37 @@ internal fun ComposeProjectHeader(
     cpuPercent: Double? = null,
     memoryUsage: Long? = null,
 ) {
+    var showStopAllConfirm by remember { mutableStateOf(false) }
+    var showRemoveAllConfirm by remember { mutableStateOf(false) }
+
+    if (showStopAllConfirm) {
+        ConfirmActionDialog(
+            title = "Stop all containers?",
+            body = "This will stop all running containers in \"$projectName\".",
+            confirmLabel = "Stop all",
+            destructive = true,
+            onConfirm = {
+                showStopAllConfirm = false
+                onStopAll()
+            },
+            onDismiss = { showStopAllConfirm = false },
+        )
+    }
+
+    if (showRemoveAllConfirm) {
+        ConfirmActionDialog(
+            title = "Delete all containers?",
+            body = "This will force-stop and delete all $containerCount container(s) in \"$projectName\".",
+            confirmLabel = "Delete all",
+            destructive = true,
+            onConfirm = {
+                showRemoveAllConfirm = false
+                onRemoveAll()
+            },
+            onDismiss = { showRemoveAllConfirm = false },
+        )
+    }
+
     BoxWithConstraints(
         modifier =
             Modifier
@@ -188,7 +223,7 @@ internal fun ComposeProjectHeader(
 
             // Group actions — packed tightly at far right to align with per-container action column
             Row(
-                modifier = Modifier.width(108.dp),
+                modifier = Modifier.width(116.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -230,7 +265,7 @@ internal fun ComposeProjectHeader(
                 }
                 if (hasRunning) {
                     AppTooltip(label = "Stop all") {
-                        IconButton(onClick = onStopAll, modifier = Modifier.size(24.dp)) {
+                        IconButton(onClick = { showStopAllConfirm = true }, modifier = Modifier.size(24.dp)) {
                             Icon(
                                 painterResource(Res.drawable.stop),
                                 contentDescription = "Stop all",
@@ -251,13 +286,15 @@ internal fun ComposeProjectHeader(
                         }
                     }
                 }
+                // Destructive separator before Delete all
+                Spacer(modifier = Modifier.width(4.dp))
                 AppTooltip(label = "Delete all") {
-                    IconButton(onClick = onRemoveAll, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = { showRemoveAllConfirm = true }, modifier = Modifier.size(24.dp)) {
                         Icon(
                             painterResource(Res.drawable.delete),
-                            contentDescription = "Delete all",
+                            contentDescription = "Delete all containers in $projectName",
                             modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -614,7 +651,6 @@ internal fun CompactContainerRow(
                         else -> MaterialTheme.colorScheme.surface
                     },
                 ).hoverHighlight()
-                .clickable(enabled = !isPendingDelete) { onViewLogs() }
                 .padding(horizontal = Spacing.sm, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -625,8 +661,14 @@ internal fun CompactContainerRow(
             enabled = !isPendingDelete,
         )
 
+        // P1 fix: constrain click-to-logs to the info area, not the whole row.
         // Container info (Name + Image below)
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .clickable(enabled = !isPendingDelete) { onViewLogs() },
+        ) {
             TruncatingText(
                 text = container.displayName,
                 style = MaterialTheme.typography.bodySmall,
@@ -774,12 +816,13 @@ internal fun CompactContainerRow(
                         },
                         onClick = {
                             showActionsMenu = false
+                            // P0 fix: confirm is handled upstream via askConfirm at ContainersScreen
                             onRemove()
                         },
                         leadingIcon = {
                             Icon(
                                 painterResource(Res.drawable.delete),
-                                null,
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                             )
                         },
@@ -865,7 +908,7 @@ internal fun ExpandedTableHeader(
                 onSortChange = onSortChange,
                 modifier = Modifier.width(200.dp),
             )
-            Spacer(modifier = Modifier.width(108.dp))
+            Spacer(modifier = Modifier.width(116.dp))
         }
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
@@ -935,6 +978,17 @@ internal fun ExpandedContainerRow(
     onRemove: () -> Unit,
     onViewLogs: () -> Unit,
 ) {
+    // Transient success flash: null = no flash, non-null = message to show briefly
+    var successMessage by remember { mutableStateOf<String?>(null) }
+
+    // Auto-clear success message after 2s
+    LaunchedEffect(successMessage) {
+        if (successMessage != null) {
+            delay(2000)
+            successMessage = null
+        }
+    }
+
     val rowAlpha by animateFloatAsState(
         targetValue = if (isPendingDelete) 0.45f else 1f,
         animationSpec = tween(200),
@@ -955,7 +1009,6 @@ internal fun ExpandedContainerRow(
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ).hoverHighlight()
-                    .clickable(enabled = !isPendingDelete) { onViewLogs() }
                     .padding(horizontal = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -966,23 +1019,34 @@ internal fun ExpandedContainerRow(
             )
             Spacer(modifier = Modifier.width(10.dp))
 
-            // Name (displayName · shortId, single line) — elastic
-            TruncatingText(
-                text = "${container.displayName} · ${container.shortId}",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.width(Spacing.md))
+            // P1 fix: constrain click-to-logs to the name/image area only, not the whole row.
+            // Action buttons remain independently clickable outside this region.
+            Row(
+                modifier =
+                    Modifier
+                        .weight(2f)
+                        .clickable(enabled = !isPendingDelete) { onViewLogs() }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                // Name (displayName · shortId, single line) — elastic
+                TruncatingText(
+                    text = "${container.displayName} · ${container.shortId}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                )
 
-            // Image — elastic
-            Text(
-                text = container.image,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                // Image — elastic
+                Text(
+                    text = container.image,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Spacer(modifier = Modifier.width(Spacing.md))
 
             // Status
@@ -1003,9 +1067,9 @@ internal fun ExpandedContainerRow(
             )
             Spacer(modifier = Modifier.width(Spacing.md))
 
-            // Actions
+            // Actions — benign actions (logs, pause/start) | separator | destructive (stop, delete)
             Row(
-                modifier = Modifier.width(108.dp),
+                modifier = Modifier.width(116.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1020,15 +1084,22 @@ internal fun ExpandedContainerRow(
                                 MaterialTheme.colorScheme.primary
                             },
                     )
+                } else if (successMessage != null) {
+                    // P1 fix: transient success indicator
+                    Text(
+                        text = "✓ ${successMessage!!}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.Running,
+                    )
                 } else {
-                    // Logs button
+                    // Logs button (benign)
                     IconButton(
                         onClick = onViewLogs,
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
                             painterResource(if (isViewingLogs) Res.drawable.article_filled else Res.drawable.article),
-                            contentDescription = "View Logs",
+                            contentDescription = "View logs for ${container.displayName}",
                             modifier = Modifier.size(14.dp),
                             tint =
                                 if (isViewingLogs) {
@@ -1039,53 +1110,92 @@ internal fun ExpandedContainerRow(
                         )
                     }
 
+                    // Benign state-change action (pause / resume / start)
                     when {
                         container.isRunning -> {
-                            IconButton(onClick = onPause, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = {
+                                    onPause()
+                                    successMessage = "Paused"
+                                },
+                                modifier = Modifier.size(24.dp),
+                            ) {
                                 Icon(
                                     painterResource(Res.drawable.pause),
-                                    contentDescription = "Pause",
+                                    contentDescription = "Pause ${container.displayName}",
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            IconButton(onClick = onStop, modifier = Modifier.size(24.dp)) {
-                                Icon(
-                                    painterResource(Res.drawable.stop),
-                                    contentDescription = "Stop",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = AppColors.Stopped,
-                                )
-                            }
                         }
                         container.isPaused -> {
-                            IconButton(onClick = onUnpause, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = {
+                                    onUnpause()
+                                    successMessage = "Resumed"
+                                },
+                                modifier = Modifier.size(24.dp),
+                            ) {
                                 Icon(
                                     painterResource(Res.drawable.play_arrow),
-                                    contentDescription = "Resume",
+                                    contentDescription = "Resume ${container.displayName}",
                                     modifier = Modifier.size(14.dp),
                                     tint = AppColors.Running,
                                 )
                             }
                         }
                         else -> {
-                            IconButton(onClick = onStart, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = {
+                                    onStart()
+                                    successMessage = "Started"
+                                },
+                                modifier = Modifier.size(24.dp),
+                            ) {
                                 Icon(
                                     painterResource(Res.drawable.play_arrow),
-                                    contentDescription = "Start",
+                                    contentDescription = "Start ${container.displayName}",
                                     modifier = Modifier.size(14.dp),
                                     tint = AppColors.Running,
                                 )
                             }
                         }
                     }
+
+                    // P1 fix: visual separator between benign and destructive actions
+                    Spacer(modifier = Modifier.width(4.dp))
+                    VerticalDivider(
+                        modifier = Modifier.height(14.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+
+                    // Destructive: Stop (only when running)
+                    if (container.isRunning) {
+                        IconButton(
+                            onClick = {
+                                onStop()
+                                successMessage = "Stopped"
+                            },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                painterResource(Res.drawable.stop),
+                                contentDescription = "Stop ${container.displayName}",
+                                modifier = Modifier.size(14.dp),
+                                tint = AppColors.Stopped,
+                            )
+                        }
+                    }
+
+                    // Destructive: Delete (confirm handled upstream via askConfirm)
                     IconButton(
                         onClick = onRemove,
                         modifier = Modifier.size(24.dp),
                     ) {
                         Icon(
                             painterResource(Res.drawable.delete),
-                            contentDescription = "Delete",
+                            contentDescription = "Delete ${container.displayName}",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.error,
                         )

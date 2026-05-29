@@ -1,5 +1,8 @@
 package com.containerdashboard.ui.components
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -14,6 +17,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.unit.dp
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.warning
 import org.jetbrains.compose.resources.painterResource
@@ -33,8 +37,10 @@ fun ConfirmActionDialog(
             Modifier.onPreviewKeyEvent { ev ->
                 if (ev.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (ev.key) {
+                    // P1 fix: Enter defaults to Cancel (dismiss), not the destructive confirm.
+                    // Users must click the destructive button explicitly to proceed.
                     Key.Enter -> {
-                        onConfirm()
+                        onDismiss()
                         true
                     }
                     Key.Escape -> {
@@ -57,7 +63,19 @@ fun ConfirmActionDialog(
                 null
             },
         title = { Text(title) },
-        text = { Text(body) },
+        text = {
+            Column {
+                Text(body)
+                if (destructive) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
         confirmButton = {
             Button(
                 onClick = onConfirm,

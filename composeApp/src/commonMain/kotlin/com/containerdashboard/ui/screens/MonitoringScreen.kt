@@ -40,6 +40,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -162,22 +164,51 @@ fun MonitoringScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
+                    // A11y fix: pair dot with shape distinction (filled circle vs outline)
+                    // and keep the text label — not just color alone.
                     Surface(
                         modifier = Modifier.size(8.dp),
                         shape = RoundedCornerShape(Radius.sm),
-                        color = if (stats.isNotEmpty()) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color =
+                            if (stats.isNotEmpty()) {
+                                AppColors.Running
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.4f,
+                                )
+                            },
                     ) {}
                     Text(
-                        text = "Live",
+                        text = if (stats.isNotEmpty()) "Live" else "Idle",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color =
+                            if (stats.isNotEmpty()) {
+                                AppColors.Running
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
-                    CircularSlider(
-                        value = refreshRate,
-                        onValueChange = { viewModel.setRefreshRate(it) },
-                        valueRange = 1f..5f,
-                        activeColor = AppColors.AccentBlue,
-                    )
+                    // Issue 7 fix: add semantics contentDescription and visible label
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "Refresh",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        CircularSlider(
+                            value = refreshRate,
+                            onValueChange = { viewModel.setRefreshRate(it) },
+                            valueRange = 1f..5f,
+                            activeColor = AppColors.AccentBlue,
+                            modifier =
+                                Modifier.semantics {
+                                    contentDescription = "Refresh rate: ${refreshRate.toInt()} seconds"
+                                },
+                        )
+                    }
                 }
             }
 

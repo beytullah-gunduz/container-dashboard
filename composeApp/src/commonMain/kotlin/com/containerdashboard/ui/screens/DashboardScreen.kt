@@ -21,7 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,10 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.ui.components.ContainerStatus
 import com.containerdashboard.ui.components.MiniStatsCard
 import com.containerdashboard.ui.components.SkeletonBar
 import com.containerdashboard.ui.components.StatsCard
+import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.navigation.Screen
@@ -432,22 +431,8 @@ private fun RecentContainerItem(
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(
-            modifier = Modifier.size(8.dp),
-            shape = RoundedCornerShape(Radius.sm),
-            color =
-                when (container.state.toContainerStatus()) {
-                    ContainerStatus.RUNNING -> AppColors.Running
-                    ContainerStatus.PAUSED -> AppColors.Paused
-                    ContainerStatus.CREATED -> AppColors.AccentBlue
-                    ContainerStatus.RESTARTING -> AppColors.Warning
-                    ContainerStatus.STOPPED,
-                    ContainerStatus.EXITED,
-                    ContainerStatus.REMOVING,
-                    ContainerStatus.DEAD,
-                    -> AppColors.Stopped
-                },
-        ) {}
+        // A11y fix: replace color-only dot with labeled StatusBadge (color + text)
+        StatusBadge(status = container.state.toContainerStatus())
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

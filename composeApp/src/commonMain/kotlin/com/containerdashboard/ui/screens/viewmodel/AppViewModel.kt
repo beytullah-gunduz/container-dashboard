@@ -96,6 +96,13 @@ class AppViewModel : ViewModel() {
             .themeMode()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.AUTO)
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    fun clearError() {
+        _error.value = null
+    }
+
     val logsPaneLayout: StateFlow<LogsPaneLayout> =
         PreferenceRepository
             .logsPaneLayout()
@@ -191,14 +198,19 @@ class AppViewModel : ViewModel() {
     private suspend fun fetchGroupLogs(containers: List<Container>) {
         try {
             val merged = mutableListOf<String>()
+            val fetchErrors = mutableListOf<String>()
             for (c in containers) {
                 val label = c.composeService ?: c.displayName
                 val result = repo.getContainerLogs(c.id)
-                result.onSuccess { logs ->
-                    logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
-                        merged.add("[$label] $line")
-                    }
-                }
+                result
+                    .onSuccess { logs ->
+                        logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
+                            merged.add("[$label] $line")
+                        }
+                    }.onFailure { fetchErrors.add("[$label] ${it.message ?: "Failed to fetch logs"}") }
+            }
+            if (fetchErrors.isNotEmpty()) {
+                _error.value = "Failed to fetch logs for ${fetchErrors.size} container(s)"
             }
             _logsPaneState.update { it.copy(logs = merged.toList(), isLoading = false) }
         } catch (e: Exception) {
@@ -219,6 +231,7 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch {
             _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
             val result = repo.pauseContainer(id)
+            result.onFailure { _error.value = it.message ?: "Failed to pause container" }
             repo.refreshContainers()
             if (result.isSuccess) {
                 awaitContainerState(id) { it.isPaused }
@@ -235,6 +248,7 @@ class AppViewModel : ViewModel() {
         viewModelScope.launch {
             _logsPaneState.update { it.copy(isPauseActionInProgress = true) }
             val result = repo.unpauseContainer(id)
+            result.onFailure { _error.value = it.message ?: "Failed to unpause container" }
             repo.refreshContainers()
             if (result.isSuccess) {
                 awaitContainerState(id) { it.isRunning }
@@ -266,7 +280,7 @@ class AppViewModel : ViewModel() {
                 .firstOrNull()
                 ?.id ?: return
         viewModelScope.launch {
-            repo.restartContainer(id)
+            repo.restartContainer(id).onFailure { _error.value = it.message ?: "Failed to restart container" }
             repo.refreshContainers()
             refreshLogs()
         }
@@ -298,7 +312,8 @@ class AppViewModel : ViewModel() {
                     val name = _logsPaneState.value.displayName
                     onLogsReady(name, merged.toString())
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Failed to save logs"
             }
             _logsPaneState.update { it.copy(isSavingLogs = false) }
         }
@@ -310,8 +325,16 @@ class AppViewModel : ViewModel() {
         logFollowJob?.cancel()
         _logsPaneState.value = LogsPaneState()
         viewModelScope.launch {
-            ids.forEach { repo.removeContainer(it, force = true) }
+            val errors = mutableListOf<String>()
+            ids.forEach { id ->
+                repo.removeContainer(id, force = true).onFailure {
+                    errors.add(it.message ?: "Failed to remove container")
+                }
+            }
             repo.refreshContainers()
+            if (errors.isNotEmpty()) {
+                _error.value = errors.first()
+            }
         }
     }
 

@@ -5,9 +5,11 @@ import com.github.dockerjava.api.model.Frame
 import com.jediterm.terminal.TtyConnector
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.io.InputStreamReader
 import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CountDownLatch
 
 class DockerExecTtyConnector(
     private val dockerClient: DockerClient,
@@ -18,13 +20,20 @@ class DockerExecTtyConnector(
 
     private val stdinPipe = PipedOutputStream()
     private val stdoutPipe = PipedOutputStream()
-    private val stdoutReader = PipedInputStream(stdoutPipe, 65536)
+    private val stdoutPipeIn = PipedInputStream(stdoutPipe, 65536)
+
+    // Streaming UTF-8 reader: buffers partial multibyte sequences across reads.
+    private val stdoutReader = InputStreamReader(stdoutPipeIn, StandardCharsets.UTF_8)
 
     @Volatile
     private var connected = false
 
     @Volatile
     private var execId: String? = null
+
+    // Counted down when the exec stream ends (onComplete/onError) OR when close() is called,
+    // so waitFor() always unblocks even if docker-java never fires a terminal callback.
+    private val doneLatch = CountDownLatch(1)
 
     private var callback: com.github.dockerjava.api.async.ResultCallback.Adapter<Frame>? = null
 
@@ -58,15 +67,21 @@ class DockerExecTtyConnector(
                     override fun onError(throwable: Throwable?) {
                         logger.warn("Docker exec stream error: {}", throwable?.message)
                         connected = false
+                        doneLatch.countDown()
                     }
 
                     override fun onComplete() {
                         connected = false
+                        doneLatch.countDown()
                     }
                 }
 
             val stdinStream = PipedInputStream(stdinPipe, 65536)
 
+            // NOTE: execStartCmd has no built-in read/connection timeout exposed by docker-java's
+            // fluent API. Adding a socket-level timeout here would require configuring the
+            // DockerClient itself (e.g. DockerClientConfig.withReadTimeout). That lives in
+            // DockerRepository, which is owned by another agent — left as a cross-lane concern.
             dockerClient
                 .execStartCmd(execCreate.id)
                 .withDetach(false)
@@ -79,6 +94,7 @@ class DockerExecTtyConnector(
         } catch (e: Exception) {
             logger.error("Failed to start Docker exec session", e)
             connected = false
+            doneLatch.countDown()
             throw e
         }
     }
@@ -89,12 +105,9 @@ class DockerExecTtyConnector(
         length: Int,
     ): Int {
         if (!connected) return -1
-        val bytes = ByteArray(length)
-        val read = stdoutReader.read(bytes, 0, length)
-        if (read <= 0) return read
-        val chars = String(bytes, 0, read, StandardCharsets.UTF_8)
-        chars.toCharArray(buf, offset, 0, chars.length)
-        return chars.length
+        // Reads chars (not bytes) so the InputStreamReader's internal CharsetDecoder can
+        // accumulate partial multibyte sequences across successive calls, preventing mojibake.
+        return stdoutReader.read(buf, offset, length)
     }
 
     override fun write(bytes: ByteArray) {
@@ -110,15 +123,14 @@ class DockerExecTtyConnector(
     override fun isConnected(): Boolean = connected
 
     override fun waitFor(): Int {
-        while (connected) {
-            Thread.sleep(100)
-        }
+        // Blocks until onComplete/onError fires OR close() is called — no busy-wait.
+        doneLatch.await()
         return 0
     }
 
     override fun ready(): Boolean =
         try {
-            connected && stdoutReader.available() > 0
+            connected && stdoutReader.ready()
         } catch (_: IOException) {
             false
         }
@@ -127,6 +139,8 @@ class DockerExecTtyConnector(
 
     override fun close() {
         connected = false
+        // Release any thread blocked in waitFor() even if docker-java callbacks never fire.
+        doneLatch.countDown()
         try {
             callback?.close()
         } catch (_: Exception) {
