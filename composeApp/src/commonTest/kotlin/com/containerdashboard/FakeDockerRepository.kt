@@ -53,6 +53,7 @@ class FakeDockerRepository(
     // single-value defaults are used (matching prior behavior).
     var containersFlowOverride: Flow<List<Container>>? = null,
     var availabilityFlowOverride: Flow<Boolean>? = null,
+    var containerStatsFlowOverride: Flow<List<ContainerStats>>? = null,
 ) : DockerRepository {
     // --- Availability ---
 
@@ -274,7 +275,7 @@ class FakeDockerRepository(
 
     // --- Stats ---
 
-    override fun getContainerStats(): Flow<List<ContainerStats>> = flowOf(containerStats)
+    override fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsFlowOverride ?: flowOf(containerStats)
 
     override fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>> =
         flowOf(containerStats.associateBy { it.containerId })

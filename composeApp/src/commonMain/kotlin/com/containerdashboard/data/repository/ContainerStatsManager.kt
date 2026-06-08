@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,12 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Shrinking the running set is free: `flatMapLatest` re-seeds the `scan` map to empty on every
  * change, and only currently-running ids feed the new `merge`, so dropped ids disappear.
+ *
+ * The non-empty branch drops `scan`'s initial empty map. With a non-empty running set, an empty
+ * emission is indistinguishable downstream from "no running containers" and would flash that state
+ * during the first sample's warm-up (and on every set change). An empty map is therefore emitted
+ * ONLY by the genuinely-empty branch — so consumers can treat empty as "nothing running" and
+ * "no emission yet" as "still collecting."
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun aggregateContainerStatsMap(
@@ -42,6 +49,7 @@ internal fun aggregateContainerStatsMap(
                 .map { (id, name) -> statsFor(id, name).map { stat -> id to stat } }
                 .merge()
                 .scan(emptyMap<String, ContainerStats>()) { acc, (id, stat) -> acc + (id to stat) }
+                .drop(1) // suppress scan's seed empty; wait for the first real sample
         }
     }
 

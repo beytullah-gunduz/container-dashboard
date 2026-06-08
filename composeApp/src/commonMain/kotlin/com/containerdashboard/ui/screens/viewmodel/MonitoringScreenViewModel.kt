@@ -123,8 +123,13 @@ class MonitoringScreenViewModel(
      * screen has been off-composition for >5s. This matters because the VM is
      * retained for the window's lifetime — [SharingStarted.Eagerly] would keep
      * streaming stats from the daemon forever, even while on other screens.
+     *
+     * Seeded `null` (not `emptyList()`): `null` means "no snapshot yet" so the UI can show a
+     * loading spinner until the first stats arrive, distinct from an empty-but-delivered list
+     * (no running containers). Seeding `emptyList()` would make the two indistinguishable and
+     * flash "No running containers" during the initial load.
      */
-    val derivedStats: StateFlow<List<DerivedContainerStats>> =
+    val derivedStats: StateFlow<List<DerivedContainerStats>?> =
         rawStats
             .runningFold(DerivedState(emptyList(), emptyMap())) { acc, stats ->
                 val now = currentTimeMillis()
@@ -159,7 +164,7 @@ class MonitoringScreenViewModel(
                 DerivedState(derived, newPrevious)
             }.drop(1)
             .map { it.derived }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
      * Aggregate history across all containers. CPU and memory follow the
@@ -176,7 +181,7 @@ class MonitoringScreenViewModel(
         combine(derivedStats, systemInfo, aggregation) { stats, sysInfo, mode ->
             Triple(stats, sysInfo, mode)
         }.runningFold(UsageHistory()) { acc, (stats, sysInfo, mode) ->
-            if (stats.isEmpty()) {
+            if (stats.isNullOrEmpty()) {
                 acc
             } else {
                 val aggCpu = aggregateCpu(stats, mode, sysInfo)

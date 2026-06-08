@@ -68,6 +68,36 @@ class ContainerStatsManagerTest {
             assertEquals(setOf("a"), emissions.last().map { it.containerId }.toSet())
         }
 
+    @Test
+    fun `aggregate never emits an empty snapshot while the running set is non-empty`() =
+        runTest {
+            // Slow first sample → without dropping scan's seed, the aggregate would emit an empty
+            // snapshot before "a" arrives, which the UI reads as "no running containers".
+            val statsFor: (String, String) -> Flow<ContainerStats> = { id, _ ->
+                flow {
+                    delay(500)
+                    emit(stat(id))
+                }
+            }
+            val emissions = aggregateContainerStats(running = flowOf(listOf("a" to "a")), statsFor = statsFor).toList()
+
+            assertTrue(
+                emissions.all { it.isNotEmpty() },
+                "no empty snapshot may be emitted for a non-empty running set: $emissions",
+            )
+            assertEquals(setOf("a"), emissions.last().map { it.containerId }.toSet())
+        }
+
+    @Test
+    fun `aggregate emits a single empty snapshot when nothing is running`() =
+        runTest {
+            val emissions =
+                aggregateContainerStats(running = flowOf(emptyList()), statsFor = { _, _ -> emptyFlow() }).toList()
+
+            assertEquals(1, emissions.size, "the genuinely-empty branch should emit exactly once: $emissions")
+            assertTrue(emissions.single().isEmpty(), "and that snapshot should be empty")
+        }
+
     // ---------------------------------------------------------------------
     // ContainerStatsManager — caching & eviction
     // ---------------------------------------------------------------------
