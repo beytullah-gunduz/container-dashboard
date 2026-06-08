@@ -29,7 +29,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -343,7 +342,13 @@ fun ContainersScreen(
                         }
                     }
 
-                    ButtonGroup(
+                    // A plain Row is used here rather than ButtonGroup: this toolbar only needs
+                    // horizontal layout with connected-button spacing. It hand-rolls its own
+                    // shapes (shapeFor) and show/hide animations (AnimatedVisibility) and uses
+                    // none of ButtonGroup's distinguishing features (animateWidth interaction
+                    // expansion, overflow-to-dropdown). The connected look comes from
+                    // ButtonGroupDefaults shapes/spacing, which remain in use below.
+                    Row(
                         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                     ) {
                         // Clear selection button (leftmost, animates last)
