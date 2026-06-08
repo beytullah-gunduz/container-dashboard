@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -40,15 +42,6 @@ class ContainersScreenViewModel(
             .map { true }
             .onStart { emit(false) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    @OptIn(FlowPreview::class)
-    val statsById: StateFlow<Map<String, ContainerStats>> =
-        repo
-            .getContainerStats()
-            .sample(3_000L)
-            .map { statsList ->
-                statsList.associateBy { it.containerId }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -84,6 +77,26 @@ class ContainersScreenViewModel(
     fun toggleOtherProject(project: String) {
         _expandedOtherProjects.update { if (project in it) it - project else it + project }
     }
+
+    // Stats render only in expanded compose-group headers of the RUNNING section, so stream stats
+    // only for those containers — collapsed groups and standalone rows cost nothing.
+    private val expandedRunningContainerIds: Flow<Set<String>> =
+        combine(containers, _expandedRunningProjects) { list, expanded ->
+            list
+                .asSequence()
+                .filter { c ->
+                    val project = c.composeProject
+                    c.isRunning && project != null && project in expanded
+                }.map { it.id }
+                .toSet()
+        }.distinctUntilChanged()
+
+    @OptIn(FlowPreview::class)
+    val statsById: StateFlow<Map<String, ContainerStats>> =
+        repo
+            .getContainerStats(expandedRunningContainerIds)
+            .sample(3_000L)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val columnWidths: Flow<ContainerColumnWidths> = PreferenceRepository.containerColumnWidths()
 

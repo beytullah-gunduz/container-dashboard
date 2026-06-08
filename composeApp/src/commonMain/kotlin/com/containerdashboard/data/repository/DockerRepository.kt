@@ -139,6 +139,9 @@ interface DockerRepository {
     // Stats
     fun getContainerStats(): Flow<List<ContainerStats>>
 
+    /** Demand-driven stats: stream only the given container ids (e.g. expanded compose groups). */
+    fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>>
+
     // Prune operations
     suspend fun pruneContainers(): Result<PruneResult>
 

@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.shareIn
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Aggregate a changing set of running containers' per-container stats flows into one
- * `List<ContainerStats>`, INCREMENTALLY: each container appears as soon as ITS stream emits.
+ * Aggregate a changing set of running containers' per-container stats flows into a map keyed by
+ * container id, INCREMENTALLY: each container appears as soon as ITS stream emits.
  *
  * Pure (no I/O, no sharing/sampling) so it is unit-testable with a fake [statsFor]. Uses
  * `merge` + `scan` rather than `combine` — `combine` would withhold all output until every
@@ -30,21 +30,26 @@ import java.util.concurrent.ConcurrentHashMap
  * change, and only currently-running ids feed the new `merge`, so dropped ids disappear.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun aggregateContainerStats(
+internal fun aggregateContainerStatsMap(
     running: Flow<List<Pair<String, String>>>,
     statsFor: (id: String, name: String) -> Flow<ContainerStats>,
-): Flow<List<ContainerStats>> =
+): Flow<Map<String, ContainerStats>> =
     running.flatMapLatest { current ->
         if (current.isEmpty()) {
-            flowOf(emptyList())
+            flowOf(emptyMap())
         } else {
             current
                 .map { (id, name) -> statsFor(id, name).map { stat -> id to stat } }
                 .merge()
                 .scan(emptyMap<String, ContainerStats>()) { acc, (id, stat) -> acc + (id to stat) }
-                .map { it.values.toList() }
         }
     }
+
+/** [aggregateContainerStatsMap] as an ordered list — for engine-wide consumers (Monitoring, tray). */
+internal fun aggregateContainerStats(
+    running: Flow<List<Pair<String, String>>>,
+    statsFor: (id: String, name: String) -> Flow<ContainerStats>,
+): Flow<List<ContainerStats>> = aggregateContainerStatsMap(running, statsFor).map { it.values.toList() }
 
 /**
  * Per-container, reference-counted hot stats streams. One Docker stats stream per container id,

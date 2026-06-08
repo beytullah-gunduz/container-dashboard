@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -1261,6 +1262,17 @@ class DesktopDockerRepository(
     }
 
     override fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
+
+    override fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>> {
+        // Stream only ids that are BOTH requested (e.g. an expanded group) AND running. The
+        // intersection prevents opening a stream for a non-running id (which would error+retry).
+        val wantedRunning =
+            combine(runningContainers, ids.distinctUntilChanged()) { running, wanted ->
+                running.filter { it.first in wanted }
+            }.distinctUntilChanged()
+        return aggregateContainerStatsMap(wantedRunning, statsManager::statsFor)
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
 
     // One persistent Docker stats stream for a single container, mapped to ContainerStats. No
     // .sample/.catch here: [ContainerStatsManager] owns sampling, and a transient failure must

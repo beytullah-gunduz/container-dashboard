@@ -272,6 +272,9 @@ class FakeDockerRepository(
 
     override fun getContainerStats(): Flow<List<ContainerStats>> = flowOf(containerStats)
 
+    override fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>> =
+        flowOf(containerStats.associateBy { it.containerId })
+
     // --- Prune ---
 
     override suspend fun pruneContainers(): Result<PruneResult> = Result.success(PruneResult(0))
