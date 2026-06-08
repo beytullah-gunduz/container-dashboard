@@ -46,9 +46,11 @@ import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
+import com.containerdashboard.ui.components.FilesTabContent
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
 import com.containerdashboard.ui.components.rememberThreePaneScaffoldNavigator
+import com.containerdashboard.ui.components.saveBytesToFile
 import com.containerdashboard.ui.components.saveLogsToFile
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.AppLogsScreen
@@ -87,6 +89,7 @@ fun App(
     val currentRoute by viewModel.currentRoute.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val logsPaneState by viewModel.logsPaneState.collectAsState()
+    val filesPaneState by viewModel.filesPaneState.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val systemDark = isSystemInDarkTheme()
     val darkTheme =
@@ -335,6 +338,23 @@ fun App(
                                             logsPaneState.container?.let { container ->
                                                 consoleContent(container.id, darkTheme)
                                             }
+                                        },
+                                        onFilesTabSelected = {
+                                            logsPaneState.container?.let { viewModel.openFilesTab(it) }
+                                        },
+                                        filesContent = {
+                                            FilesTabContent(
+                                                state = filesPaneState,
+                                                onToggleNode = { viewModel.toggleNode(it) },
+                                                onFileClick = { viewModel.openFile(it) },
+                                                onRefresh = { viewModel.refreshFiles() },
+                                                onCloseViewer = { viewModel.closeFileViewer() },
+                                                onDownload = { entry ->
+                                                    viewModel.downloadFile(entry) { name, bytes ->
+                                                        saveBytesToFile(name, bytes)
+                                                    }
+                                                },
+                                            )
                                         },
                                     )
                                 },

@@ -1,6 +1,8 @@
 package com.containerdashboard
 
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerFileContent
+import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
@@ -43,6 +45,10 @@ class FakeDockerRepository(
     var removeNetworkResult: Result<Unit> = Result.success(Unit),
     var createVolumeResult: Result<Volume>? = null,
     var createNetworkResult: Result<DockerNetwork>? = null,
+    var listDirectoryResult: Result<List<ContainerFileEntry>> = Result.success(emptyList()),
+    var readFileResult: Result<ContainerFileContent> =
+        Result.success(ContainerFileContent(text = "", isBinary = false, truncated = false, totalBytesShown = 0)),
+    var downloadFileResult: Result<ByteArray> = Result.success(ByteArray(0)),
 ) : DockerRepository {
     // --- Availability ---
 
@@ -129,6 +135,22 @@ class FakeDockerRepository(
         id: String,
         force: Boolean,
     ): Result<Unit> = removeContainerResult
+
+    override suspend fun listContainerDirectory(
+        id: String,
+        path: String,
+    ): Result<List<ContainerFileEntry>> = listDirectoryResult
+
+    override suspend fun readContainerFile(
+        id: String,
+        path: String,
+        maxBytes: Int,
+    ): Result<ContainerFileContent> = readFileResult
+
+    override suspend fun downloadContainerFile(
+        id: String,
+        path: String,
+    ): Result<ByteArray> = downloadFileResult
 
     // --- Images ---
 

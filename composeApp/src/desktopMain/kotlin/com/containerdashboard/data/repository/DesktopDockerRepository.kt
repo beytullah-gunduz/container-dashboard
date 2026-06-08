@@ -2,6 +2,8 @@ package com.containerdashboard.data.repository
 
 import com.containerdashboard.data.models.AttachedContainer
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerFileContent
+import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerPort
 import com.containerdashboard.data.models.ContainerStats
@@ -21,6 +23,9 @@ import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.models.VolumeInspect
+import com.containerdashboard.data.util.looksBinary
+import com.containerdashboard.data.util.normalizePath
+import com.containerdashboard.data.util.parseLsOutput
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -480,6 +485,179 @@ class DesktopDockerRepository(
                 Result.failure(e)
             }
         }
+
+    // --- Container file browsing (read-only) ---
+
+    override suspend fun listContainerDirectory(
+        id: String,
+        path: String,
+    ): Result<List<ContainerFileEntry>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val normalized = normalizePath(path)
+                val result = execCapture(id, listOf("ls", "-la", "--", normalized))
+                when {
+                    result.timedOut ->
+                        Result.failure(IllegalStateException("Listing '$normalized' timed out"))
+                    // BusyBox exits 0; some `ls` exit non-zero on partial permission errors but still
+                    // print the readable rows — keep whatever we got.
+                    result.exitCode == 0 || result.stdout.isNotEmpty() ->
+                        Result.success(parseLsOutput(result.stdout.toString(Charsets.UTF_8), normalized))
+                    else -> Result.failure(mapShellError(result, normalized))
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to list directory {} in container {}", path, id, e)
+                Result.failure(e)
+            }
+        }
+
+    override suspend fun readContainerFile(
+        id: String,
+        path: String,
+        maxBytes: Int,
+    ): Result<ContainerFileContent> =
+        withContext(Dispatchers.IO) {
+            try {
+                val normalized = normalizePath(path)
+                // head -c (maxBytes + 1): a returned length > maxBytes proves the file was truncated.
+                val result =
+                    execCapture(id, listOf("head", "-c", (maxBytes.toLong() + 1).toString(), "--", normalized))
+                when {
+                    result.timedOut ->
+                        Result.failure(IllegalStateException("Reading '$normalized' timed out"))
+                    result.exitCode != 0 && result.stdout.isEmpty() ->
+                        Result.failure(mapShellError(result, normalized))
+                    else -> {
+                        val rawBytes = result.stdout
+                        val truncated = rawBytes.size > maxBytes
+                        val shown = if (truncated) rawBytes.copyOf(maxBytes) else rawBytes
+                        val binary = looksBinary(shown)
+                        Result.success(
+                            ContainerFileContent(
+                                text = if (binary) "" else shown.toString(Charsets.UTF_8),
+                                isBinary = binary,
+                                truncated = truncated,
+                                totalBytesShown = shown.size,
+                            ),
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to read file {} in container {}", path, id, e)
+                Result.failure(e)
+            }
+        }
+
+    override suspend fun downloadContainerFile(
+        id: String,
+        path: String,
+    ): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            try {
+                val normalized = normalizePath(path)
+                val result = execCapture(id, listOf("cat", "--", normalized), timeoutMillis = 300_000)
+                when {
+                    result.timedOut ->
+                        Result.failure(IllegalStateException("Downloading '$normalized' timed out"))
+                    result.exitCode == 0 || result.stdout.isNotEmpty() -> Result.success(result.stdout)
+                    else -> Result.failure(mapShellError(result, normalized))
+                }
+            } catch (e: Exception) {
+                logger.error("Failed to download file {} in container {}", path, id, e)
+                Result.failure(e)
+            }
+        }
+
+    /** Result of a one-shot, non-TTY exec. Bytes are raw (binary-safe); decode at the call site. */
+    private class ExecResult(
+        val stdout: ByteArray,
+        val stderr: ByteArray,
+        val exitCode: Int?,
+        val timedOut: Boolean,
+    )
+
+    /**
+     * Run [argv] in a container via a one-shot, non-TTY `docker exec`, capturing stdout and stderr
+     * separately. Must be non-TTY so the daemon demultiplexes the two streams by [com.github.dockerjava.api.model.Frame]
+     * type. Bounded by [timeoutMillis] via the callback's built-in awaitCompletion — the HTTP client
+     * deliberately has no socket read timeout for streaming endpoints, so this is the only ceiling.
+     */
+    private suspend fun execCapture(
+        containerId: String,
+        argv: List<String>,
+        timeoutMillis: Long = 30_000,
+    ): ExecResult =
+        withContext(Dispatchers.IO) {
+            withRetryOnPoolShutdown {
+                val execId =
+                    dockerClient
+                        .execCreateCmd(containerId)
+                        .withCmd(*argv.toTypedArray())
+                        .withAttachStdout(true)
+                        .withAttachStderr(true)
+                        .withTty(false)
+                        .exec()
+                        .id
+
+                val out = java.io.ByteArrayOutputStream()
+                val err = java.io.ByteArrayOutputStream()
+                val callback =
+                    object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                        override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
+                            val payload = frame?.payload ?: return
+                            if (frame.streamType == com.github.dockerjava.api.model.StreamType.STDERR) {
+                                err.write(payload)
+                            } else {
+                                out.write(payload)
+                            }
+                        }
+                    }
+
+                val completed =
+                    dockerClient
+                        .execStartCmd(execId)
+                        .withDetach(false)
+                        .exec(callback)
+                        .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+
+                if (!completed) {
+                    try {
+                        callback.close()
+                    } catch (_: Exception) {
+                    }
+                    return@withRetryOnPoolShutdown ExecResult(out.toByteArray(), err.toByteArray(), null, true)
+                }
+
+                // The exit code can briefly be null right after the stream ends; re-inspect once.
+                var inspect = dockerClient.inspectExecCmd(execId).exec()
+                if (inspect.exitCodeLong == null) {
+                    inspect = dockerClient.inspectExecCmd(execId).exec()
+                }
+                ExecResult(out.toByteArray(), err.toByteArray(), inspect.exitCodeLong?.toInt(), false)
+            }
+        }
+
+    /** Map exec stderr / exit code to a friendly exception for the UI. */
+    private fun mapShellError(
+        result: ExecResult,
+        path: String,
+    ): Exception {
+        val message =
+            result.stderr
+                .toString(Charsets.UTF_8)
+                .lineSequence()
+                .firstOrNull { it.isNotBlank() }
+                .orEmpty()
+        return when {
+            "executable file not found" in message || result.exitCode == 126 || result.exitCode == 127 ->
+                IllegalStateException("This container has no shell/coreutils, so its filesystem can't be browsed.")
+            "Permission denied" in message -> SecurityException("Permission denied: $path")
+            "No such file or directory" in message -> java.io.FileNotFoundException(path)
+            "is not running" in message -> IllegalStateException("Container is no longer running.")
+            message.isNotEmpty() -> IllegalStateException(message)
+            else -> IllegalStateException("Command failed (exit ${result.exitCode}) for $path")
+        }
+    }
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followContainerLogs(

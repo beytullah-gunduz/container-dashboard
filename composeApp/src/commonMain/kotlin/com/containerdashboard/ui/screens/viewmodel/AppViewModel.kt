@@ -4,13 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.engine.engineTypeFromHost
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerFileEntry
+import com.containerdashboard.data.models.FileType
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.data.util.joinPath
+import com.containerdashboard.data.util.normalizePath
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.components.LogsPaneLayout
 import com.containerdashboard.ui.navigation.Screen
+import com.containerdashboard.ui.state.FileTreeNode
+import com.containerdashboard.ui.state.FilesPaneState
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.util.formatBytes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +33,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+private const val MAX_VIEW_BYTES = 1024 * 1024 // 1 MiB inline-preview cap
+private const val MAX_DOWNLOAD_BYTES = 100L * 1024 * 1024 // 100 MB download cap
+private const val ROOT_PATH = "/"
 
 class AppViewModel(
     private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
@@ -55,6 +66,9 @@ class AppViewModel(
     private val _logsPaneState = MutableStateFlow(LogsPaneState())
     val logsPaneState: StateFlow<LogsPaneState> = _logsPaneState.asStateFlow()
 
+    private val _filesPaneState = MutableStateFlow(FilesPaneState())
+    val filesPaneState: StateFlow<FilesPaneState> = _filesPaneState.asStateFlow()
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val containers: StateFlow<List<Container>> =
         repoFlow
@@ -76,6 +90,7 @@ class AppViewModel(
                 if (allGone) {
                     logFollowJob?.cancel()
                     _logsPaneState.value = LogsPaneState()
+                    _filesPaneState.value = FilesPaneState()
                 } else if (updated != tracked) {
                     _logsPaneState.update { it.copy(containers = updated) }
                     val noneRunning = updated.none { it.isRunning }
@@ -131,6 +146,7 @@ class AppViewModel(
 
     fun showContainerLogs(container: Container) {
         logFollowJob?.cancel()
+        _filesPaneState.value = FilesPaneState()
         _logsPaneState.value = LogsPaneState(containers = listOf(container), isLoading = true)
         if (container.isRunning) {
             startFollowing(listOf(container))
@@ -141,6 +157,7 @@ class AppViewModel(
 
     fun showGroupLogs(containers: List<Container>) {
         logFollowJob?.cancel()
+        _filesPaneState.value = FilesPaneState()
         _logsPaneState.value = LogsPaneState(containers = containers, isLoading = true)
         val running = containers.any { it.isRunning }
         if (running) {
@@ -223,6 +240,205 @@ class AppViewModel(
     fun clearLogs() {
         logFollowJob?.cancel()
         _logsPaneState.value = LogsPaneState()
+        _filesPaneState.value = FilesPaneState()
+    }
+
+    // --- Container file browsing (read-only) ---
+
+    // Lazily-loaded tree state, keyed by node path. A symlink's children are listed from its
+    // resolved target but stored under the symlink's own path, so flattening stays uniform.
+    private val childrenByPath = mutableMapOf<String, List<ContainerFileEntry>>()
+    private val expandedPaths = mutableSetOf<String>()
+    private val loadingPaths = mutableSetOf<String>()
+    private val nodeErrors = mutableMapOf<String, String>()
+
+    fun openFilesTab(container: Container) {
+        val state = _filesPaneState.value
+        if (state.containerId == container.id && state.loaded) return
+        resetTree()
+        _filesPaneState.value =
+            FilesPaneState(
+                containerId = container.id,
+                isRunning = container.isRunning,
+                loaded = true,
+            )
+        if (container.isRunning) loadRoot()
+    }
+
+    fun refreshFiles() {
+        resetTree()
+        _filesPaneState.update { it.copy(nodes = emptyList()) }
+        loadRoot()
+    }
+
+    /** Expand or collapse a directory (or symlink) node, lazily loading its children on first expand. */
+    fun toggleNode(entry: ContainerFileEntry) {
+        if (entry.type != FileType.DIRECTORY && entry.type != FileType.SYMLINK) return
+        if (expandedPaths.remove(entry.path)) {
+            _filesPaneState.update { it.copy(nodes = flattenTree()) }
+            return
+        }
+        expandedPaths.add(entry.path)
+        if (childrenByPath[entry.path] != null) {
+            _filesPaneState.update { it.copy(nodes = flattenTree()) }
+        } else {
+            loadChildren(entry)
+        }
+    }
+
+    fun openFile(entry: ContainerFileEntry) {
+        val containerId = _filesPaneState.value.containerId ?: return
+        if (entry.sizeBytes > MAX_VIEW_BYTES) {
+            _filesPaneState.update {
+                it.copy(
+                    selectedFile = entry,
+                    fileContent = null,
+                    isFileLoading = false,
+                    fileError = "File is too large to preview (${formatBytes(entry.sizeBytes)}). Download it instead.",
+                )
+            }
+            return
+        }
+        _filesPaneState.update {
+            it.copy(selectedFile = entry, fileContent = null, fileError = null, isFileLoading = true)
+        }
+        viewModelScope.launch {
+            repo.readContainerFile(containerId, entry.path, MAX_VIEW_BYTES).fold(
+                onSuccess = { content ->
+                    _filesPaneState.update { it.copy(fileContent = content, isFileLoading = false) }
+                },
+                onFailure = { e ->
+                    _filesPaneState.update {
+                        it.copy(isFileLoading = false, fileError = e.message ?: "Failed to read file")
+                    }
+                },
+            )
+        }
+    }
+
+    fun closeFileViewer() {
+        _filesPaneState.update {
+            it.copy(selectedFile = null, fileContent = null, fileError = null, isFileLoading = false)
+        }
+    }
+
+    /**
+     * Download [entry] to the host. The platform save dialog is supplied via [onBytes] so this
+     * logic stays in commonMain (mirrors how saving logs works).
+     */
+    fun downloadFile(
+        entry: ContainerFileEntry,
+        onBytes: (name: String, bytes: ByteArray) -> Unit,
+    ) {
+        val containerId = _filesPaneState.value.containerId ?: return
+        if (entry.sizeBytes > MAX_DOWNLOAD_BYTES) {
+            _error.value =
+                "\"${entry.name}\" is too large to download (${formatBytes(entry.sizeBytes)}); " +
+                "the limit is ${formatBytes(MAX_DOWNLOAD_BYTES)}."
+            return
+        }
+        viewModelScope.launch {
+            _filesPaneState.update { it.copy(isDownloading = true) }
+            repo.downloadContainerFile(containerId, entry.path).fold(
+                onSuccess = { bytes -> onBytes(entry.name, bytes) },
+                onFailure = { e -> _error.value = e.message ?: "Failed to download file" },
+            )
+            _filesPaneState.update { it.copy(isDownloading = false) }
+        }
+    }
+
+    private fun resetTree() {
+        childrenByPath.clear()
+        expandedPaths.clear()
+        loadingPaths.clear()
+        nodeErrors.clear()
+    }
+
+    private fun loadRoot() {
+        val containerId = _filesPaneState.value.containerId ?: return
+        _filesPaneState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            repo.listContainerDirectory(containerId, ROOT_PATH).fold(
+                onSuccess = { entries ->
+                    childrenByPath[ROOT_PATH] = sortEntries(entries)
+                    _filesPaneState.update { it.copy(isLoading = false, error = null, nodes = flattenTree()) }
+                },
+                onFailure = { e ->
+                    _filesPaneState.update {
+                        it.copy(isLoading = false, error = e.message ?: "Failed to list directory")
+                    }
+                },
+            )
+        }
+    }
+
+    private fun loadChildren(entry: ContainerFileEntry) {
+        val containerId = _filesPaneState.value.containerId ?: return
+        loadingPaths.add(entry.path)
+        nodeErrors.remove(entry.path)
+        _filesPaneState.update { it.copy(nodes = flattenTree()) }
+        viewModelScope.launch {
+            repo.listContainerDirectory(containerId, resolveListPath(entry)).fold(
+                onSuccess = { entries ->
+                    childrenByPath[entry.path] = sortEntries(entries)
+                    loadingPaths.remove(entry.path)
+                    _filesPaneState.update { it.copy(nodes = flattenTree()) }
+                },
+                onFailure = { e ->
+                    loadingPaths.remove(entry.path)
+                    expandedPaths.remove(entry.path) // collapse again on failure
+                    nodeErrors[entry.path] = e.message ?: "Failed to list directory"
+                    _filesPaneState.update { it.copy(nodes = flattenTree()) }
+                },
+            )
+        }
+    }
+
+    /** A symlink lists from its (relative-or-absolute) target; everything else from its own path. */
+    private fun resolveListPath(entry: ContainerFileEntry): String {
+        val target = entry.symlinkTarget
+        if (entry.type == FileType.SYMLINK && !target.isNullOrBlank()) {
+            return if (target.startsWith("/")) {
+                normalizePath(target)
+            } else {
+                joinPath(normalizePath(entry.path, ".."), target)
+            }
+        }
+        return entry.path
+    }
+
+    private fun sortEntries(entries: List<ContainerFileEntry>): List<ContainerFileEntry> =
+        entries.sortedWith(
+            compareByDescending<ContainerFileEntry> { it.type == FileType.DIRECTORY }
+                .thenBy { it.name.lowercase() },
+        )
+
+    private fun flattenTree(): List<FileTreeNode> {
+        val nodes = mutableListOf<FileTreeNode>()
+
+        fun appendChildren(
+            parentPath: String,
+            depth: Int,
+        ) {
+            val children = childrenByPath[parentPath] ?: return
+            for (entry in children) {
+                val expandable = entry.type == FileType.DIRECTORY || entry.type == FileType.SYMLINK
+                val expanded = expandable && entry.path in expandedPaths
+                nodes.add(
+                    FileTreeNode(
+                        entry = entry,
+                        depth = depth,
+                        isExpandable = expandable,
+                        isExpanded = expanded,
+                        isLoading = entry.path in loadingPaths,
+                        error = nodeErrors[entry.path],
+                    ),
+                )
+                if (expanded) appendChildren(entry.path, depth + 1)
+            }
+        }
+        appendChildren(ROOT_PATH, 0)
+        return nodes
     }
 
     fun pauseLogsContainer() {

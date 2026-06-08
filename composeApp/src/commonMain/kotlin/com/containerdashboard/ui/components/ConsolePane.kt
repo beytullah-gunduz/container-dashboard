@@ -44,6 +44,7 @@ import com.dockerdashboard.composeapp.generated.resources.article
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.delete
 import com.dockerdashboard.composeapp.generated.resources.download
+import com.dockerdashboard.composeapp.generated.resources.folder
 import com.dockerdashboard.composeapp.generated.resources.pause
 import com.dockerdashboard.composeapp.generated.resources.play_arrow
 import com.dockerdashboard.composeapp.generated.resources.restart_alt
@@ -63,13 +64,15 @@ fun ContainerExtraPane(
     onRemoveContainer: () -> Unit,
     consoleContent: @Composable () -> Unit,
     onConsoleTabSelected: () -> Unit = {},
+    filesContent: @Composable () -> Unit = {},
+    onFilesTabSelected: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val container = logsState.container
     var selectedTab by remember(container?.id) { mutableStateOf(0) }
     var consoleEverOpened by remember(container?.id) { mutableStateOf(false) }
     LaunchedEffect(selectedTab) {
-        if (selectedTab == 1) consoleEverOpened = true
+        if (selectedTab == 2) consoleEverOpened = true
     }
     val activeConsoleSessions by ConsoleSessionRegistry.activeSessions.collectAsState()
     val isConsoleAlive = container?.id?.let { it in activeConsoleSessions } == true
@@ -231,6 +234,27 @@ fun ContainerExtraPane(
                         selected = selectedTab == 1,
                         onClick = {
                             selectedTab = 1
+                            onFilesTabSelected()
+                        },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painterResource(Res.drawable.folder),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Files",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        },
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = {
+                            selectedTab = 2
                             onConsoleTabSelected()
                         },
                         text = {
@@ -272,7 +296,7 @@ fun ContainerExtraPane(
                     if (consoleEverOpened) {
                         Box(
                             modifier =
-                                if (selectedTab == 1) {
+                                if (selectedTab == 2) {
                                     Modifier.fillMaxSize()
                                 } else {
                                     Modifier.size(0.dp)
@@ -286,6 +310,9 @@ fun ContainerExtraPane(
                             state = logsState,
                             onRefresh = onRefreshLogs,
                         )
+                    }
+                    if (selectedTab == 1) {
+                        filesContent()
                     }
                 }
             }

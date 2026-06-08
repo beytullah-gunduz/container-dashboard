@@ -1,6 +1,8 @@
 package com.containerdashboard.data.repository
 
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.ContainerFileContent
+import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
@@ -71,6 +73,23 @@ interface DockerRepository {
         id: String,
         force: Boolean = false,
     ): Result<Unit>
+
+    // Container file browsing (read-only; requires a running container with a shell + coreutils)
+    suspend fun listContainerDirectory(
+        id: String,
+        path: String,
+    ): Result<List<ContainerFileEntry>>
+
+    suspend fun readContainerFile(
+        id: String,
+        path: String,
+        maxBytes: Int,
+    ): Result<ContainerFileContent>
+
+    suspend fun downloadContainerFile(
+        id: String,
+        path: String,
+    ): Result<ByteArray>
 
     // Images
     fun getImages(): Flow<List<DockerImage>>
