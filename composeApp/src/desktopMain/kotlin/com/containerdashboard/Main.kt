@@ -38,7 +38,6 @@ import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
 import com.containerdashboard.data.models.ContainerStats
-import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
 import com.containerdashboard.di.AppModule
@@ -47,11 +46,12 @@ import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
 import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import org.slf4j.LoggerFactory
 
 /**
@@ -127,36 +127,22 @@ data class TrayStats(
         get() = totalCpuPercent >= 90.0 || memoryPercent >= 90.0
 }
 
+@OptIn(kotlinx.coroutines.FlowPreview::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 private fun trayStatsFlow(refreshRateSeconds: Int): Flow<TrayStats> =
-    flow {
-        while (true) {
-            try {
-                val repo = AppModule.dockerRepository as DesktopDockerRepository
-                val containers = repo.listContainersOnce(all = true)
-                val running = containers.filter { it.isRunning }
-                val stats =
-                    if (running.isNotEmpty()) {
-                        repo.getContainerStatsOnce(running.map { it.id to it.displayName })
-                    } else {
-                        emptyList()
-                    }
-                val totalCpu = stats.sumOf { it.cpuPercent }
-                val totalMemUsage = stats.sumOf { it.memoryUsage }
-                val totalMemLimit = stats.maxOfOrNull { it.memoryLimit } ?: 0L
-                emit(
-                    TrayStats(
-                        runningContainers = running.size,
-                        totalCpuPercent = totalCpu,
-                        totalMemoryUsage = totalMemUsage,
-                        totalMemoryLimit = totalMemLimit,
-                    ),
-                )
-            } catch (_: Exception) {
-                emit(TrayStats())
-            }
-            delay(refreshRateSeconds * 1000L)
-        }
-    }.catch { emit(TrayStats()) }
+    // Subscribe to the shared per-container stats (dedups with the UI; survives reconnects via
+    // dockerRepositoryFlow). Sampled to the tray's cadence.
+    AppModule.dockerRepositoryFlow
+        .flatMapLatest { repo -> repo.getContainerStats() }
+        .sample(refreshRateSeconds * 1000L)
+        .map { stats ->
+            TrayStats(
+                // Converges to the true running count within one stat warm-up (~2s) of a start.
+                runningContainers = stats.size,
+                totalCpuPercent = stats.sumOf { it.cpuPercent },
+                totalMemoryUsage = stats.sumOf { it.memoryUsage },
+                totalMemoryLimit = stats.maxOfOrNull { it.memoryLimit } ?: 0L,
+            )
+        }.catch { emit(TrayStats()) }
 
 fun main() {
     // Workaround for macOS accessibility crash (NPE in SemanticsOwnerAccessibility.onNodeRemoved)

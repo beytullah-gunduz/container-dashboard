@@ -1186,57 +1186,6 @@ class DesktopDockerRepository(
             }
         }
 
-    // One-shot container list (for tray stats)
-    suspend fun listContainersOnce(all: Boolean = true): List<Container> =
-        withContext(Dispatchers.IO) {
-            try {
-                dockerClient
-                    .listContainersCmd()
-                    .withShowAll(all)
-                    .exec()
-                    .map { it.toContainer() }
-            } catch (e: Exception) {
-                logger.warn("Failed to list containers once: {}", e.message)
-                emptyList()
-            }
-        }
-
-    // One-shot stats for a list of containers (for tray stats)
-    suspend fun getContainerStatsOnce(containers: List<Pair<String, String>>): List<ContainerStats> =
-        withContext(Dispatchers.IO) {
-            containers.mapNotNull { (id, name) ->
-                try {
-                    var result: com.github.dockerjava.api.model.Statistics? = null
-                    val callback =
-                        object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
-                            override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
-                                if (s != null) result = s
-                            }
-                        }
-                    dockerClient.statsCmd(id).withNoStream(true).exec(callback)
-                    callback.awaitCompletion()
-                    result?.let {
-                        val (diskR, diskW) = extractDiskIo(it)
-                        val (netRx, netTx) = extractNetworkIo(it)
-                        ContainerStats(
-                            containerId = id,
-                            containerName = name,
-                            cpuPercent = calculateCpuPercent(it),
-                            memoryUsage = it.memoryStats?.usage ?: 0L,
-                            memoryLimit = it.memoryStats?.limit ?: 0L,
-                            diskReadBytes = diskR,
-                            diskWriteBytes = diskW,
-                            networkRxBytes = netRx,
-                            networkTxBytes = netTx,
-                        )
-                    }
-                } catch (e: Exception) {
-                    logger.debug("Failed to get one-shot stats for {}: {}", id, e.message)
-                    null
-                }
-            }
-        }
-
     // Stats — per-container, reference-counted hot streams (one Docker stats stream per
     // container, shared across Containers + Monitoring + tray), aggregated INCREMENTALLY so each
     // container's cell fills as soon as ITS stream emits. See [ContainerStatsManager].
