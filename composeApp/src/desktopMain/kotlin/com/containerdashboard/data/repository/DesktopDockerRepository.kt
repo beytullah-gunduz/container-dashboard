@@ -48,16 +48,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
@@ -1238,61 +1236,54 @@ class DesktopDockerRepository(
             }
         }
 
-    // Stats — hot shared flow keyed on the stable running set.
-    //
-    // Key change vs prior implementation: distinctUntilChanged runs on
-    // List<Pair<id, displayName>> of *running* containers only, so the
-    // frequent status-text updates ("Up 3 minutes" → "Up 4 minutes")
-    // no longer trip flatMapLatest and tear down every per-container
-    // stats stream. The streams only restart when the running set
-    // genuinely changes.
-    //
-    // Shared so Containers + Monitoring screens observe one set of
-    // per-container HTTP stats streams; slower consumers downsample
-    // via .sample(...) on their side.
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val containerStatsShared: SharedFlow<List<ContainerStats>> by lazy {
+    // Stats — per-container, reference-counted hot streams (one Docker stats stream per
+    // container, shared across Containers + Monitoring + tray), aggregated INCREMENTALLY so each
+    // container's cell fills as soon as ITS stream emits. See [ContainerStatsManager].
+    private val statsManager =
+        ContainerStatsManager(scope = scope, rawStatsStream = ::rawSingleContainerStats)
+
+    // Running (id -> displayName) set. distinctUntilChanged on the running set means frequent
+    // status-text updates ("Up 3 minutes" -> "Up 4 minutes") don't churn the stats streams.
+    private val runningContainers: Flow<List<Pair<String, String>>> by lazy {
         getContainers(true)
             .map { list -> list.filter { it.isRunning }.map { it.id to it.displayName } }
             .distinctUntilChanged()
-            .flatMapLatest { running ->
-                if (running.isEmpty()) {
-                    flowOf(emptyList())
-                } else {
-                    combine(
-                        running.map { (id, name) ->
-                            singleContainerStats(id, name, 1_000L)
-                        },
-                    ) { stats -> stats.toList() }
-                }
-            }.shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    }
+
+    private val containerStatsShared: SharedFlow<List<ContainerStats>> by lazy {
+        aggregateContainerStats(
+            // Prune cached streams for containers that are no longer running. The cache only grows
+            // while a consumer is subscribed (statsFor is called from the aggregator), so pruning
+            // here covers all growth without needing an always-on container poll.
+            running = runningContainers.onEach { running -> statsManager.retain(running.map { it.first }.toSet()) },
+            statsFor = statsManager::statsFor,
+        ).shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
     override fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
-    private fun singleContainerStats(
+    // One persistent Docker stats stream for a single container, mapped to ContainerStats. No
+    // .sample/.catch here: [ContainerStatsManager] owns sampling, and a transient failure must
+    // propagate (close(throwable)) so the manager's retryWhen can recover the stream. A normal
+    // onComplete (e.g. the container stopped) ends the stream without a retry.
+    private fun rawSingleContainerStats(
         containerId: String,
         containerName: String,
-        refreshRateMillis: Long,
     ): Flow<ContainerStats> =
         callbackFlow<ContainerStats> {
             val callback =
                 object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
                     override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
                         s?.let {
-                            val cpuPercent = calculateCpuPercent(it)
-                            val memUsage = it.memoryStats?.usage ?: 0L
-                            val memLimit = it.memoryStats?.limit ?: 0L
                             val (diskR, diskW) = extractDiskIo(it)
                             val (netRx, netTx) = extractNetworkIo(it)
                             trySend(
                                 ContainerStats(
                                     containerId = containerId,
                                     containerName = containerName,
-                                    cpuPercent = cpuPercent,
-                                    memoryUsage = memUsage,
-                                    memoryLimit = memLimit,
+                                    cpuPercent = calculateCpuPercent(it),
+                                    memoryUsage = it.memoryStats?.usage ?: 0L,
+                                    memoryLimit = it.memoryStats?.limit ?: 0L,
                                     diskReadBytes = diskR,
                                     diskWriteBytes = diskW,
                                     networkRxBytes = netRx,
@@ -1303,8 +1294,7 @@ class DesktopDockerRepository(
                     }
 
                     override fun onError(throwable: Throwable?) {
-                        logger.debug("Stats stream closed for container {}: {}", containerId, throwable?.message)
-                        close()
+                        close(throwable)
                     }
 
                     override fun onComplete() {
@@ -1314,19 +1304,16 @@ class DesktopDockerRepository(
             try {
                 dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
             } catch (e: Exception) {
-                logger.error("Failed to start stats stream for container {}", containerId, e)
-                close()
+                close(e)
             }
             awaitClose {
                 try {
                     callback.close()
                 } catch (e: Exception) {
-                    logger.debug("Error closing stats callback: {}", e.message)
+                    logger.debug("Error closing stats callback for {}: {}", containerId, e.message)
                 }
             }
-        }.catch { e ->
-            logger.debug("Stats flow error for container {}: {}", containerId, e.message)
-        }.sample(refreshRateMillis)
+        }
 
     // Sum cumulative disk IO from blkioStats.ioServiceBytesRecursive entries by op.
     // Many backends (notably cgroup v2 / rootless Docker) report an empty list —

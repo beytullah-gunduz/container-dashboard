@@ -81,8 +81,12 @@ fun looksBinary(bytes: ByteArray): Boolean {
         val b = bytes[i].toInt() and 0xFF
         if (b == 0) return true // NUL => binary
         val printable =
-            b == 0x09 || b == 0x0A || b == 0x0D || // tab, LF, CR
-                b in 0x20..0x7E || // printable ASCII
+            b == 0x09 ||
+                b == 0x0A ||
+                b == 0x0D ||
+                // tab, LF, CR
+                b in 0x20..0x7E ||
+                // printable ASCII
                 b >= 0x80 // UTF-8 lead/continuation bytes
         if (!printable) nonText++
     }
