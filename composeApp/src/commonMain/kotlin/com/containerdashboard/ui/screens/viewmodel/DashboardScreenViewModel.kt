@@ -10,13 +10,13 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -32,9 +32,13 @@ class DashboardScreenViewModel(
     private val _version = MutableStateFlow<DockerVersion?>(null)
     val version: StateFlow<DockerVersion?> = _version.asStateFlow()
 
+    // Shared source for the list; `hasLoaded` must derive from this raw flow rather than the
+    // seeded `containers` StateFlow, which would replay its emptyList seed and flip `hasLoaded`
+    // true before the first real fetch (see ContainersScreenViewModel for the full rationale).
+    private val containersFlow: Flow<List<Container>> = repo.getContainers(all = true)
+
     val containers: StateFlow<List<Container>> =
-        repo
-            .getContainers(all = true)
+        containersFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val images: StateFlow<List<DockerImage>> =
@@ -54,19 +58,20 @@ class DashboardScreenViewModel(
 
     /** Emits `false` until the first containers list has been delivered. */
     val hasLoaded: StateFlow<Boolean> =
-        containers
+        containersFlow
             .map { true }
-            .onStart { emit(false) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val isConnected: StateFlow<Boolean> =
+    val connectionState: StateFlow<EngineConnectionState> =
         repoFlow
             .flatMapLatest { it.isDockerAvailable() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+            .map { available ->
+                if (available) EngineConnectionState.CONNECTED else EngineConnectionState.UNAVAILABLE
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EngineConnectionState.CHECKING)
 
     init {
         loadSystemInfo()

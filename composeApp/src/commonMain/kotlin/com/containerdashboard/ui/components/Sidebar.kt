@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.navigation.Screen
+import com.containerdashboard.ui.screens.viewmodel.EngineConnectionState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
@@ -44,7 +45,7 @@ import org.jetbrains.compose.resources.painterResource
 fun Sidebar(
     currentRoute: String,
     onNavigate: (Screen) -> Unit,
-    isConnected: Boolean = false,
+    connectionState: EngineConnectionState = EngineConnectionState.CHECKING,
     engineName: String = "Container Engine",
     // Issue 8 fix: optional hooks so callers can wire the discoverable palette/shortcuts affordance
     onOpenPalette: (() -> Unit)? = null,
@@ -146,7 +147,7 @@ fun Sidebar(
 
             // Connection status
             ConnectionStatus(
-                isConnected = isConnected,
+                connectionState = connectionState,
                 engineName = engineName,
                 modifier = Modifier.padding(horizontal = Spacing.md),
             )
@@ -230,10 +231,16 @@ private fun SidebarItem(
 
 @Composable
 private fun ConnectionStatus(
-    isConnected: Boolean,
+    connectionState: EngineConnectionState,
     engineName: String,
     modifier: Modifier = Modifier,
 ) {
+    val (dotColor, label) =
+        when (connectionState) {
+            EngineConnectionState.CONNECTED -> AppColors.Running to "Connected"
+            EngineConnectionState.CHECKING -> AppColors.Warning to "Connecting…"
+            EngineConnectionState.UNAVAILABLE -> AppColors.Stopped to "Disconnected"
+        }
     Row(
         modifier =
             modifier
@@ -247,12 +254,12 @@ private fun ConnectionStatus(
         Surface(
             modifier = Modifier.size(8.dp),
             shape = RoundedCornerShape(Radius.sm),
-            color = if (isConnected) AppColors.Running else AppColors.Stopped,
+            color = dotColor,
         ) {}
 
         Column {
             Text(
-                text = if (isConnected) "Connected" else "Disconnected",
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )

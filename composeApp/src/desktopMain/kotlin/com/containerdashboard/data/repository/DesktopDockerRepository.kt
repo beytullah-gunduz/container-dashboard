@@ -72,6 +72,13 @@ import com.github.dockerjava.api.model.Container as DockerContainer
 import com.github.dockerjava.api.model.Image as DockerJavaImage
 import com.github.dockerjava.api.model.Network as DockerNetworkModel
 
+// A daemon's socket can accept connections before its HTTP API answers (right after launch, or
+// during a brief hiccup). Retry a reachable-but-silent engine this many times, spaced this far
+// apart, before reporting it unavailable — so the UI stays in "connecting" instead of flashing
+// "engine not available" at users whose engine is actually running.
+private const val STARTUP_PING_RETRIES = 4
+private const val STARTUP_PING_RETRY_MS = 350L
+
 class DesktopDockerRepository(
     private val dockerHost: String,
 ) : DockerRepository {
@@ -141,55 +148,68 @@ class DesktopDockerRepository(
     override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
             while (true) {
-                val available =
-                    try {
-                        val reachable =
-                            when {
-                                dockerHost.startsWith("unix://") -> {
-                                    val socketPath = dockerHost.removePrefix("unix://")
-                                    File(socketPath).exists()
-                                }
-                                dockerHost.startsWith(
-                                    "tcp://",
-                                ) ||
-                                    dockerHost.startsWith("http://") ||
-                                    dockerHost.startsWith("https://") -> {
-                                    // Lightweight TCP reachability check — connect only, no data.
-                                    val uri = java.net.URI(dockerHost)
-                                    val host = uri.host ?: "localhost"
-                                    val port = if (uri.port > 0) uri.port else 2375
-                                    try {
-                                        Socket().use { socket ->
-                                            socket.connect(InetSocketAddress(host, port), 3_000)
-                                            true
-                                        }
-                                    } catch (_: Exception) {
-                                        false
-                                    }
-                                }
-                                else -> {
-                                    // Unknown scheme — fall back to ping only
-                                    true
-                                }
-                            }
-                        if (!reachable) {
-                            false
-                        } else {
-                            if (!lastAvailable) {
-                                rebuildClient()
-                            }
-                            dockerClient.pingCmd().exec()
-                            true
-                        }
-                    } catch (e: Exception) {
-                        logger.debug("Docker daemon not reachable: {}", e.message)
-                        false
-                    }
-                lastAvailable = available
-                emit(available)
+                emit(determineAvailability())
                 delay(checkIntervalMillis)
             }
         }.distinctUntilChanged().flowOn(Dispatchers.IO)
+
+    /**
+     * Resolve engine availability for one poll cycle.
+     *
+     * If the host isn't even reachable (no unix socket file / refused TCP connect) we're sure
+     * nothing is there and report `false` right away. If the host IS reachable but the API ping
+     * fails, the daemon may just be warming up, so we retry the ping a few times before
+     * concluding it's down — keeping the UI in its "connecting" state until we're genuinely sure
+     * rather than flashing "engine not available" at a daemon that's still coming up.
+     */
+    private suspend fun determineAvailability(): Boolean {
+        if (!isHostReachable()) {
+            lastAvailable = false
+            return false
+        }
+        // Reachable: rebuild a stale client once when coming from a disconnected state, then ping
+        // with a short retry budget to ride out daemon warm-up and transient blips.
+        if (!lastAvailable) {
+            rebuildClient()
+        }
+        val available = probeWithRetry(STARTUP_PING_RETRIES, STARTUP_PING_RETRY_MS) { pingOnce() }
+        lastAvailable = available
+        return available
+    }
+
+    /** Cheap "is anything listening" probe — no API call, just socket/file reachability. */
+    private fun isHostReachable(): Boolean =
+        when {
+            dockerHost.startsWith("unix://") -> File(dockerHost.removePrefix("unix://")).exists()
+            dockerHost.startsWith("tcp://") ||
+                dockerHost.startsWith("http://") ||
+                dockerHost.startsWith("https://") -> {
+                // Lightweight TCP reachability check — connect only, no data.
+                val uri = java.net.URI(dockerHost)
+                val host = uri.host ?: "localhost"
+                val port = if (uri.port > 0) uri.port else 2375
+                try {
+                    Socket().use { socket ->
+                        socket.connect(InetSocketAddress(host, port), 3_000)
+                        true
+                    }
+                } catch (_: Exception) {
+                    false
+                }
+            }
+            // Unknown scheme — assume reachable and let the ping decide.
+            else -> true
+        }
+
+    /** One-shot daemon ping. Returns `false` (and logs at debug) instead of throwing. */
+    private fun pingOnce(): Boolean =
+        try {
+            dockerClient.pingCmd().exec()
+            true
+        } catch (e: Exception) {
+            logger.debug("Docker daemon ping failed: {}", e.message)
+            false
+        }
 
     private val dockerEvents: SharedFlow<Event> =
         flow {

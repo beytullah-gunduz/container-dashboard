@@ -40,6 +40,7 @@ import com.containerdashboard.ui.components.rememberSkeletonAlpha
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.EngineConnectionState
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
@@ -69,7 +70,7 @@ fun DashboardScreen(
     val volumes by viewModel.volumes.collectAsState(listOf())
     val networks by viewModel.networks.collectAsState(listOf())
     val error by viewModel.error.collectAsState()
-    val isConnected by viewModel.isConnected.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
     val hasLoaded by viewModel.hasLoaded.collectAsState()
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -99,9 +100,19 @@ fun DashboardScreen(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = if (isConnected) "Connected to container engine" else "Overview of your container environment",
+                        text =
+                            when (connectionState) {
+                                EngineConnectionState.CONNECTED -> "Connected to container engine"
+                                EngineConnectionState.CHECKING -> "Checking for container engine…"
+                                EngineConnectionState.UNAVAILABLE -> "Overview of your container environment"
+                            },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isConnected) AppColors.Running else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color =
+                            if (connectionState == EngineConnectionState.CONNECTED) {
+                                AppColors.Running
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                     )
                 }
             }

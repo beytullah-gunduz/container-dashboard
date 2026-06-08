@@ -45,10 +45,12 @@ class AppViewModel(
     private val repo: DockerRepository get() = repoProvider()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val isConnected: StateFlow<Boolean> =
+    val connectionState: StateFlow<EngineConnectionState> =
         repoFlow
             .flatMapLatest { it.isDockerAvailable() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+            .map { available ->
+                if (available) EngineConnectionState.CONNECTED else EngineConnectionState.UNAVAILABLE
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EngineConnectionState.CHECKING)
 
     private val _currentRoute =
         MutableStateFlow(

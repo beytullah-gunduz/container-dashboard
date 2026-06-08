@@ -49,10 +49,14 @@ class FakeDockerRepository(
     var readFileResult: Result<ContainerFileContent> =
         Result.success(ContainerFileContent(text = "", isBinary = false, truncated = false, totalBytesShown = 0)),
     var downloadFileResult: Result<ByteArray> = Result.success(ByteArray(0)),
+    // Flow overrides for driving loading/availability transitions in tests. When null, the simple
+    // single-value defaults are used (matching prior behavior).
+    var containersFlowOverride: Flow<List<Container>>? = null,
+    var availabilityFlowOverride: Flow<Boolean>? = null,
 ) : DockerRepository {
     // --- Availability ---
 
-    override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = flowOf(true)
+    override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = availabilityFlowOverride ?: flowOf(true)
 
     // --- System ---
 
@@ -62,7 +66,7 @@ class FakeDockerRepository(
 
     // --- Containers ---
 
-    override fun getContainers(all: Boolean): Flow<List<Container>> = flowOf(containers)
+    override fun getContainers(all: Boolean): Flow<List<Container>> = containersFlowOverride ?: flowOf(containers)
 
     override suspend fun refreshContainers() = Unit
 

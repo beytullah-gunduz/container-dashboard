@@ -63,6 +63,7 @@ import com.containerdashboard.ui.screens.SettingsScreen
 import com.containerdashboard.ui.screens.VolumesScreen
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
+import com.containerdashboard.ui.screens.viewmodel.EngineConnectionState
 import com.containerdashboard.ui.shortcuts.AppShortcutScope
 import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
@@ -87,7 +88,7 @@ fun App(
     consoleContent: @Composable (containerId: String, darkTheme: Boolean) -> Unit = { _, _ -> },
 ) {
     val currentRoute by viewModel.currentRoute.collectAsState()
-    val isConnected by viewModel.isConnected.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
     val logsPaneState by viewModel.logsPaneState.collectAsState()
     val filesPaneState by viewModel.filesPaneState.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -117,14 +118,14 @@ fun App(
         ) {
             AnimatedContent(
                 modifier = Modifier.fillMaxSize(),
-                targetState = isConnected,
+                targetState = connectionState,
                 transitionSpec = {
                     (fadeIn() + scaleIn(initialScale = 0.96f))
                         .togetherWith(fadeOut())
                 },
                 label = "DockerConnectionTransition",
-            ) { connected ->
-                if (!connected) {
+            ) { state ->
+                if (state != EngineConnectionState.CONNECTED) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         WindowChromeBar()
                         if (currentRoute == Screen.Settings.route) {
@@ -145,40 +146,65 @@ fun App(
                                 modifier = Modifier.weight(1f).fillMaxSize(),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(Res.drawable.warning),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = "Container engine is not available",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Text(
-                                        text = "Please start your container engine and the dashboard will connect automatically.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                    OutlinedButton(
-                                        onClick = { viewModel.navigate(Screen.Settings.route) },
+                                if (state == EngineConnectionState.CHECKING) {
+                                    // Initial poll hasn't returned yet — show a calm connecting
+                                    // state rather than the alarming "not available" panel, which
+                                    // would otherwise flash for every user whose engine IS running.
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(32.dp),
+                                            strokeWidth = 3.dp,
+                                        )
+                                        Text(
+                                            text = "Connecting to $engineName…",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Text(
+                                            text = "Looking for your container engine.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                     ) {
                                         Icon(
-                                            painter = painterResource(Res.drawable.settings),
+                                            painter = painterResource(Res.drawable.warning),
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(64.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
-                                        Spacer(modifier = Modifier.width(Spacing.sm))
-                                        Text("Settings")
+                                        Text(
+                                            text = "Container engine is not available",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Text(
+                                            text = "Please start your container engine and the dashboard will connect automatically.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                        OutlinedButton(
+                                            onClick = { viewModel.navigate(Screen.Settings.route) },
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(Res.drawable.settings),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(Spacing.sm))
+                                            Text("Settings")
+                                        }
                                     }
                                 }
                             }
@@ -259,7 +285,7 @@ fun App(
                                     Sidebar(
                                         currentRoute = currentRoute,
                                         onNavigate = { screen -> viewModel.navigate(screen.route) },
-                                        isConnected = isConnected,
+                                        connectionState = connectionState,
                                         engineName = engineName,
                                         // Issue 8 fix: wire discoverable affordance
                                         onOpenPalette = { showPalette = true },

@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -31,16 +30,20 @@ class ContainersScreenViewModel(
 ) : ViewModel() {
     private val repo: DockerRepository get() = repoProvider()
 
+    // Single shared source for the list. `hasLoaded` derives from THIS raw flow, not from the
+    // `containers` StateFlow below: a StateFlow replays its seed (emptyList) to every new
+    // collector immediately, so deriving `hasLoaded` from it flips it to `true` before the first
+    // real fetch returns — surfacing a spurious "No containers" empty state during initial load.
+    private val containersFlow: Flow<List<Container>> = repo.getContainers(all = true)
+
     val containers: StateFlow<List<Container>> =
-        repo
-            .getContainers(all = true)
+        containersFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Emits `false` until the first list of containers has been delivered. */
     val hasLoaded: StateFlow<Boolean> =
-        containers
+        containersFlow
             .map { true }
-            .onStart { emit(false) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
