@@ -34,7 +34,11 @@ import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import javax.swing.JComponent
+import javax.swing.JTextArea
+
+private val logger = LoggerFactory.getLogger("com.containerdashboard.terminal.JediTermConsole")
 
 @Composable
 fun JediTermConsole(
@@ -96,7 +100,17 @@ fun JediTermConsole(
                     background = Color.Black,
                     modifier = Modifier.fillMaxSize(),
                     factory = {
-                        createTerminalWidget(conn, darkTheme)
+                        // This runs on the Swing/Compose render thread. An uncaught throwable
+                        // here is fatal to the whole window: Compose's default exception handler
+                        // shows a bare "Unknown error" dialog and tears the app down. Contain it
+                        // and degrade to an inline message so a terminal failure stays contained
+                        // to the Console tab.
+                        try {
+                            createTerminalWidget(conn, darkTheme)
+                        } catch (throwable: Throwable) {
+                            logger.error("Failed to create terminal widget for container {}", containerId, throwable)
+                            terminalErrorComponent(throwable)
+                        }
                     },
                 )
             }
@@ -165,4 +179,25 @@ private fun createTerminalWidget(
     widget.setTtyConnector(connector)
     widget.start()
     return widget.component
+}
+
+/**
+ * Fallback shown in the Console tab when the terminal widget can't be created
+ * (e.g. a JediTerm initialization failure). Replaces an uncaught render-thread
+ * throwable — which would otherwise crash the whole window — with a contained,
+ * readable message.
+ */
+private fun terminalErrorComponent(throwable: Throwable): JComponent {
+    val detail =
+        throwable.message
+            ?: throwable.cause?.message
+            ?: throwable::class.java.simpleName
+    return JTextArea("Couldn't open the console.\n\n$detail").apply {
+        isEditable = false
+        lineWrap = true
+        wrapStyleWord = true
+        background = java.awt.Color(0x1A, 0x1A, 0x1A)
+        foreground = java.awt.Color(0xE0, 0x6C, 0x6C)
+        margin = java.awt.Insets(16, 16, 16, 16)
+    }
 }

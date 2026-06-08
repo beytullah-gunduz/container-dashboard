@@ -90,6 +90,22 @@
 -keep class org.bouncycastle.** { *; }
 
 # ---------------------------------------------------------------------------
+# JediTerm terminal emulator (interactive container console).
+# Keep every class and member intact. Without this, ProGuard's enum
+# optimization strips the enum-ness of com.jediterm.terminal.TextStyle$Option,
+# so the EnumSet.noneOf(TextStyle.Option.class) call in TextStyle's static
+# initializer throws "ClassCastException: ... not an enum". That surfaces as an
+# ExceptionInInitializerError the moment a JediTermWidget is constructed (when
+# the user opens the Console tab); because it propagates uncaught on the
+# Swing/Compose render thread it tears down the whole window — the app appears
+# to crash with a bare "Unknown error" dialog. The widget is also subclassed
+# (DefaultSettingsProvider) and carries internal terminal state, so a partial
+# shrink is unsafe: keep the library whole.
+# ---------------------------------------------------------------------------
+-keep class com.jediterm.** { *; }
+-dontwarn com.jediterm.**
+
+# ---------------------------------------------------------------------------
 # Jackson + docker-java POJOs.
 # Docker-java parses the daemon's JSON into POJOs in
 # com.github.dockerjava.api.model.** using Jackson reflection (@JsonProperty
