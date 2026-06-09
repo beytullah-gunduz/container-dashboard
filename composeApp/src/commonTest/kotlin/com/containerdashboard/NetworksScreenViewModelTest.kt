@@ -1,10 +1,14 @@
 package com.containerdashboard
 
+import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.NetworkSortColumn
 import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -31,7 +35,26 @@ class NetworksScreenViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm(fake: FakeDockerRepository = FakeDockerRepository()) = NetworksScreenViewModel(repoProvider = { fake })
+    private fun makeVm(fake: FakeDockerRepository = FakeDockerRepository()) =
+        NetworksScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+
+    // -------------------------------------------------------------------------
+    // Engine reconnect
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `networks re-stream from the new repository after an engine reconnect`() =
+        runTest {
+            val fake1 = FakeDockerRepository(networks = listOf(DockerNetwork(id = "n1", name = "old", driver = "bridge")))
+            val fake2 = FakeDockerRepository(networks = listOf(DockerNetwork(id = "n2", name = "new", driver = "bridge")))
+            val repoFlow = MutableStateFlow<DockerRepository>(fake1)
+            val vm = NetworksScreenViewModel(repoProvider = { repoFlow.value }, repoFlow = repoFlow)
+
+            assertEquals(listOf("old"), vm.networks.first().map { it.name })
+
+            repoFlow.value = fake2 // AppModule.reconnect() swaps the repository
+            assertEquals(listOf("new"), vm.networks.first().map { it.name })
+        }
 
     // -------------------------------------------------------------------------
     // Selection ops

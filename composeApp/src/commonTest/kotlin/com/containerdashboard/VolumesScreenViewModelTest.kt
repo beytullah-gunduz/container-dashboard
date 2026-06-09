@@ -1,10 +1,14 @@
 package com.containerdashboard
 
+import com.containerdashboard.data.models.Volume
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -31,7 +35,26 @@ class VolumesScreenViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm(fake: FakeDockerRepository = FakeDockerRepository()) = VolumesScreenViewModel(repoProvider = { fake })
+    private fun makeVm(fake: FakeDockerRepository = FakeDockerRepository()) =
+        VolumesScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+
+    // -------------------------------------------------------------------------
+    // Engine reconnect
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `volumes re-stream from the new repository after an engine reconnect`() =
+        runTest {
+            val fake1 = FakeDockerRepository(volumes = listOf(Volume(name = "old", driver = "local")))
+            val fake2 = FakeDockerRepository(volumes = listOf(Volume(name = "new", driver = "local")))
+            val repoFlow = MutableStateFlow<DockerRepository>(fake1)
+            val vm = VolumesScreenViewModel(repoProvider = { repoFlow.value }, repoFlow = repoFlow)
+
+            assertEquals(listOf("old"), vm.volumes.first().map { it.name })
+
+            repoFlow.value = fake2 // AppModule.reconnect() swaps the repository
+            assertEquals(listOf("new"), vm.volumes.first().map { it.name })
+        }
 
     // -------------------------------------------------------------------------
     // Selection ops

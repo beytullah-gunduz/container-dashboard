@@ -3,11 +3,13 @@ package com.containerdashboard.ui.screens.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.containerdashboard.data.repository.DockerRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
@@ -23,17 +25,29 @@ enum class SortDirection {
  * Base ViewModel for list screens that share checked-set, search, selection,
  * deletion, and refresh logic.
  *
- * [items] must be supplied as a constructor argument (not an abstract property)
- * to avoid the init-order pitfall where [hasLoaded] would reference an
- * uninitialized abstract member during base-class construction.
+ * [itemsSource] must be supplied as a constructor argument (not an abstract
+ * property) to avoid the init-order pitfall where [hasLoaded] would reference
+ * an uninitialized abstract member during base-class construction. It is bound
+ * through [repoFlow] with `flatMapLatest`, so when the user switches engine
+ * hosts and `AppModule.reconnect()` swaps the repository, [items] re-streams
+ * from the new instance instead of the closed old one.
  */
 abstract class ListScreenViewModel<T>(
     protected val repoProvider: () -> DockerRepository,
-    protected val items: Flow<List<T>>,
+    protected val repoFlow: StateFlow<DockerRepository>,
+    itemsSource: (DockerRepository) -> Flow<List<T>>,
 ) : ViewModel() {
     protected val repo: DockerRepository get() = repoProvider()
 
-    /** Emits `false` until the first list of items has been delivered. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    protected val items: Flow<List<T>> = repoFlow.flatMapLatest(itemsSource)
+
+    /**
+     * Emits `false` until the first list of items has been delivered. Stays
+     * `true` across an engine-host reconnect: the previous host's data remains
+     * visible until the new host's first list arrives, avoiding an empty-state
+     * flash mid-switch.
+     */
     val hasLoaded: StateFlow<Boolean> =
         items
             .map { true }
@@ -127,9 +141,10 @@ abstract class ListScreenViewModel<T>(
  */
 abstract class SortableListScreenViewModel<T, C : Enum<C>>(
     repoProvider: () -> DockerRepository,
-    items: Flow<List<T>>,
+    repoFlow: StateFlow<DockerRepository>,
+    itemsSource: (DockerRepository) -> Flow<List<T>>,
     initialColumn: C,
-) : ListScreenViewModel<T>(repoProvider, items) {
+) : ListScreenViewModel<T>(repoProvider, repoFlow, itemsSource) {
     private val _sortColumn = MutableStateFlow(initialColumn)
     val sortColumn: StateFlow<C> = _sortColumn.asStateFlow()
 

@@ -18,9 +18,11 @@ enum class NetworkSortColumn {
 
 class NetworksScreenViewModel(
     repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : SortableListScreenViewModel<DockerNetwork, NetworkSortColumn>(
         repoProvider = repoProvider,
-        items = repoProvider().getNetworks(),
+        repoFlow = repoFlow,
+        itemsSource = { it.getNetworks() },
         initialColumn = NetworkSortColumn.NAME,
     ) {
     val networks: Flow<List<DockerNetwork>> get() = items

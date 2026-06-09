@@ -18,9 +18,11 @@ enum class VolumeSortColumn {
 
 class VolumesScreenViewModel(
     repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : SortableListScreenViewModel<Volume, VolumeSortColumn>(
         repoProvider = repoProvider,
-        items = repoProvider().getVolumes(),
+        repoFlow = repoFlow,
+        itemsSource = { it.getVolumes() },
         initialColumn = VolumeSortColumn.NAME,
     ) {
     val volumes: Flow<List<Volume>> get() = items

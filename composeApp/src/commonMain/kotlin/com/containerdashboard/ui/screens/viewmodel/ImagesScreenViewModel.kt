@@ -17,9 +17,11 @@ enum class ImageSortColumn {
 
 class ImagesScreenViewModel(
     repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : SortableListScreenViewModel<DockerImage, ImageSortColumn>(
         repoProvider = repoProvider,
-        items = repoProvider().getImages(),
+        repoFlow = repoFlow,
+        itemsSource = { it.getImages() },
         initialColumn = ImageSortColumn.REPOSITORY,
     ) {
     val images: Flow<List<DockerImage>> get() = items
