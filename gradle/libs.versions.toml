@@ -7,6 +7,9 @@ lifecycle = "2.11.0-beta01"
 coroutines = "1.10.2"
 serialization = "1.9.0"
 datetime = "0.6.1"
+# ktor is currently unreferenced (no io.ktor imports in commonMain or desktopMain;
+# networking goes through docker-java's Apache transport). Remove the entry below
+# when Ktor is confirmed permanently unused, or wire it back in when/if needed.
 ktor = "3.1.0"
 docker-java = "3.3.4"
 jediterm = "3.64"
@@ -41,7 +44,8 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 
-# Ktor
+# Ktor — currently unreferenced (removed from build.gradle.kts; no io.ktor imports exist).
+# Kept here for easy reinstatement if Ktor is adopted in a future networking layer.
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
@@ -67,7 +71,7 @@ android-datastore = ["androidx-datastore-core", "androidx-datastore-preferences"
 compose-common = ["compose-runtime", "compose-foundation", "compose-material3", "compose-ui", "compose-components-resources"]
 compose-material3-adaptive = ["compose-material3-adaptive", "compose-material3-adaptive-layout", "compose-material3-adaptive-navigation"]
 lifecycle = ["lifecycle-runtime-compose","lifecycle-viewmodel", "lifecycle-viewmodel-compose"]
-ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
+ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]  # unreferenced — see ktor note above
 docker-java = ["docker-java-core", "docker-java-transport-httpclient5"]
 logging = ["slf4j-api", "logback-classic"]
 

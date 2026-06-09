@@ -53,8 +53,6 @@ kotlin {
                 // DateTime
                 implementation(libs.kotlinx.datetime)
 
-                // Ktor Client for Docker API
-                implementation(libs.bundles.ktor.common)
             }
         }
 
@@ -69,9 +67,6 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
-
-                // Ktor Client CIO engine for desktop
-                implementation(libs.ktor.client.cio)
 
                 // Docker Java client
                 implementation(libs.bundles.docker.java)
