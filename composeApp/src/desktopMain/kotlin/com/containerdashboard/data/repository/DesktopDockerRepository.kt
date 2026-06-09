@@ -1383,7 +1383,16 @@ class DesktopDockerRepository(
         return (cpuDelta.toDouble() / systemDelta.toDouble()) * numCpus * 100.0
     }
 
-    // Prune operations
+    // Prune operations.
+    //
+    // docker-java 3.3.4's typed PruneResponse only exposes SpaceReclaimed; the deleted-item
+    // lists (ContainersDeleted / ImagesDeleted / VolumesDeleted / NetworksDeleted) are still
+    // present in the raw response map that docker-java's DockerObjectDeserializer attaches to
+    // every DockerObject (getRawValues() is the documented escape hatch for fields the typed
+    // model doesn't cover). Null / absent list — nothing was deleted — counts as 0.
+    private fun com.github.dockerjava.api.model.PruneResponse.deletedItemCount(rawKey: String): Int =
+        (rawValues[rawKey] as? List<*>)?.size ?: 0
+
     override suspend fun pruneContainers(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
@@ -1391,7 +1400,7 @@ class DesktopDockerRepository(
                 logger.info("Pruned containers, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
-                        deletedCount = response.spaceReclaimed?.toInt() ?: 0,
+                        deletedCount = response.deletedItemCount("ContainersDeleted"),
                         reclaimedSpace = response.spaceReclaimed ?: 0,
                     ),
                 )
@@ -1408,7 +1417,9 @@ class DesktopDockerRepository(
                 logger.info("Pruned images, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
-                        deletedCount = response.spaceReclaimed?.toInt() ?: 0,
+                        // ImagesDeleted entries are {Untagged|Deleted} records; the list length
+                        // is the number of delete/untag operations, matching `docker image prune`.
+                        deletedCount = response.deletedItemCount("ImagesDeleted"),
                         reclaimedSpace = response.spaceReclaimed ?: 0,
                     ),
                 )
@@ -1425,7 +1436,7 @@ class DesktopDockerRepository(
                 logger.info("Pruned volumes, reclaimed {} bytes", response.spaceReclaimed)
                 Result.success(
                     PruneResult(
-                        deletedCount = response.spaceReclaimed?.toInt() ?: 0,
+                        deletedCount = response.deletedItemCount("VolumesDeleted"),
                         reclaimedSpace = response.spaceReclaimed ?: 0,
                     ),
                 )
@@ -1438,11 +1449,12 @@ class DesktopDockerRepository(
     override suspend fun pruneNetworks(): Result<PruneResult> =
         withContext(Dispatchers.IO) {
             try {
-                dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.NETWORKS).exec()
+                val response = dockerClient.pruneCmd(com.github.dockerjava.api.model.PruneType.NETWORKS).exec()
                 logger.info("Pruned networks")
                 Result.success(
                     PruneResult(
-                        deletedCount = 0,
+                        deletedCount = response.deletedItemCount("NetworksDeleted"),
+                        // Network prune frees no disk space; the API returns no SpaceReclaimed.
                         reclaimedSpace = 0,
                     ),
                 )
