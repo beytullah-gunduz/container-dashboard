@@ -31,7 +31,9 @@ import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.theme.AppColors
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -50,32 +52,44 @@ fun JediTermConsole(
     var isConnecting by remember(containerId) { mutableStateOf(true) }
     var error by remember(containerId) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // Holds the in-flight connect Job so onDispose can cancel it even before the
+    // connector is assigned — preventing an orphaned exec session on early disposal.
+    var connectJob by remember(containerId) { mutableStateOf<Job?>(null) }
 
     fun connect() {
-        scope.launch {
-            isConnecting = true
-            error = null
-            try {
-                val conn =
-                    withContext(Dispatchers.IO) {
-                        DockerExecTtyConnector(
-                            dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
-                            containerId = containerId,
-                        ).also { it.start() }
-                    }
-                connector = conn
-                ConsoleSessionRegistry.register(containerId)
-            } catch (e: Exception) {
-                error = e.message ?: "Failed to connect"
-            } finally {
-                isConnecting = false
+        connectJob =
+            scope.launch {
+                isConnecting = true
+                error = null
+                var conn: DockerExecTtyConnector? = null
+                try {
+                    conn =
+                        withContext(Dispatchers.IO) {
+                            DockerExecTtyConnector(
+                                dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
+                                containerId = containerId,
+                            ).also { it.start() }
+                        }
+                    connector = conn
+                    ConsoleSessionRegistry.register(containerId)
+                } catch (e: CancellationException) {
+                    // Coroutine cancelled (early dispose) — close the connector if it
+                    // was already created so the exec session doesn't leak.
+                    conn?.close()
+                    throw e
+                } catch (e: Exception) {
+                    conn?.close()
+                    error = e.message ?: "Failed to connect"
+                } finally {
+                    isConnecting = false
+                }
             }
-        }
     }
 
     DisposableEffect(containerId) {
         connect()
         onDispose {
+            connectJob?.cancel()
             connector?.close()
             connector = null
             ConsoleSessionRegistry.unregister(containerId)
