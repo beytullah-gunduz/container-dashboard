@@ -8,6 +8,7 @@ import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
@@ -27,20 +29,29 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class ContainersScreenViewModel(
     private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : ViewModel() {
     private val repo: DockerRepository get() = repoProvider()
 
-    // Single shared source for the list. `hasLoaded` derives from THIS raw flow, not from the
-    // `containers` StateFlow below: a StateFlow replays its seed (emptyList) to every new
-    // collector immediately, so deriving `hasLoaded` from it flips it to `true` before the first
-    // real fetch returns — surfacing a spurious "No containers" empty state during initial load.
-    private val containersFlow: Flow<List<Container>> = repo.getContainers(all = true)
+    // Single shared source for the list, re-bound to the current repository whenever
+    // `AppModule.reconnect()` swaps it (engine-host switch). `hasLoaded` derives from THIS raw
+    // flow, not from the `containers` StateFlow below: a StateFlow replays its seed (emptyList)
+    // to every new collector immediately, so deriving `hasLoaded` from it flips it to `true`
+    // before the first real fetch returns — surfacing a spurious "No containers" empty state
+    // during initial load.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val containersFlow: Flow<List<Container>> =
+        repoFlow.flatMapLatest { it.getContainers(all = true) }
 
     val containers: StateFlow<List<Container>> =
         containersFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Emits `false` until the first list of containers has been delivered. */
+    /**
+     * Emits `false` until the first list of containers has been delivered. Stays `true` across an
+     * engine-host reconnect: the previous host's list remains visible until the new host's first
+     * list arrives, avoiding a "No containers" flash mid-switch.
+     */
     val hasLoaded: StateFlow<Boolean> =
         containersFlow
             .map { true }
@@ -94,10 +105,10 @@ class ContainersScreenViewModel(
                 .toSet()
         }.distinctUntilChanged()
 
-    @OptIn(FlowPreview::class)
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val statsById: StateFlow<Map<String, ContainerStats>> =
-        repo
-            .getContainerStats(expandedRunningContainerIds)
+        repoFlow
+            .flatMapLatest { it.getContainerStats(expandedRunningContainerIds) }
             .sample(3_000L)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 

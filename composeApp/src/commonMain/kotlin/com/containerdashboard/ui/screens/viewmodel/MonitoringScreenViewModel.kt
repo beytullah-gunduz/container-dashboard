@@ -84,6 +84,7 @@ private data class DerivedState(
 
 class MonitoringScreenViewModel(
     private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : ViewModel() {
     private val repo: DockerRepository get() = repoProvider()
 
@@ -105,10 +106,12 @@ class MonitoringScreenViewModel(
             .monitoringAggregation()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonitoringAggregation.ENGINE)
 
+    // Re-binds on BOTH refresh-rate changes and repository swaps (engine-host reconnect), so
+    // stats keep streaming from the current repository instead of the closed old one.
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private val rawStats =
-        _refreshRate
-            .flatMapLatest { seconds ->
+        combine(repoFlow, _refreshRate) { repo, seconds -> repo to seconds }
+            .flatMapLatest { (repo, seconds) ->
                 repo.getContainerStats().sample((seconds * 1000).toLong())
             }
 

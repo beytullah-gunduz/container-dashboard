@@ -3,6 +3,7 @@ package com.containerdashboard
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -25,7 +26,10 @@ class ContainersSelectionTest {
         Dispatchers.resetMain()
     }
 
-    private fun makeVm() = ContainersScreenViewModel(repoProvider = { FakeDockerRepository() })
+    private fun makeVm(): ContainersScreenViewModel {
+        val fake = FakeDockerRepository()
+        return ContainersScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+    }
 
     // -------------------------------------------------------------------------
     // Initial state

@@ -8,6 +8,7 @@ import com.containerdashboard.ui.screens.viewmodel.aggregateCpu
 import com.containerdashboard.ui.screens.viewmodel.aggregateMemory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -24,7 +25,7 @@ class MonitoringHelpersTest {
     fun setUp() {
         Dispatchers.setMain(StandardTestDispatcher())
         val fake = FakeDockerRepository()
-        vm = MonitoringScreenViewModel(repoProvider = { fake })
+        vm = MonitoringScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
     }
 
     @AfterTest

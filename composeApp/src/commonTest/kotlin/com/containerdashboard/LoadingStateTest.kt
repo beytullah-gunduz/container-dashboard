@@ -2,6 +2,7 @@ package com.containerdashboard
 
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
@@ -56,7 +57,7 @@ class LoadingStateTest {
         runTest {
             val source = MutableSharedFlow<List<Container>>(replay = 1)
             val fake = FakeDockerRepository(containersFlowOverride = source)
-            val vm = ContainersScreenViewModel(repoProvider = { fake })
+            val vm = ContainersScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
 
             assertEquals(false, vm.hasLoaded.value, "seed must be false")
 
@@ -122,6 +123,31 @@ class LoadingStateTest {
             imagesSource.tryEmit(emptyList())
             advanceUntilIdle()
             assertEquals(true, vm.imagesLoaded.value, "images loaded once delivered")
+
+            jobs.forEach { it.cancel() }
+        }
+
+    @Test
+    fun `Containers list rebinds to the new repository after an engine reconnect`() =
+        runTest {
+            val fake1 = FakeDockerRepository(containers = listOf(container("old")))
+            val fake2 = FakeDockerRepository(containers = listOf(container("new")))
+            val repoFlow = MutableStateFlow<DockerRepository>(fake1)
+            val vm = ContainersScreenViewModel(repoProvider = { repoFlow.value }, repoFlow = repoFlow)
+
+            val jobs =
+                listOf(
+                    launch { vm.containers.collect {} },
+                    launch { vm.hasLoaded.collect {} },
+                )
+            advanceUntilIdle()
+            assertEquals(listOf("old"), vm.containers.value.map { it.id })
+            assertEquals(true, vm.hasLoaded.value)
+
+            repoFlow.value = fake2 // AppModule.reconnect() swaps the repository
+            advanceUntilIdle()
+            assertEquals(listOf("new"), vm.containers.value.map { it.id }, "list must come from the new repository")
+            assertEquals(true, vm.hasLoaded.value, "hasLoaded stays true across a reconnect — no empty-state flash")
 
             jobs.forEach { it.cancel() }
         }

@@ -1,10 +1,12 @@
 package com.containerdashboard
 
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -48,7 +50,7 @@ class MonitoringLoadingStateTest {
         runTest {
             val statsSource = MutableSharedFlow<List<ContainerStats>>(replay = 1)
             val fake = FakeDockerRepository(containerStatsFlowOverride = statsSource)
-            val vm = MonitoringScreenViewModel(repoProvider = { fake })
+            val vm = MonitoringScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
             vm.setRefreshRate(0.05f) // 50ms sample window keeps the test fast
 
             assertNull(vm.derivedStats.value, "seed must be null = no snapshot yet")
@@ -62,6 +64,36 @@ class MonitoringLoadingStateTest {
             advanceTimeBy(300)
             runCurrent()
             assertEquals(2, vm.derivedStats.value?.size, "becomes a non-null list once a snapshot arrives")
+
+            job.cancel()
+        }
+
+    @Test
+    fun `stats stream rebinds to the new repository after an engine reconnect`() =
+        runTest {
+            val source1 = MutableSharedFlow<List<ContainerStats>>(replay = 1)
+            val source2 = MutableSharedFlow<List<ContainerStats>>(replay = 1)
+            val fake1 = FakeDockerRepository(containerStatsFlowOverride = source1)
+            val fake2 = FakeDockerRepository(containerStatsFlowOverride = source2)
+            val repoFlow = MutableStateFlow<DockerRepository>(fake1)
+            val vm = MonitoringScreenViewModel(repoProvider = { repoFlow.value }, repoFlow = repoFlow)
+            vm.setRefreshRate(0.05f)
+
+            val job = launch { vm.derivedStats.collect {} }
+            source1.tryEmit(listOf(stats("old")))
+            advanceTimeBy(300)
+            runCurrent()
+            assertEquals(listOf("old"), vm.derivedStats.value?.map { it.containerId })
+
+            repoFlow.value = fake2 // AppModule.reconnect() swaps the repository
+            source2.tryEmit(listOf(stats("new1"), stats("new2")))
+            advanceTimeBy(300)
+            runCurrent()
+            assertEquals(
+                listOf("new1", "new2"),
+                vm.derivedStats.value?.map { it.containerId },
+                "stats must stream from the new repository",
+            )
 
             job.cancel()
         }
