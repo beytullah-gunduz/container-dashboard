@@ -36,3 +36,24 @@ fun joinPath(
     basePath: String,
     name: String,
 ): String = normalizePath(if (basePath.endsWith("/")) "$basePath$name" else "$basePath/$name")
+
+/**
+ * Validate and normalize a container path.
+ *
+ * Returns [Result.failure] if [path] contains a NUL byte or any other ASCII control character
+ * (code points 0x00–0x1F or 0x7F), which could be used to smuggle commands into `execCreateCmd`
+ * or confuse path handling in the container runtime.
+ * Otherwise returns [Result.success] with the normalized path.
+ */
+fun validateContainerPath(path: String): Result<String> {
+    val controlChar = path.firstOrNull { it.code in 0..31 || it.code == 127 }
+    if (controlChar != null) {
+        return Result.failure(
+            IllegalArgumentException(
+                "Container path contains an illegal control character " +
+                    "(code point ${controlChar.code}): refusing to proceed",
+            ),
+        )
+    }
+    return Result.success(normalizePath(path))
+}

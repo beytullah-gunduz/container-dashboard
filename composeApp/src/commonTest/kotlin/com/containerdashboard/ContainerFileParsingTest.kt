@@ -5,6 +5,7 @@ import com.containerdashboard.data.util.joinPath
 import com.containerdashboard.data.util.looksBinary
 import com.containerdashboard.data.util.normalizePath
 import com.containerdashboard.data.util.parseLsOutput
+import com.containerdashboard.data.util.validateContainerPath
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -141,5 +142,45 @@ class ContainerFileParsingTest {
     @Test
     fun `looksBinary flags a high ratio of control bytes`() {
         assertTrue(looksBinary(ByteArray(100) { 0x01 }))
+    }
+
+    // ---------------------------------------------------------------------
+    // validateContainerPath
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun `validateContainerPath normalizes a clean path`() {
+        val result = validateContainerPath("/etc/hosts")
+        assertTrue(result.isSuccess)
+        assertEquals("/etc/hosts", result.getOrThrow())
+    }
+
+    @Test
+    fun `validateContainerPath rejects a path with a NUL byte`() {
+        val pathWithNul = "/etc/host" + 0.toChar() + "s"
+        val result = validateContainerPath(pathWithNul)
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `validateContainerPath rejects a path with a low control character`() {
+        val pathWithCtrl = "/etc/" + 1.toChar() + "hosts"
+        val result = validateContainerPath(pathWithCtrl)
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `validateContainerPath rejects a path with DEL (0x7F)`() {
+        val pathWithDel = "/etc/hosts" + 127.toChar()
+        val result = validateContainerPath(pathWithDel)
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `validateContainerPath still resolves dot-dot segments on clean paths`() {
+        val result = validateContainerPath("/a/b/../c")
+        assertTrue(result.isSuccess)
+        assertEquals("/a/c", result.getOrThrow())
     }
 }
