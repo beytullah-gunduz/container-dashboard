@@ -34,6 +34,10 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e  # v6.1.0
+        with:
+          # Dependency and wrapper caches are on by default in v4+/v6+.
+          # Enable cleanup so stale entries don't grow the cache unboundedly.
+          gradle-home-cache-cleanup: true
 
       - name: Verify formatting
         run: ./gradlew spotlessCheck
