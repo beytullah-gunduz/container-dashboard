@@ -1,5 +1,8 @@
 package com.containerdashboard.data.engine
 
+import com.containerdashboard.ui.util.isLinuxHost
+import com.containerdashboard.ui.util.isMacHost
+import com.containerdashboard.ui.util.isWindowsHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +36,9 @@ sealed interface EngineActionState {
         val message: String,
     ) : EngineActionState
 }
+
+/** Allowed characters for a Colima profile name passed to `--profile`. */
+private val COLIMA_PROFILE_REGEX = Regex("^[a-zA-Z0-9_-]{1,64}$")
 
 object EngineManager {
     private val logger = LoggerFactory.getLogger(EngineManager::class.java)
@@ -103,10 +109,27 @@ object EngineManager {
         disk: Int? = null,
     ): Boolean {
         _output.value = ""
+        // S3.5 — validate Colima profile before passing to argv
+        if (type == EngineType.COLIMA && !profile.isNullOrEmpty() && profile != "default") {
+            if (!COLIMA_PROFILE_REGEX.matches(profile)) {
+                val msg = "Invalid Colima profile name: \"$profile\""
+                logger.warn(msg)
+                _actionState.value = EngineActionState.Done(false, msg)
+                return false
+            }
+        }
         _actionState.value = EngineActionState.Running("Starting ${type.displayName}...")
         return withContext(Dispatchers.IO) {
             try {
-                val cmd = buildCommand(type, "start", profile, cpu, memory, disk)
+                val cmd =
+                    buildCommand(type, "start", profile, cpu, memory, disk)
+                        ?: run {
+                            val osName = currentOsName()
+                            val msg = "${type.displayName} is not supported on $osName"
+                            logger.warn(msg)
+                            _actionState.value = EngineActionState.Done(false, msg)
+                            return@withContext false
+                        }
                 appendOutput("$ ${cmd.joinToString(" ")}")
                 val success = runProcess(cmd, TIMEOUT_START_SECONDS)
                 _actionState.value =
@@ -130,10 +153,27 @@ object EngineManager {
         profile: String? = null,
     ): Boolean {
         _output.value = ""
+        // S3.5 — validate Colima profile before passing to argv
+        if (type == EngineType.COLIMA && !profile.isNullOrEmpty() && profile != "default") {
+            if (!COLIMA_PROFILE_REGEX.matches(profile)) {
+                val msg = "Invalid Colima profile name: \"$profile\""
+                logger.warn(msg)
+                _actionState.value = EngineActionState.Done(false, msg)
+                return false
+            }
+        }
         _actionState.value = EngineActionState.Running("Stopping ${type.displayName}...")
         return withContext(Dispatchers.IO) {
             try {
-                val cmd = buildCommand(type, "stop", profile)
+                val cmd =
+                    buildCommand(type, "stop", profile)
+                        ?: run {
+                            val osName = currentOsName()
+                            val msg = "${type.displayName} is not supported on $osName"
+                            logger.warn(msg)
+                            _actionState.value = EngineActionState.Done(false, msg)
+                            return@withContext false
+                        }
                 appendOutput("$ ${cmd.joinToString(" ")}")
                 val success = runProcess(cmd, TIMEOUT_STOP_SECONDS)
                 _actionState.value =
@@ -152,6 +192,23 @@ object EngineManager {
         }
     }
 
+    /** Returns a short human-readable OS name for error messages. */
+    private fun currentOsName(): String =
+        when {
+            isMacHost -> "macOS"
+            isWindowsHost -> "Windows"
+            isLinuxHost -> "Linux"
+            else -> System.getProperty("os.name", "this OS")
+        }
+
+    /**
+     * Returns the argv list for the requested engine action, or `null` when the
+     * engine/action combination is not supported on the current OS.
+     *
+     * Callers treat `null` as an "unsupported" signal and surface a clear
+     * [EngineActionState.Done] failure rather than launching a process that would
+     * produce an opaque IOException.
+     */
     private fun buildCommand(
         type: EngineType,
         action: String,
@@ -159,9 +216,11 @@ object EngineManager {
         cpu: Int? = null,
         memory: Int? = null,
         disk: Int? = null,
-    ): List<String> =
+    ): List<String>? =
         when (type) {
             EngineType.COLIMA -> {
+                // limactl/colima is available on macOS and Linux; not on Windows.
+                if (isWindowsHost) return null
                 val cmd = mutableListOf("colima", action)
                 if (!profile.isNullOrEmpty() && profile != "default") {
                     cmd.addAll(listOf("--profile", profile))
@@ -174,30 +233,39 @@ object EngineManager {
                 cmd
             }
             EngineType.DOCKER_DESKTOP ->
-                when (action) {
-                    "start" -> listOf("open", "-a", "Docker")
-                    "stop" -> listOf("osascript", "-e", "quit app \"Docker\"")
-                    else -> listOf("echo", "unsupported")
+                when {
+                    // macOS: launch/quit the .app bundle
+                    isMacHost && action == "start" -> listOf("open", "-a", "Docker")
+                    isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"Docker\"")
+                    // Windows: Docker Desktop ships a CLI since v4.x
+                    isWindowsHost && action == "start" -> listOf("docker", "desktop", "start")
+                    isWindowsHost && action == "stop" -> listOf("docker", "desktop", "stop")
+                    // Linux: Docker Desktop for Linux is not widely supported; unsupported.
+                    else -> null
                 }
             EngineType.ORBSTACK ->
-                when (action) {
-                    "start" -> listOf("open", "-a", "OrbStack")
-                    "stop" -> listOf("osascript", "-e", "quit app \"OrbStack\"")
-                    else -> listOf("echo", "unsupported")
+                // OrbStack is macOS-only.
+                when {
+                    isMacHost && action == "start" -> listOf("open", "-a", "OrbStack")
+                    isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"OrbStack\"")
+                    else -> null
                 }
             EngineType.LIMA ->
-                when (action) {
-                    "start" -> listOf("limactl", "start")
-                    "stop" -> listOf("limactl", "stop")
-                    else -> listOf("echo", "unsupported")
+                // limactl works on macOS and Linux; not on Windows.
+                when {
+                    !isWindowsHost && action == "start" -> listOf("limactl", "start")
+                    !isWindowsHost && action == "stop" -> listOf("limactl", "stop")
+                    else -> null
                 }
             EngineType.RANCHER_DESKTOP ->
-                when (action) {
-                    "start" -> listOf("open", "-a", "Rancher Desktop")
-                    "stop" -> listOf("osascript", "-e", "quit app \"Rancher Desktop\"")
-                    else -> listOf("echo", "unsupported")
+                // Rancher Desktop GUI is launched via open -a on macOS; no stable
+                // cross-platform CLI is available for start/stop — unsupported elsewhere.
+                when {
+                    isMacHost && action == "start" -> listOf("open", "-a", "Rancher Desktop")
+                    isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"Rancher Desktop\"")
+                    else -> null
                 }
-            EngineType.UNKNOWN -> listOf("echo", "Unknown engine")
+            EngineType.UNKNOWN -> null
         }
 
     private fun runProcess(

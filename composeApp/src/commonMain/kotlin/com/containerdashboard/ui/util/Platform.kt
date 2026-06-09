@@ -9,3 +9,11 @@ package com.containerdashboard.ui.util
  * the process.
  */
 val isMacHost: Boolean = System.getProperty("os.name", "").contains("mac", ignoreCase = true)
+
+/** True when the JVM reports Windows as the host OS. */
+val isWindowsHost: Boolean = System.getProperty("os.name", "").contains("windows", ignoreCase = true)
+
+/** True when the JVM reports Linux as the host OS. */
+val isLinuxHost: Boolean =
+    !isMacHost && !isWindowsHost &&
+        System.getProperty("os.name", "").contains("linux", ignoreCase = true)
