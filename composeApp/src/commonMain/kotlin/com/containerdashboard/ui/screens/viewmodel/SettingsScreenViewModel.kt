@@ -25,6 +25,9 @@ import kotlinx.coroutines.launch
 
 class SettingsScreenViewModel(
     private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
+    // Factory seam for testConnection: production builds a real repository for the
+    // candidate host; tests inject a fake. Defaults keep runtime behavior identical.
+    private val testRepoFactory: (String) -> DockerRepository = { host -> createDockerRepository(host) },
 ) : ViewModel() {
     private val repo: DockerRepository get() = repoProvider()
 
@@ -132,8 +135,7 @@ class SettingsScreenViewModel(
         viewModelScope.launch {
             _connectionTestResult.value = ConnectionTestState.Testing
             try {
-                val testRepo =
-                    createDockerRepository(host)
+                val testRepo = testRepoFactory(host)
                 val result = testRepo.getVersion()
                 testRepo.close()
                 result.fold(

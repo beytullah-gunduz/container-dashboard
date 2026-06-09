@@ -33,6 +33,9 @@ class FakeDockerRepository(
     var volumes: List<Volume> = emptyList(),
     var networks: List<DockerNetwork> = emptyList(),
     var dockerVersion: DockerVersion = DockerVersion(),
+    // When non-null, [getVersion] returns this instead of success(dockerVersion) —
+    // lets connection-test failures be driven through the fake.
+    var getVersionResult: Result<DockerVersion>? = null,
     // Per-operation result overrides — set to failure to drive error paths.
     var pauseResult: Result<Unit> = Result.success(Unit),
     var unpauseResult: Result<Unit> = Result.success(Unit),
@@ -40,12 +43,23 @@ class FakeDockerRepository(
     var removeContainerResult: Result<Unit> = Result.success(Unit),
     var startResult: Result<Unit> = Result.success(Unit),
     var stopResult: Result<Unit> = Result.success(Unit),
+    // Per-container stop overrides — looked up by id first, falling back to [stopResult].
+    var stopResultsById: Map<String, Result<Unit>> = emptyMap(),
     var removeImageResult: Result<Unit> = Result.success(Unit),
     var removeVolumeResult: Result<Unit> = Result.success(Unit),
     var removeNetworkResult: Result<Unit> = Result.success(Unit),
     var createVolumeResult: Result<Volume>? = null,
     var createNetworkResult: Result<DockerNetwork>? = null,
     var listDirectoryResult: Result<List<ContainerFileEntry>> = Result.success(emptyList()),
+    // Per-path directory listings — looked up by the requested path first, falling back
+    // to [listDirectoryResult]. Lets file-browser tests seed a small tree.
+    var directoryListings: Map<String, Result<List<ContainerFileEntry>>> = emptyMap(),
+    // Per-operation prune overrides — set individual ops to failure to drive
+    // partial-failure aggregation in pruneAll.
+    var pruneContainersResult: Result<PruneResult> = Result.success(PruneResult(0)),
+    var pruneImagesResult: Result<PruneResult> = Result.success(PruneResult(0)),
+    var pruneVolumesResult: Result<PruneResult> = Result.success(PruneResult(0)),
+    var pruneNetworksResult: Result<PruneResult> = Result.success(PruneResult(0)),
     var readFileResult: Result<ContainerFileContent> =
         Result.success(ContainerFileContent(text = "", isBinary = false, truncated = false, totalBytesShown = 0)),
     var downloadFileResult: Result<ByteArray> = Result.success(ByteArray(0)),
@@ -56,6 +70,18 @@ class FakeDockerRepository(
     var containerStatsFlowOverride: Flow<List<ContainerStats>>? = null,
     var imagesFlowOverride: Flow<List<DockerImage>>? = null,
 ) : DockerRepository {
+    // --- Recorded interactions (for behavioral assertions) ---
+
+    /** Ids passed to [stopContainer], in call order. */
+    val stoppedContainerIds = mutableListOf<String>()
+
+    /** Paths passed to [listContainerDirectory], in call order. */
+    val listedDirectoryPaths = mutableListOf<String>()
+
+    /** Number of times [close] was invoked. */
+    var closeCount = 0
+        private set
+
     // --- Availability ---
 
     override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = availabilityFlowOverride ?: flowOf(true)
@@ -64,11 +90,12 @@ class FakeDockerRepository(
 
     override suspend fun getSystemInfo(): Result<SystemInfo> = Result.success(systemInfo)
 
-    override suspend fun getVersion(): Result<DockerVersion> = Result.success(dockerVersion)
+    override suspend fun getVersion(): Result<DockerVersion> = getVersionResult ?: Result.success(dockerVersion)
 
     // --- Containers ---
 
-    override fun getContainers(all: Boolean): Flow<List<Container>> = containersFlowOverride ?: flowOf(containers)
+    override fun getContainers(all: Boolean): Flow<List<Container>> =
+        containersFlowOverride ?: flowOf(if (all) containers else containers.filter { it.isRunning })
 
     override suspend fun refreshContainers() = Unit
 
@@ -129,7 +156,10 @@ class FakeDockerRepository(
 
     override suspend fun startContainer(id: String): Result<Unit> = startResult
 
-    override suspend fun stopContainer(id: String): Result<Unit> = stopResult
+    override suspend fun stopContainer(id: String): Result<Unit> {
+        stoppedContainerIds.add(id)
+        return stopResultsById[id] ?: stopResult
+    }
 
     override suspend fun restartContainer(id: String): Result<Unit> = restartResult
 
@@ -145,7 +175,10 @@ class FakeDockerRepository(
     override suspend fun listContainerDirectory(
         id: String,
         path: String,
-    ): Result<List<ContainerFileEntry>> = listDirectoryResult
+    ): Result<List<ContainerFileEntry>> {
+        listedDirectoryPaths.add(path)
+        return directoryListings[path] ?: listDirectoryResult
+    }
 
     override suspend fun readContainerFile(
         id: String,
@@ -283,15 +316,17 @@ class FakeDockerRepository(
 
     // --- Prune ---
 
-    override suspend fun pruneContainers(): Result<PruneResult> = Result.success(PruneResult(0))
+    override suspend fun pruneContainers(): Result<PruneResult> = pruneContainersResult
 
-    override suspend fun pruneImages(): Result<PruneResult> = Result.success(PruneResult(0))
+    override suspend fun pruneImages(): Result<PruneResult> = pruneImagesResult
 
-    override suspend fun pruneVolumes(): Result<PruneResult> = Result.success(PruneResult(0))
+    override suspend fun pruneVolumes(): Result<PruneResult> = pruneVolumesResult
 
-    override suspend fun pruneNetworks(): Result<PruneResult> = Result.success(PruneResult(0))
+    override suspend fun pruneNetworks(): Result<PruneResult> = pruneNetworksResult
 
     // --- Lifecycle ---
 
-    override fun close() = Unit
+    override fun close() {
+        closeCount++
+    }
 }
