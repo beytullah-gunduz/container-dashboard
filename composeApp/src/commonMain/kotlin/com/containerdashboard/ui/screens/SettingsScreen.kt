@@ -63,10 +63,7 @@ import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
 import com.dockerdashboard.composeapp.generated.resources.Res
-import com.dockerdashboard.composeapp.generated.resources.brightness_auto
 import com.dockerdashboard.composeapp.generated.resources.cleaning_services
-import com.dockerdashboard.composeapp.generated.resources.dark_mode
-import com.dockerdashboard.composeapp.generated.resources.light_mode
 import com.dockerdashboard.composeapp.generated.resources.monitor_heart
 import com.dockerdashboard.composeapp.generated.resources.network_check
 import com.dockerdashboard.composeapp.generated.resources.play_arrow
@@ -765,49 +762,40 @@ private fun ThemeModeSelector(
     selected: ThemeMode,
     onSelect: (ThemeMode) -> Unit,
 ) {
-    val options: List<Triple<ThemeMode, String, DrawableResource>> =
-        listOf(
-            Triple(ThemeMode.AUTO, "Auto", Res.drawable.brightness_auto),
-            Triple(ThemeMode.LIGHT, "Light", Res.drawable.light_mode),
-            Triple(ThemeMode.DARK, "Dark", Res.drawable.dark_mode),
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Theme",
+            style = MaterialTheme.typography.bodyLarge,
         )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Theme",
-                style = MaterialTheme.typography.bodyLarge,
+        Text(
+            text = "Choose dark, light, or follow your system appearance",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg, alignment = Alignment.CenterHorizontally),
+        ) {
+            ThemePreviewCard(
+                label = "Dark",
+                selected = selected == ThemeMode.DARK,
+                primaryColors = DarkPreviewColors,
+                onClick = { onSelect(ThemeMode.DARK) },
             )
-            Text(
-                text = "Auto follows your system appearance",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ThemePreviewCard(
+                label = "Light",
+                selected = selected == ThemeMode.LIGHT,
+                primaryColors = LightPreviewColors,
+                onClick = { onSelect(ThemeMode.LIGHT) },
             )
-        }
-        Spacer(modifier = Modifier.width(Spacing.lg))
-        SingleChoiceSegmentedButtonRow {
-            options.forEachIndexed { index, (mode, label, icon) ->
-                SegmentedButton(
-                    shape =
-                        SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = options.size,
-                        ),
-                    onClick = { onSelect(mode) },
-                    selected = selected == mode,
-                    icon = {
-                        Icon(
-                            painter = painterResource(icon),
-                            contentDescription = null,
-                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                        )
-                    },
-                    label = { Text(label) },
-                )
-            }
+            ThemePreviewCard(
+                label = "Auto",
+                selected = selected == ThemeMode.AUTO,
+                primaryColors = DarkPreviewColors,
+                secondaryColors = LightPreviewColors,
+                onClick = { onSelect(ThemeMode.AUTO) },
+            )
         }
     }
 }
