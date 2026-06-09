@@ -1,8 +1,6 @@
 package com.containerdashboard.ui.state
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Process-lifetime holder for the logs pane filter bar.
@@ -10,8 +8,11 @@ import androidx.compose.runtime.setValue
  * `filterText` and `selectedService` outlive the `LogsTabContent` composable,
  * so closing/reopening the logs pane (or switching to the console tab and
  * back) preserves the user's filter selection.
+ *
+ * Backed by [MutableStateFlow] so writes are thread-safe regardless of which
+ * thread they happen on; UI consumers observe via `collectAsState()`.
  */
 object LogsFilterState {
-    var filterText: String by mutableStateOf("")
-    var selectedService: String? by mutableStateOf(null)
+    val filterText = MutableStateFlow("")
+    val selectedService = MutableStateFlow<String?>(null)
 }
