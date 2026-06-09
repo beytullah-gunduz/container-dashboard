@@ -81,7 +81,11 @@ class AppViewModel(
     init {
         viewModelScope.launch {
             containers.collect { liveContainers ->
-                val tracked = _logsPaneState.value.containers
+                // Snapshot the pane state once per decision: startFollowing and the logs-pane
+                // actions can interleave with this collector, so repeated `.value` reads could
+                // observe different states (e.g. a stale isFollowing) within one pass.
+                val pane = _logsPaneState.value
+                val tracked = pane.containers
                 if (tracked.isEmpty()) return@collect
 
                 val updated =
@@ -95,15 +99,17 @@ class AppViewModel(
                     _logsPaneState.value = LogsPaneState()
                     _filesPaneState.value = FilesPaneState()
                 } else if (updated != tracked) {
-                    _logsPaneState.update { it.copy(containers = updated) }
-                    val noneRunning = updated.none { it.isRunning }
-                    if (noneRunning && _logsPaneState.value.isFollowing) {
-                        logFollowJob?.cancel()
-                        _logsPaneState.update {
+                    val streamEnded = pane.isFollowing && updated.none { it.isRunning }
+                    if (streamEnded) logFollowJob?.cancel()
+                    _logsPaneState.update {
+                        if (streamEnded) {
                             it.copy(
+                                containers = updated,
                                 logs = it.logs + "--- Stream ended (containers stopped) ---",
                                 isFollowing = false,
                             )
+                        } else {
+                            it.copy(containers = updated)
                         }
                     }
                 }
