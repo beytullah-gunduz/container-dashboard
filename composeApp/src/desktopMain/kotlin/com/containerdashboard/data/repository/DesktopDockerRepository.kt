@@ -1,34 +1,21 @@
 package com.containerdashboard.data.repository
 
-import com.containerdashboard.data.models.AttachedContainer
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerFileContent
 import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.ContainerInspect
-import com.containerdashboard.data.models.ContainerPort
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.models.DockerVersion
-import com.containerdashboard.data.models.EnvVar
-import com.containerdashboard.data.models.IPAM
-import com.containerdashboard.data.models.IPAMConfig
 import com.containerdashboard.data.models.ImageInspect
-import com.containerdashboard.data.models.IpamConfigEntry
-import com.containerdashboard.data.models.MountInfo
-import com.containerdashboard.data.models.NetworkAttachment
-import com.containerdashboard.data.models.NetworkContainer
 import com.containerdashboard.data.models.NetworkInspect
-import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.data.util.looksBinary
 import com.containerdashboard.data.util.parseLsOutput
 import com.containerdashboard.data.util.validateContainerPath
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Event
 import com.github.dockerjava.api.model.EventType
@@ -69,9 +56,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
-import com.github.dockerjava.api.model.Container as DockerContainer
-import com.github.dockerjava.api.model.Image as DockerJavaImage
-import com.github.dockerjava.api.model.Network as DockerNetworkModel
 
 // A daemon's socket can accept connections before its HTTP API answers (right after launch, or
 // during a brief hiccup). Retry a reachable-but-silent engine this many times, spaced this far
@@ -635,14 +619,6 @@ class DesktopDockerRepository(
             }
         }
 
-    /** Result of a one-shot, non-TTY exec. Bytes are raw (binary-safe); decode at the call site. */
-    private class ExecResult(
-        val stdout: ByteArray,
-        val stderr: ByteArray,
-        val exitCode: Int?,
-        val timedOut: Boolean,
-    )
-
     /**
      * Run [argv] in a container via a one-shot, non-TTY `docker exec`, capturing stdout and stderr
      * separately. Must be non-TTY so the daemon demultiplexes the two streams by [com.github.dockerjava.api.model.Frame]
@@ -703,28 +679,6 @@ class DesktopDockerRepository(
                 ExecResult(out.toByteArray(), err.toByteArray(), inspect.exitCodeLong?.toInt(), false)
             }
         }
-
-    /** Map exec stderr / exit code to a friendly exception for the UI. */
-    private fun mapShellError(
-        result: ExecResult,
-        path: String,
-    ): Exception {
-        val message =
-            result.stderr
-                .toString(Charsets.UTF_8)
-                .lineSequence()
-                .firstOrNull { it.isNotBlank() }
-                .orEmpty()
-        return when {
-            "executable file not found" in message || result.exitCode == 126 || result.exitCode == 127 ->
-                IllegalStateException("This container has no shell/coreutils, so its filesystem can't be browsed.")
-            "Permission denied" in message -> SecurityException("Permission denied: $path")
-            "No such file or directory" in message -> java.io.FileNotFoundException(path)
-            "is not running" in message -> IllegalStateException("Container is no longer running.")
-            message.isNotEmpty() -> IllegalStateException(message)
-            else -> IllegalStateException("Command failed (exit ${result.exitCode}) for $path")
-        }
-    }
 
     /**
      * Split a log frame's payload into lines, PRESERVING intentional blank lines (a container
@@ -1369,58 +1323,6 @@ class DesktopDockerRepository(
             }
         }
 
-    // Sum cumulative disk IO from blkioStats.ioServiceBytesRecursive entries by op.
-    // Many backends (notably cgroup v2 / rootless Docker) report an empty list —
-    // we return (0, 0) in that case rather than failing.
-    private fun extractDiskIo(stats: com.github.dockerjava.api.model.Statistics): Pair<Long, Long> {
-        val entries = stats.blkioStats?.ioServiceBytesRecursive ?: return 0L to 0L
-        if (entries.isEmpty()) return 0L to 0L
-        var read = 0L
-        var write = 0L
-        for (entry in entries) {
-            val op = entry?.op?.lowercase() ?: continue
-            val value = entry.value ?: continue
-            when (op) {
-                "read" -> read += value
-                "write" -> write += value
-            }
-        }
-        return read to write
-    }
-
-    // Sum cumulative rx/tx bytes across every network interface reported.
-    // Returns (0, 0) when the networks map is missing or empty.
-    private fun extractNetworkIo(stats: com.github.dockerjava.api.model.Statistics): Pair<Long, Long> {
-        val networks = stats.networks ?: return 0L to 0L
-        if (networks.isEmpty()) return 0L to 0L
-        var rx = 0L
-        var tx = 0L
-        for (net in networks.values) {
-            if (net == null) continue
-            rx += net.rxBytes ?: 0L
-            tx += net.txBytes ?: 0L
-        }
-        return rx to tx
-    }
-
-    private fun calculateCpuPercent(stats: com.github.dockerjava.api.model.Statistics): Double {
-        val cpuStats = stats.cpuStats ?: return 0.0
-        val preCpuStats = stats.preCpuStats ?: return 0.0
-
-        val cpuDelta = (cpuStats.cpuUsage?.totalUsage ?: 0L) - (preCpuStats.cpuUsage?.totalUsage ?: 0L)
-        val systemDelta = (cpuStats.systemCpuUsage ?: 0L) - (preCpuStats.systemCpuUsage ?: 0L)
-
-        if (systemDelta <= 0L || cpuDelta < 0L) return 0.0
-
-        // cgroup v2 reports neither percpuUsage nor (sometimes) onlineCpus; falling back to 1
-        // would cap CPU% at 100 on multi-core hosts, so use the host's processor count instead.
-        val numCpus =
-            cpuStats.cpuUsage?.percpuUsage?.size
-                ?: cpuStats.onlineCpus?.toInt()
-                ?: Runtime.getRuntime().availableProcessors()
-        return (cpuDelta.toDouble() / systemDelta.toDouble()) * numCpus * 100.0
-    }
-
     // Prune operations.
     //
     // docker-java 3.3.4's typed PruneResponse only exposes SpaceReclaimed; the deleted-item
@@ -1512,323 +1414,4 @@ class DesktopDockerRepository(
             logger.warn("Error during DockerRepository shutdown", e)
         }
     }
-
-    private val inspectJsonMapper: ObjectMapper =
-        ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
-
-    private fun toPrettyJson(obj: Any): String =
-        try {
-            inspectJsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj)
-        } catch (e: Exception) {
-            logger.warn("Failed to serialize docker-java response to JSON: {}", e.message)
-            obj.toString()
-        }
-
-    private fun com.github.dockerjava.api.command.InspectContainerResponse.toContainerInspect(): ContainerInspect {
-        val config = this.config
-        val hostConfig = this.hostConfig
-        val netSettings = this.networkSettings
-        val state = this.state
-
-        val statusText = state?.status ?: ""
-        val stateText =
-            when {
-                state?.running == true -> "running"
-                state?.paused == true -> "paused"
-                state?.restarting == true -> "restarting"
-                state?.dead == true -> "dead"
-                !statusText.isNullOrBlank() -> statusText
-                else -> "unknown"
-            }
-
-        val envPairs =
-            config?.env?.map { entry ->
-                val idx = entry.indexOf('=')
-                if (idx >= 0) {
-                    EnvVar(entry.substring(0, idx), entry.substring(idx + 1))
-                } else {
-                    EnvVar(entry, "")
-                }
-            } ?: emptyList()
-
-        val mounts =
-            this.mounts?.map { mount ->
-                MountInfo(
-                    type = if (!mount.name.isNullOrBlank()) "volume" else "bind",
-                    source = mount.source ?: "",
-                    destination = mount.destination?.path ?: "",
-                    mode = mount.mode ?: "",
-                    rw = mount.rw ?: true,
-                )
-            } ?: emptyList()
-
-        val hostBindings = hostConfig?.portBindings?.bindings ?: emptyMap()
-        val exposedBindings = netSettings?.ports?.bindings ?: emptyMap()
-        val allBindingKeys = (hostBindings.keys + exposedBindings.keys).distinct()
-
-        val portMappings =
-            allBindingKeys.flatMap { exposed ->
-                val bindings = exposedBindings[exposed] ?: hostBindings[exposed]
-                if (bindings == null || bindings.isEmpty()) {
-                    listOf(
-                        PortMapping(
-                            containerPort = exposed.port,
-                            hostPort = null,
-                            protocol = exposed.protocol?.name?.lowercase() ?: "tcp",
-                            hostIp = null,
-                        ),
-                    )
-                } else {
-                    bindings.map { binding ->
-                        PortMapping(
-                            containerPort = exposed.port,
-                            hostPort = binding.hostPortSpec?.toIntOrNull(),
-                            protocol = exposed.protocol?.name?.lowercase() ?: "tcp",
-                            hostIp = binding.hostIp,
-                        )
-                    }
-                }
-            }
-
-        val networkAttachments =
-            netSettings?.networks?.entries?.map { (netName, net) ->
-                NetworkAttachment(
-                    name = netName,
-                    ipAddress = net.ipAddress ?: "",
-                    gateway = net.gateway ?: "",
-                    macAddress = net.macAddress ?: "",
-                    aliases = net.aliases ?: emptyList(),
-                )
-            } ?: emptyList()
-
-        val restartPolicyText =
-            hostConfig?.restartPolicy?.let { rp ->
-                val base = rp.name.orEmpty().ifBlank { "no" }
-                val retries = rp.maximumRetryCount ?: 0
-                if (base == "on-failure" && retries > 0) "$base:$retries" else base
-            } ?: "no"
-
-        val entrypointList = config?.entrypoint?.toList().orEmpty()
-        val cmdText =
-            config
-                ?.cmd
-                ?.joinToString(" ")
-                .orEmpty()
-                .ifBlank {
-                    this.path.orEmpty() +
-                        (
-                            this.args
-                                ?.takeIf { it.isNotEmpty() }
-                                ?.joinToString(" ", prefix = " ")
-                                .orEmpty()
-                        )
-                }.trim()
-
-        val displayName = (this.name ?: "").removePrefix("/")
-
-        return ContainerInspect(
-            id = this.id ?: "",
-            name = displayName,
-            image = config?.image ?: "",
-            imageId = this.imageId ?: "",
-            status = statusText,
-            state = stateText,
-            createdAt = this.created ?: "",
-            startedAt = state?.startedAt ?: "",
-            command = cmdText,
-            entrypoint = entrypointList,
-            workingDir = config?.workingDir ?: "",
-            user = config?.user ?: "",
-            restartPolicy = restartPolicyText,
-            hostname = config?.hostName ?: "",
-            platform = this.platform ?: "",
-            environment = envPairs,
-            mounts = mounts,
-            ports = portMappings,
-            networks = networkAttachments,
-            labels = config?.labels ?: emptyMap(),
-            rawJson = toPrettyJson(this),
-        )
-    }
-
-    private fun com.github.dockerjava.api.command.InspectImageResponse.toImageInspect(): ImageInspect {
-        val config = this.config
-        val envPairs =
-            config?.env?.map { entry ->
-                val idx = entry.indexOf('=')
-                if (idx >= 0) {
-                    EnvVar(entry.substring(0, idx), entry.substring(idx + 1))
-                } else {
-                    EnvVar(entry, "")
-                }
-            } ?: emptyList()
-
-        val exposedPortStrings =
-            config
-                ?.exposedPorts
-                ?.map { port ->
-                    val proto = port?.protocol?.name?.lowercase() ?: "tcp"
-                    "${port?.port ?: 0}/$proto"
-                }.orEmpty()
-
-        val rawId = this.id ?: ""
-        val shortId = rawId.removePrefix("sha256:").take(12)
-
-        val layerDigests = this.rootFS?.layers.orEmpty()
-
-        return ImageInspect(
-            id = rawId,
-            shortId = shortId,
-            repoTags = this.repoTags.orEmpty(),
-            repoDigests = this.repoDigests.orEmpty(),
-            architecture = this.arch ?: "",
-            os = this.os ?: "",
-            size = this.size ?: 0L,
-            virtualSize = this.virtualSize ?: 0L,
-            createdAt = this.created ?: "",
-            dockerVersion = this.dockerVersion ?: "",
-            author = this.author ?: "",
-            entrypoint = config?.entrypoint?.toList().orEmpty(),
-            command = config?.cmd?.toList().orEmpty(),
-            workingDir = config?.workingDir ?: "",
-            user = config?.user ?: "",
-            exposedPorts = exposedPortStrings,
-            environment = envPairs,
-            labels = config?.labels ?: emptyMap(),
-            layers = layerDigests,
-            rawJson = toPrettyJson(this),
-        )
-    }
-
-    private fun com.github.dockerjava.api.model.Network.toNetworkInspect(): NetworkInspect {
-        val rawId = this.id ?: ""
-        val shortId = rawId.take(12)
-
-        val ipam = this.ipam
-        val ipamEntries =
-            ipam?.config?.map { entry ->
-                IpamConfigEntry(
-                    subnet = entry.subnet ?: "",
-                    gateway = entry.gateway ?: "",
-                    ipRange = entry.ipRange ?: "",
-                )
-            } ?: emptyList()
-
-        val attached =
-            this.containers?.entries?.map { (cid, info) ->
-                AttachedContainer(
-                    id = cid,
-                    name = info?.name ?: "",
-                    ipv4Address = info?.ipv4Address ?: "",
-                    ipv6Address = info?.ipv6Address ?: "",
-                    macAddress = info?.macAddress ?: "",
-                )
-            } ?: emptyList()
-
-        return NetworkInspect(
-            id = rawId,
-            shortId = shortId,
-            name = this.name ?: "",
-            driver = this.driver ?: "",
-            scope = this.scope ?: "",
-            attachable = this.isAttachable ?: false,
-            ingress = false,
-            internal = this.getInternal() ?: false,
-            ipv6Enabled = this.enableIPv6 ?: false,
-            createdAt = "",
-            ipamDriver = ipam?.driver ?: "",
-            ipamConfig = ipamEntries,
-            options = this.options ?: emptyMap(),
-            labels = this.labels ?: emptyMap(),
-            attachedContainers = attached,
-            rawJson = toPrettyJson(this),
-        )
-    }
-
-    private fun com.github.dockerjava.api.command.InspectVolumeResponse.toVolumeInspect(): VolumeInspect =
-        VolumeInspect(
-            name = this.name ?: "",
-            driver = this.driver ?: "",
-            mountpoint = this.mountpoint ?: "",
-            // docker-java 3.3.4's typed InspectVolumeResponse exposes neither Scope nor
-            // CreatedAt; both are present in the raw response map its deserializer attaches to
-            // every DockerObject, so read them from there (empty when the daemon omits them).
-            scope = this.rawValues["Scope"] as? String ?: "",
-            createdAt = this.rawValues["CreatedAt"] as? String ?: "",
-            options = this.options ?: emptyMap(),
-            labels = this.labels ?: emptyMap(),
-            rawJson = toPrettyJson(this),
-        )
-
-    // Extension functions to convert Docker Java models to our models
-    private fun DockerContainer.toContainer(): Container =
-        Container(
-            id = this.id ?: "",
-            names = this.names?.toList() ?: emptyList(),
-            image = this.image ?: "",
-            imageId = this.imageId ?: "",
-            command = this.command ?: "",
-            created = this.created ?: 0,
-            state = this.state ?: "unknown",
-            status = this.status ?: "",
-            ports =
-                this.ports?.map { port ->
-                    ContainerPort(
-                        ip = port.ip,
-                        privatePort = port.privatePort ?: 0,
-                        publicPort = port.publicPort,
-                        type = port.type ?: "tcp",
-                    )
-                } ?: emptyList(),
-            labels = this.labels ?: emptyMap(),
-        )
-
-    private fun DockerJavaImage.toDockerImage(): DockerImage =
-        DockerImage(
-            id = this.id ?: "",
-            parentId = this.parentId ?: "",
-            repoTags = this.repoTags?.toList(),
-            repoDigests = this.repoDigests?.toList(),
-            created = this.created ?: 0,
-            size = this.size ?: 0,
-            virtualSize = this.virtualSize ?: 0,
-            labels = this.labels,
-        )
-
-    private fun DockerNetworkModel.toDockerNetwork(): DockerNetwork =
-        DockerNetwork(
-            id = this.id ?: "",
-            name = this.name ?: "",
-            driver = this.driver ?: "bridge",
-            scope = this.scope ?: "local",
-            internal = this.internal ?: false,
-            attachable = this.isAttachable ?: false,
-            ipam =
-                this.ipam?.let { ipam ->
-                    IPAM(
-                        driver = ipam.driver ?: "default",
-                        config =
-                            ipam.config?.map { config ->
-                                IPAMConfig(
-                                    subnet = config.subnet,
-                                    gateway = config.gateway,
-                                    ipRange = config.ipRange,
-                                )
-                            },
-                    )
-                },
-            labels = this.labels,
-            containers =
-                this.containers?.mapValues { (_, container) ->
-                    NetworkContainer(
-                        name = container.name,
-                        endpointId = container.endpointId ?: "",
-                        macAddress = container.macAddress ?: "",
-                        ipv4Address = container.ipv4Address ?: "",
-                        ipv6Address = container.ipv6Address ?: "",
-                    )
-                },
-        )
 }
