@@ -19,8 +19,11 @@ logback = "1.5.15"
 jna = "5.14.0"
 
 [libraries]
-androidx-datastore-core = { module = "androidx.datastore:datastore-core", version = "1.2.0" }
-androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences-core", version = "1.1.7" }
+datastore = "1.2.0"
+# Both DataStore artifacts are on the same release train; they must stay aligned.
+# Bump both together by updating the single `datastore` version alias above.
+androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastore" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
 
 # Compose
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
