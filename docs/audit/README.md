@@ -58,3 +58,36 @@ of commit `63440c8`.
 
 `S<epic>.<n>` — e.g. S1.3. Each story in the epic files is self-contained: severity,
 effort (S/M/L), exact files/lines, problem statement, suggested fix, acceptance criteria.
+
+## Implementation status (2026-06-10)
+
+**All 53 stories implemented** across three waves (52 commits + 1 format fixup on `main`,
+`63440c8..`). Wave 1: the 10 verified highs + S7.1. Wave 2: all mediums/lows (E2–E7).
+Wave 3: E8 test coverage (~120 new tests; suite went from 124 to ~250 test cases).
+
+Scoping decisions made during implementation:
+- **S5.2**: warning row in Settings + WARN log only; full TLS cert-path UI deliberately not built.
+- **S7.3**: CI caching was already on by default in setup-gradle v6; added `gradle-home-cache-cleanup` only.
+- **S7.5**: configuration cache deliberately NOT enabled (Spotless config-cache flake).
+- **S7.4**: `docker-compose.test.yml` deleted (revivable from history if integration tests are built).
+- **S6.4**: macOS dir move includes one-time migration from `~/.container-dashboard`.
+- **S4.2**: pragmatic scope — stable callbacks + primitive group-card params; rows skip via
+  reference-stable `Container` instances; full `@Stable` holder rework not done.
+- **S7.2 side effect**: `kotlinx-io-core` added as a direct desktopMain dep (was transitive
+  via the removed Ktor; still used by `SystemDirectories.kt`).
+
+**New findings flagged during implementation** (pinned by tests, NOT fixed — candidates
+for a future pass):
+1. `calculateCpuPercent`: an empty (non-null) `percpu_usage: []` yields numCpus=0 → always 0%.
+2. `mapShellError`: exit code 126 takes precedence over a "Permission denied" stderr message.
+3. `FormatUtils`: locale-dependent decimal separator (`%.1f` with default locale); can
+   display "1024.0 KB"; no TB tier.
+4. `SettingsScreenViewModel.testConnection`: repo `close()` skipped if `getVersion()` throws
+   (unreachable via current Result-based contract).
+5. `stopAllContainers`: no timeout on the cold `getContainers(all=false).first()`.
+
+**Remaining manual validation** (needs a live engine / packaged app — see per-story
+acceptance criteria and the wave reports): event-driven list refresh, reconnect flows on a
+real host switch, logs-pane UX (virtualized list, scrollback hold), env-var masking UI,
+release `.app` run for the ProGuard keep rules (S6.1), macOS data-dir migration on first
+launch (S6.4), and CI cache behavior on the next push/tag.
