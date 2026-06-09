@@ -15,5 +15,6 @@ val isWindowsHost: Boolean = System.getProperty("os.name", "").contains("windows
 
 /** True when the JVM reports Linux as the host OS. */
 val isLinuxHost: Boolean =
-    !isMacHost && !isWindowsHost &&
+    !isMacHost &&
+        !isWindowsHost &&
         System.getProperty("os.name", "").contains("linux", ignoreCase = true)
