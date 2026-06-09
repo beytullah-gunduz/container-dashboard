@@ -1279,6 +1279,13 @@ class DesktopDockerRepository(
 
     override fun getContainerStats(): Flow<List<ContainerStats>> = containerStatsShared
 
+    // Returns a COLD flow on purpose: a per-call shareIn(scope, ...) would register a new
+    // never-cancelled job on the repo-lifetime scope for every invocation. Callers own sharing —
+    // ContainersScreenViewModel.statsById applies stateIn(viewModelScope, WhileSubscribed, ...),
+    // which provides the replay-latest-value semantics the old shareIn(replay = 1) had, on a
+    // scope with a real lifecycle. Re-subscribing to an unchanged id is still cheap: the
+    // underlying per-container streams in [ContainerStatsManager] are hot, reference-counted,
+    // and replay their last sample instantly.
     override fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>> {
         // Stream only ids that are BOTH requested (e.g. an expanded group) AND running. The
         // intersection prevents opening a stream for a non-running id (which would error+retry).
@@ -1287,7 +1294,6 @@ class DesktopDockerRepository(
                 running.filter { it.first in wanted }
             }.distinctUntilChanged()
         return aggregateContainerStatsMap(wantedRunning, statsManager::statsFor)
-            .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
     // One persistent Docker stats stream for a single container, mapped to ContainerStats. No

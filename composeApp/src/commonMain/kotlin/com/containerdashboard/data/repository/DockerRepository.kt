@@ -139,7 +139,12 @@ interface DockerRepository {
     // Stats
     fun getContainerStats(): Flow<List<ContainerStats>>
 
-    /** Demand-driven stats: stream only the given container ids (e.g. expanded compose groups). */
+    /**
+     * Demand-driven stats: stream only the given container ids (e.g. expanded compose groups).
+     *
+     * The returned flow is COLD — callers must share/state it on their own scope (e.g.
+     * `stateIn(viewModelScope, ...)`) if they need replay or multicast.
+     */
     fun getContainerStats(ids: Flow<Set<String>>): Flow<Map<String, ContainerStats>>
 
     // Prune operations
