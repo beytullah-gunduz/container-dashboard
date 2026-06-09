@@ -116,6 +116,16 @@ fun CommandPalette(
             }
         }
 
+        // Selection highlighting looks rows up by id instead of relying on the
+        // order in which lazy item blocks happen to compose.
+        val actionIndexById by remember {
+            derivedStateOf {
+                buildMap {
+                    flatActions.forEachIndexed { index, action -> put(action.id, index) }
+                }
+            }
+        }
+
         val listState = rememberLazyListState()
 
         LaunchedEffect(selectedIndex, flatActions.size) {
@@ -234,7 +244,6 @@ fun CommandPalette(
                         }
                     } else {
                         LazyColumn(state = listState) {
-                            var runningIndex = 0
                             sectioned.forEach { (sectionName, sectionActions) ->
                                 item(key = "section-$sectionName") {
                                     Text(
@@ -252,9 +261,7 @@ fun CommandPalette(
                                     items = sectionActions,
                                     key = { action -> "action-${action.id}" },
                                 ) { action ->
-                                    val localIndex = runningIndex
-                                    runningIndex += 1
-                                    val isSelected = localIndex == selectedIndex
+                                    val isSelected = actionIndexById[action.id] == selectedIndex
                                     PaletteRow(
                                         action = action,
                                         isSelected = isSelected,

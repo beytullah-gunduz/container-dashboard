@@ -223,23 +223,28 @@ fun App(
                     var pendingPaletteDeleteName by remember { mutableStateOf("") }
                     var pendingPaletteDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+                    // All lambda captures are stable across compositions (view models,
+                    // the remembered navigator, and snapshot-state setters), so the
+                    // action list only rebuilds when the container set actually changes.
                     val paletteActions =
-                        buildPaletteActions(
-                            containers = containers,
-                            onNavigate = { screen -> viewModel.navigate(screen.route) },
-                            onShowLogs = { c ->
-                                viewModel.showContainerLogs(c)
-                                navigator.showExtraPane()
-                            },
-                            onStart = { id -> containersVm.startContainer(id) },
-                            onStop = { id -> containersVm.stopContainer(id) },
-                            onRestart = { id -> containersVm.restartContainer(id) },
-                            onRemove = { id -> containersVm.removeContainer(id) },
-                            onAskConfirmRemove = { name, action ->
-                                pendingPaletteDeleteName = name
-                                pendingPaletteDeleteAction = action
-                            },
-                        )
+                        remember(containers) {
+                            buildPaletteActions(
+                                containers = containers,
+                                onNavigate = { screen -> viewModel.navigate(screen.route) },
+                                onShowLogs = { c ->
+                                    viewModel.showContainerLogs(c)
+                                    navigator.showExtraPane()
+                                },
+                                onStart = { id -> containersVm.startContainer(id) },
+                                onStop = { id -> containersVm.stopContainer(id) },
+                                onRestart = { id -> containersVm.restartContainer(id) },
+                                onRemove = { id -> containersVm.removeContainer(id) },
+                                onAskConfirmRemove = { name, action ->
+                                    pendingPaletteDeleteName = name
+                                    pendingPaletteDeleteAction = action
+                                },
+                            )
+                        }
 
                     CompositionLocalProvider(LocalSearchFocusRequester provides searchFocus) {
                         AppShortcutScope(
