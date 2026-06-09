@@ -76,8 +76,9 @@ Scoping decisions made during implementation:
 - **S7.2 side effect**: `kotlinx-io-core` added as a direct desktopMain dep (was transitive
   via the removed Ktor; still used by `SystemDirectories.kt`).
 
-**New findings flagged during implementation** (pinned by tests, NOT fixed — candidates
-for a future pass):
+**New findings flagged during implementation** — now tracked as dispatchable stories
+F1–F5 in [follow-ups.md](follow-ups.md), together with the full manual-validation
+checklist and deferred-scope list. Summary:
 1. `calculateCpuPercent`: an empty (non-null) `percpu_usage: []` yields numCpus=0 → always 0%.
 2. `mapShellError`: exit code 126 takes precedence over a "Permission denied" stderr message.
 3. `FormatUtils`: locale-dependent decimal separator (`%.1f` with default locale); can
