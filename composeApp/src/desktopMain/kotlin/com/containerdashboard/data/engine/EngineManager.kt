@@ -208,8 +208,10 @@ object EngineManager {
      * Callers treat `null` as an "unsupported" signal and surface a clear
      * [EngineActionState.Done] failure rather than launching a process that would
      * produce an opaque IOException.
+     *
+     * Internal (not private) so desktopTest can pin the exact argv per engine/action.
      */
-    private fun buildCommand(
+    internal fun buildCommand(
         type: EngineType,
         action: String,
         profile: String?,
