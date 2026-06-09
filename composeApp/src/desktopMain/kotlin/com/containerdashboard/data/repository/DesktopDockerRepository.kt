@@ -971,14 +971,21 @@ class DesktopDockerRepository(
     override suspend fun getImage(id: String): Result<DockerImage> =
         withContext(Dispatchers.IO) {
             try {
+                // Callers pass DockerImage.id (a "sha256:..." digest), which the daemon's name
+                // filter never matches — so match by id over the full image list instead. Accepts
+                // full ids with or without the "sha256:" prefix, plus unambiguous short-id prefixes.
+                val wanted = id.removePrefix("sha256:")
+                require(wanted.isNotBlank()) { "Image id must not be blank" }
                 val image =
-                    dockerClient
-                        .listImagesCmd()
-                        .withImageNameFilter(id)
-                        .exec()
-                        .firstOrNull()
-                        ?.toDockerImage()
-                        ?: throw Exception("Image not found")
+                    withRetryOnPoolShutdown {
+                        dockerClient
+                            .listImagesCmd()
+                            .withShowAll(true)
+                            .exec()
+                    }.firstOrNull { candidate ->
+                        candidate.id?.removePrefix("sha256:")?.startsWith(wanted) == true
+                    }?.toDockerImage()
+                        ?: throw Exception("Image not found: $id")
                 Result.success(image)
             } catch (e: Exception) {
                 logger.error("Failed to get image {}", id, e)
