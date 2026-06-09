@@ -37,6 +37,7 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
+import com.containerdashboard.BuildConfig
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
@@ -372,7 +373,7 @@ fun main() {
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "Version 1.0.0",
+                                text = "Version ${BuildConfig.VERSION}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
