@@ -10,11 +10,13 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -77,20 +79,34 @@ class DashboardScreenViewModel(
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EngineConnectionState.CHECKING)
 
     init {
-        loadSystemInfo()
+        viewModelScope.launch {
+            loadSystemInfo()
+            // If the daemon was down (or still starting) at VM creation, the one-shot load
+            // above leaves systemInfo/version null forever — unlike the per-card flows, which
+            // self-heal. Retry whenever the engine reports CONNECTED until both have loaded
+            // once, then stop, so this VM doesn't keep the availability probe subscribed for
+            // its whole lifetime.
+            while (_systemInfo.value == null || _version.value == null) {
+                connectionState.first { it == EngineConnectionState.CONNECTED }
+                loadSystemInfo()
+                if (_systemInfo.value == null || _version.value == null) {
+                    // CONNECTED but the calls still failed (e.g. daemon mid-startup):
+                    // back off, since the conflated StateFlow won't re-emit CONNECTED.
+                    delay(2_000)
+                }
+            }
+        }
     }
 
-    private fun loadSystemInfo() {
-        viewModelScope.launch {
-            try {
-                val sysInfoResult = repo.getSystemInfo()
-                val versionResult = repo.getVersion()
+    private suspend fun loadSystemInfo() {
+        try {
+            val sysInfoResult = repo.getSystemInfo()
+            val versionResult = repo.getVersion()
 
-                _systemInfo.value = sysInfoResult.getOrNull()
-                _version.value = versionResult.getOrNull()
-            } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to connect to container engine"
-            }
+            _systemInfo.value = sysInfoResult.getOrNull()
+            _version.value = versionResult.getOrNull()
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Failed to connect to container engine"
         }
     }
 
