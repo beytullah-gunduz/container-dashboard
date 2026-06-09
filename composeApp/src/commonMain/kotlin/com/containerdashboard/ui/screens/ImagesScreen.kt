@@ -122,47 +122,45 @@ fun ImagesScreen(
     }
 
     val filteredImages =
-        images
-            .filter { image ->
-                searchQuery.isEmpty() ||
-                    image.repository.contains(searchQuery, ignoreCase = true) ||
-                    image.tag.contains(searchQuery, ignoreCase = true)
-            }.let { list: List<DockerImage> ->
-                val ascending = sortDirection == SortDirection.ASC
-                when (sortColumn) {
-                    ImageSortColumn.REPOSITORY ->
-                        if (ascending) {
-                            list.sortedBy {
-                                it.repository.lowercase()
+        remember(images, searchQuery, sortColumn, sortDirection) {
+            images
+                .filter { image ->
+                    searchQuery.isEmpty() ||
+                        image.repository.contains(searchQuery, ignoreCase = true) ||
+                        image.tag.contains(searchQuery, ignoreCase = true)
+                }.let { list: List<DockerImage> ->
+                    val ascending = sortDirection == SortDirection.ASC
+                    when (sortColumn) {
+                        ImageSortColumn.REPOSITORY ->
+                            if (ascending) {
+                                list.sortedBy { it.repository.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.repository.lowercase() }
                             }
-                        } else {
-                            list.sortedByDescending { it.repository.lowercase() }
-                        }
-                    ImageSortColumn.TAG ->
-                        if (ascending) {
-                            list.sortedBy {
-                                it.tag.lowercase()
+                        ImageSortColumn.TAG ->
+                            if (ascending) {
+                                list.sortedBy { it.tag.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.tag.lowercase() }
                             }
-                        } else {
-                            list.sortedByDescending { it.tag.lowercase() }
-                        }
-                    ImageSortColumn.IMAGE_ID ->
-                        if (ascending) {
-                            list.sortedBy {
-                                it.shortId.lowercase()
+                        ImageSortColumn.IMAGE_ID ->
+                            if (ascending) {
+                                list.sortedBy { it.shortId.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.shortId.lowercase() }
                             }
-                        } else {
-                            list.sortedByDescending {
-                                it.shortId
-                                    .lowercase()
+                        ImageSortColumn.SIZE ->
+                            if (ascending) {
+                                list.sortedBy { it.size }
+                            } else {
+                                list.sortedByDescending { it.size }
                             }
-                        }
-                    ImageSortColumn.SIZE -> if (ascending) list.sortedBy { it.size } else list.sortedByDescending { it.size }
+                    }
                 }
-            }
+        }
 
-    val namedImages = filteredImages.filter { it.repository != "<none>" }
-    val unnamedImages = filteredImages.filter { it.repository == "<none>" }
+    val namedImages = remember(filteredImages) { filteredImages.filter { it.repository != "<none>" } }
+    val unnamedImages = remember(filteredImages) { filteredImages.filter { it.repository == "<none>" } }
 
     val totalSize = images.sumOf { it.size }
 

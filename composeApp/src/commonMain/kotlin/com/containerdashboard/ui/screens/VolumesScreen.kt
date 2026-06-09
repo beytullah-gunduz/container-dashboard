@@ -149,40 +149,34 @@ fun VolumesScreen(
     }
 
     val filteredVolumes =
-        volumes
-            .filter { volume ->
-                searchQuery.isEmpty() || volume.name.contains(searchQuery, ignoreCase = true)
-            }.let { list ->
-                val ascending = sortDirection == SortDirection.ASC
-                when (sortColumn) {
-                    VolumeSortColumn.NAME ->
-                        if (ascending) {
-                            list.sortedBy { it.name.lowercase() }
-                        } else {
-                            list.sortedByDescending {
-                                it.name
-                                    .lowercase()
+        remember(volumes, searchQuery, sortColumn, sortDirection) {
+            volumes
+                .filter { volume ->
+                    searchQuery.isEmpty() || volume.name.contains(searchQuery, ignoreCase = true)
+                }.let { list ->
+                    val ascending = sortDirection == SortDirection.ASC
+                    when (sortColumn) {
+                        VolumeSortColumn.NAME ->
+                            if (ascending) {
+                                list.sortedBy { it.name.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.name.lowercase() }
                             }
-                        }
-                    VolumeSortColumn.DRIVER ->
-                        if (ascending) {
-                            list.sortedBy { it.driver.lowercase() }
-                        } else {
-                            list.sortedByDescending {
-                                it.driver
-                                    .lowercase()
+                        VolumeSortColumn.DRIVER ->
+                            if (ascending) {
+                                list.sortedBy { it.driver.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.driver.lowercase() }
                             }
-                        }
-                    VolumeSortColumn.MOUNTPOINT ->
-                        if (ascending) {
-                            list.sortedBy {
-                                it.mountpoint.lowercase()
+                        VolumeSortColumn.MOUNTPOINT ->
+                            if (ascending) {
+                                list.sortedBy { it.mountpoint.lowercase() }
+                            } else {
+                                list.sortedByDescending { it.mountpoint.lowercase() }
                             }
-                        } else {
-                            list.sortedByDescending { it.mountpoint.lowercase() }
-                        }
+                    }
                 }
-            }
+        }
 
     // Create Volume Dialog
     if (showCreateDialog) {
@@ -353,8 +347,8 @@ fun VolumesScreen(
                     )
                 }
             } else {
-                val namedVolumes = filteredVolumes.filterNot { it.isAnonymous }
-                val anonymousVolumes = filteredVolumes.filter { it.isAnonymous }
+                val namedVolumes = remember(filteredVolumes) { filteredVolumes.filterNot { it.isAnonymous } }
+                val anonymousVolumes = remember(filteredVolumes) { filteredVolumes.filter { it.isAnonymous } }
                 val onResizeName: (Float) -> Unit = { delta ->
                     val newName = (nameWeight + delta).coerceIn(0.5f, totalWeight - 1f)
                     val newDriver = (driverWeight - delta).coerceIn(0.3f, totalWeight - 1f)
