@@ -52,7 +52,6 @@ kotlin {
 
                 // DateTime
                 implementation(libs.kotlinx.datetime)
-
             }
         }
 
@@ -80,6 +79,10 @@ kotlin {
 
                 // JNA for AppKit bridge (macOS native window drag, multi-monitor)
                 implementation(libs.jna)
+
+                // kotlinx-io: previously pulled in transitively by Ktor; now a direct dep
+                // because SystemDirectories.kt uses kotlinx.io.files.Path
+                implementation(libs.kotlinx.io.core)
             }
         }
     }

@@ -20,6 +20,9 @@ jna = "5.14.0"
 # Both DataStore artifacts are on the same release train; bump both together by
 # updating this single alias.
 datastore = "1.2.0"
+# kotlinx-io was previously provided transitively by Ktor; now declared directly
+# because SystemDirectories.kt uses kotlinx.io.files.Path.
+kotlinx-io = "0.6.0"
 
 [libraries]
 androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastore" }
@@ -46,6 +49,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 
 # Ktor — currently unreferenced (removed from build.gradle.kts; no io.ktor imports exist).
 # Kept here for easy reinstatement if Ktor is adopted in a future networking layer.
