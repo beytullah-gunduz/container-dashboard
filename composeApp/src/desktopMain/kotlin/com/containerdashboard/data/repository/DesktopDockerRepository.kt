@@ -103,17 +103,48 @@ class DesktopDockerRepository(
             .responseTimeout(Duration.ofSeconds(45))
             .build()
 
-    @Volatile private var httpClient = createHttpClient()
+    /**
+     * Immutable holder pairing the HTTP transport with the [DockerClient] built on top of it, so
+     * the two are swapped with a single volatile write. Two separate volatile fields would let a
+     * concurrent reader observe a fresh httpClient paired with the stale dockerClient (or vice
+     * versa) mid-rebuild.
+     */
+    private class ClientPair(
+        val httpClient: ApacheDockerHttpClient,
+        val dockerClient: DockerClient,
+    )
 
-    @Volatile private var dockerClient: DockerClient = DockerClientImpl.getInstance(config, httpClient)
+    private fun createClientPair(): ClientPair {
+        val http = createHttpClient()
+        return ClientPair(http, DockerClientImpl.getInstance(config, http))
+    }
 
-    val client: DockerClient get() = dockerClient
+    @Volatile private var clients = createClientPair()
 
-    private fun rebuildClient() {
-        val oldHttp = httpClient
-        httpClient = createHttpClient()
-        dockerClient = DockerClientImpl.getInstance(config, httpClient)
-        oldHttp.close()
+    private val clientRebuildLock = Any()
+
+    private val dockerClient: DockerClient get() = clients.dockerClient
+
+    val client: DockerClient get() = clients.dockerClient
+
+    /**
+     * Atomically replace the client pair, then close the old HTTP client (after the swap, so no
+     * reader can pick it up from [clients] anymore). [stale] is the pair the caller observed
+     * failing: if a concurrent caller already swapped it out, the rebuild is skipped so we never
+     * close a client a sibling just installed. Both call paths (`withRetryOnPoolShutdown` and
+     * `determineAvailability`) serialize on [clientRebuildLock].
+     */
+    private fun rebuildClient(stale: ClientPair = clients) {
+        synchronized(clientRebuildLock) {
+            val old = clients
+            if (old !== stale) return // a concurrent caller already rebuilt; reuse its client
+            clients = createClientPair()
+            try {
+                old.httpClient.close()
+            } catch (e: Exception) {
+                logger.debug("Error closing replaced HTTP client: {}", e.message)
+            }
+        }
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -133,17 +164,21 @@ class DesktopDockerRepository(
 
     @Volatile private var lastAvailable = false
 
-    private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T =
-        try {
+    private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T {
+        // Capture the pair in use so a failure only rebuilds THIS pair — if a concurrent caller
+        // already rebuilt it, rebuildClient is a no-op and the retry uses the sibling's client.
+        val used = clients
+        return try {
             block()
         } catch (e: Exception) {
             if (e.message?.contains("shut down") == true) {
-                rebuildClient()
+                rebuildClient(used)
                 block()
             } else {
                 throw e
             }
         }
+    }
 
     override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> =
         flow {
@@ -1415,8 +1450,9 @@ class DesktopDockerRepository(
     override fun close() {
         try {
             scope.cancel()
-            dockerClient.close()
-            httpClient.close()
+            val current = clients
+            current.dockerClient.close()
+            current.httpClient.close()
         } catch (e: Exception) {
             logger.warn("Error during DockerRepository shutdown", e)
         }
