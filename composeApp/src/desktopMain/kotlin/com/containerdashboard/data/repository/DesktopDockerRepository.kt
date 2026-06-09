@@ -24,8 +24,8 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.data.util.looksBinary
-import com.containerdashboard.data.util.normalizePath
 import com.containerdashboard.data.util.parseLsOutput
+import com.containerdashboard.data.util.validateContainerPath
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -156,6 +156,13 @@ class DesktopDockerRepository(
     private val cachedMaxLogLines = AtomicInteger(1000)
 
     init {
+        if (dockerHost.startsWith("tcp://") || dockerHost.startsWith("http://")) {
+            logger.warn(
+                "Connecting to Docker host '{}' over an unencrypted channel — " +
+                    "all API traffic (including container env vars) is sent in plaintext.",
+                dockerHost,
+            )
+        }
         scope.launch {
             PreferenceRepository.logsMaxLinesState.collect { value ->
                 cachedMaxLogLines.set(value)
@@ -554,7 +561,7 @@ class DesktopDockerRepository(
     ): Result<List<ContainerFileEntry>> =
         withContext(Dispatchers.IO) {
             try {
-                val normalized = normalizePath(path)
+                val normalized = validateContainerPath(path).getOrElse { return@withContext Result.failure(it) }
                 val result = execCapture(id, listOf("ls", "-la", "--", normalized))
                 when {
                     result.timedOut ->
@@ -578,7 +585,7 @@ class DesktopDockerRepository(
     ): Result<ContainerFileContent> =
         withContext(Dispatchers.IO) {
             try {
-                val normalized = normalizePath(path)
+                val normalized = validateContainerPath(path).getOrElse { return@withContext Result.failure(it) }
                 // head -c (maxBytes + 1): a returned length > maxBytes proves the file was truncated.
                 val result =
                     execCapture(id, listOf("head", "-c", (maxBytes.toLong() + 1).toString(), "--", normalized))
@@ -614,7 +621,7 @@ class DesktopDockerRepository(
     ): Result<ByteArray> =
         withContext(Dispatchers.IO) {
             try {
-                val normalized = normalizePath(path)
+                val normalized = validateContainerPath(path).getOrElse { return@withContext Result.failure(it) }
                 val result = execCapture(id, listOf("cat", "--", normalized), timeoutMillis = 300_000)
                 when {
                     result.timedOut ->

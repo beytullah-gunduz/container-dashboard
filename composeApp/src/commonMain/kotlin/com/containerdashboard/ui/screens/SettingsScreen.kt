@@ -71,6 +71,7 @@ import com.dockerdashboard.composeapp.generated.resources.restart_alt
 import com.dockerdashboard.composeapp.generated.resources.save
 import com.dockerdashboard.composeapp.generated.resources.stop
 import com.dockerdashboard.composeapp.generated.resources.view_in_ar
+import com.dockerdashboard.composeapp.generated.resources.warning
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -129,6 +130,33 @@ fun SettingsScreen(
                 value = dockerHost,
                 onValueChange = { viewModel.setEngineHost(it) },
             )
+
+            // Warn when the configured host uses an unencrypted scheme.
+            val isUnencryptedHost =
+                dockerHost.startsWith("tcp://") || dockerHost.startsWith("http://")
+            if (isUnencryptedHost) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.warning),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = "Unencrypted connection — traffic to this host is not TLS-protected",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(Spacing.md))
 
