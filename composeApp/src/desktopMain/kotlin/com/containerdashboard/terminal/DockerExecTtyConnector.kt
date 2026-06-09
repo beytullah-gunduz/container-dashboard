@@ -10,6 +10,7 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DockerExecTtyConnector(
     private val dockerClient: DockerClient,
@@ -25,8 +26,13 @@ class DockerExecTtyConnector(
     // Streaming UTF-8 reader: buffers partial multibyte sequences across reads.
     private val stdoutReader = InputStreamReader(stdoutPipeIn, StandardCharsets.UTF_8)
 
+    // `started` becomes true once exec has been successfully submitted (set only once, in start()).
+    // `closed` is set to true by onError/onComplete/close() and never reverts.
+    // A terminal false (from callbacks or close()) therefore can never be overwritten by the
+    // startup `true`: `isConnected()` is only true while started && !closed.
     @Volatile
-    private var connected = false
+    private var started = false
+    private val closed = AtomicBoolean(false)
 
     @Volatile
     private var execId: String? = null
@@ -66,12 +72,12 @@ class DockerExecTtyConnector(
 
                     override fun onError(throwable: Throwable?) {
                         logger.warn("Docker exec stream error: {}", throwable?.message)
-                        connected = false
+                        closed.set(true)
                         doneLatch.countDown()
                     }
 
                     override fun onComplete() {
-                        connected = false
+                        closed.set(true)
                         doneLatch.countDown()
                     }
                 }
@@ -89,11 +95,14 @@ class DockerExecTtyConnector(
                 .withStdIn(stdinStream)
                 .exec(callback!!)
 
-            connected = true
+            // Only mark as started after exec has been successfully submitted.
+            // If closed was already set true by an onError that raced with this point,
+            // isConnected() will still return false because it checks !closed.get().
+            started = true
             logger.info("Docker exec session started for container {}", containerId)
         } catch (e: Exception) {
             logger.error("Failed to start Docker exec session", e)
-            connected = false
+            closed.set(true)
             doneLatch.countDown()
             throw e
         }
@@ -104,14 +113,14 @@ class DockerExecTtyConnector(
         offset: Int,
         length: Int,
     ): Int {
-        if (!connected) return -1
+        if (!isConnected()) return -1
         // Reads chars (not bytes) so the InputStreamReader's internal CharsetDecoder can
         // accumulate partial multibyte sequences across successive calls, preventing mojibake.
         return stdoutReader.read(buf, offset, length)
     }
 
     override fun write(bytes: ByteArray) {
-        if (!connected) return
+        if (!isConnected()) return
         stdinPipe.write(bytes)
         stdinPipe.flush()
     }
@@ -120,7 +129,7 @@ class DockerExecTtyConnector(
         write(string.toByteArray(StandardCharsets.UTF_8))
     }
 
-    override fun isConnected(): Boolean = connected
+    override fun isConnected(): Boolean = started && !closed.get()
 
     override fun waitFor(): Int {
         // Blocks until onComplete/onError fires OR close() is called — no busy-wait.
@@ -130,7 +139,7 @@ class DockerExecTtyConnector(
 
     override fun ready(): Boolean =
         try {
-            connected && stdoutReader.ready()
+            isConnected() && stdoutReader.ready()
         } catch (_: IOException) {
             false
         }
@@ -138,7 +147,7 @@ class DockerExecTtyConnector(
     override fun getName(): String = "docker-exec-$containerId"
 
     override fun close() {
-        connected = false
+        closed.set(true)
         // Release any thread blocked in waitFor() even if docker-java callbacks never fire.
         doneLatch.countDown()
         try {
