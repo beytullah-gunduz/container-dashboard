@@ -283,7 +283,12 @@ class DesktopDockerRepository(
                 }
                 delay(5000)
             }
-        }.shareIn(scope, SharingStarted.Lazily)
+        }
+            // WhileSubscribed matches the downstream containers/images/volumes/networks flows so
+            // the event connection follows real UI demand. Known gap: events firing while no
+            // consumer is subscribed (no replay) are lost — the 15 s poll fallback in each list
+            // flow bounds the resulting staleness.
+            .shareIn(scope, SharingStarted.WhileSubscribed(5_000))
 
     // System
     override suspend fun getSystemInfo(): Result<SystemInfo> =
