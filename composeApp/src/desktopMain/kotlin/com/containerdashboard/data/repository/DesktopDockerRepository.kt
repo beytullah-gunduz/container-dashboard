@@ -1386,7 +1386,12 @@ class DesktopDockerRepository(
 
         if (systemDelta <= 0L || cpuDelta < 0L) return 0.0
 
-        val numCpus = cpuStats.cpuUsage?.percpuUsage?.size ?: cpuStats.onlineCpus?.toInt() ?: 1
+        // cgroup v2 reports neither percpuUsage nor (sometimes) onlineCpus; falling back to 1
+        // would cap CPU% at 100 on multi-core hosts, so use the host's processor count instead.
+        val numCpus =
+            cpuStats.cpuUsage?.percpuUsage?.size
+                ?: cpuStats.onlineCpus?.toInt()
+                ?: Runtime.getRuntime().availableProcessors()
         return (cpuDelta.toDouble() / systemDelta.toDouble()) * numCpus * 100.0
     }
 
