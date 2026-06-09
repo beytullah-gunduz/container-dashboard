@@ -87,6 +87,37 @@ object PreferenceRepository {
     private val DEFAULT_ENGINE_HOST by lazy { DockerHostConfig.detectDockerHost() }
 
     /**
+     * Live cache of the full DataStore snapshot, collected eagerly on [repoScope]
+     * (Dispatchers.IO). Backs the synchronous startup getters ([initialEngineHost],
+     * [windowBoundsSync], [lastRouteSync], [logsPaneRightWidthSync],
+     * [logsPaneBottomHeightSync]): after the first emission lands, sync reads are
+     * non-blocking and stay fresh, because DataStore re-emits on every edit.
+     */
+    private val prefsSnapshotFlow: StateFlow<Preferences?> by lazy {
+        dataStore.data.stateIn(repoScope, SharingStarted.Eagerly, null)
+    }
+
+    /**
+     * One-time blocking fallback for sync getters hit before [prefsSnapshotFlow] has
+     * delivered (i.e. the very first startup read). `lazy` guarantees at most one
+     * blocking disk read per process — every sync getter shares it — and
+     * `runBlocking(Dispatchers.IO)` runs the DataStore read machinery on IO instead
+     * of the caller's event loop.
+     */
+    private val firstSnapshot: Preferences? by lazy {
+        runBlocking(Dispatchers.IO) { dataStore.data.firstOrNull() }
+    }
+
+    /**
+     * Synchronous snapshot for the startup getters below. Residual blocking: the very
+     * first call still blocks its caller (typically the main/Swing thread during `main`)
+     * until the DataStore file has been read once — unavoidable while the call sites
+     * need values before the window/repository exist — but repeated sync reads no longer
+     * each block on separate file I/O.
+     */
+    private fun syncSnapshot(): Preferences? = prefsSnapshotFlow.value ?: firstSnapshot
+
+    /**
      * Synchronous one-time read for app startup (AppModule lazy init constructs the
      * DockerRepository with this host). Must be synchronous: the persisted host has to
      * be known before the repository is created, and an async StateFlow would hand back
@@ -94,7 +125,7 @@ object PreferenceRepository {
      * custom host on every launch. All other reads use the Flow-based [engineHost].
      */
     val initialEngineHost: String
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(ENGINE_HOST) ?: DEFAULT_ENGINE_HOST }
+        get() = syncSnapshot()?.get(ENGINE_HOST) ?: DEFAULT_ENGINE_HOST
 
     fun engineHost(): Flow<String> =
         dataStore.data.map {
@@ -243,21 +274,20 @@ object PreferenceRepository {
     // Synchronous one-time read at startup to place the window where the user left it.
     // Needs the persisted value before the first frame, so it must not be async.
     val windowBoundsSync: WindowBounds?
-        get() =
-            runBlocking {
-                val prefs = dataStore.data.firstOrNull() ?: return@runBlocking null
-                val x = prefs[WINDOW_X] ?: return@runBlocking null
-                val y = prefs[WINDOW_Y] ?: return@runBlocking null
-                val w = prefs[WINDOW_W] ?: return@runBlocking null
-                val h = prefs[WINDOW_H] ?: return@runBlocking null
-                WindowBounds(
-                    x = x,
-                    y = y,
-                    width = w,
-                    height = h,
-                    maximized = prefs[WINDOW_MAXIMIZED] ?: false,
-                )
-            }
+        get() {
+            val prefs = syncSnapshot() ?: return null
+            val x = prefs[WINDOW_X] ?: return null
+            val y = prefs[WINDOW_Y] ?: return null
+            val w = prefs[WINDOW_W] ?: return null
+            val h = prefs[WINDOW_H] ?: return null
+            return WindowBounds(
+                x = x,
+                y = y,
+                width = w,
+                height = h,
+                maximized = prefs[WINDOW_MAXIMIZED] ?: false,
+            )
+        }
 
     suspend fun setWindowBounds(bounds: WindowBounds) {
         dataStore.edit { prefs ->
@@ -271,7 +301,7 @@ object PreferenceRepository {
 
     // Synchronous one-time read at startup to restore the last-viewed screen.
     val lastRouteSync: String?
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(LAST_ROUTE) }
+        get() = syncSnapshot()?.get(LAST_ROUTE)
 
     suspend fun setLastRoute(route: String) {
         dataStore.edit { it[LAST_ROUTE] = route }
@@ -280,7 +310,7 @@ object PreferenceRepository {
     fun logsPaneRightWidth(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_RIGHT_W] }
 
     val logsPaneRightWidthSync: Int?
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(LOGS_PANE_RIGHT_W) }
+        get() = syncSnapshot()?.get(LOGS_PANE_RIGHT_W)
 
     suspend fun setLogsPaneRightWidth(dp: Int) {
         dataStore.edit { it[LOGS_PANE_RIGHT_W] = dp }
@@ -289,7 +319,7 @@ object PreferenceRepository {
     fun logsPaneBottomHeight(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_BOTTOM_H] }
 
     val logsPaneBottomHeightSync: Int?
-        get() = runBlocking { dataStore.data.firstOrNull()?.get(LOGS_PANE_BOTTOM_H) }
+        get() = syncSnapshot()?.get(LOGS_PANE_BOTTOM_H)
 
     suspend fun setLogsPaneBottomHeight(dp: Int) {
         dataStore.edit { it[LOGS_PANE_BOTTOM_H] = dp }
