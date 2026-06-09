@@ -29,8 +29,16 @@
 # Apache HttpClient5 (pulled in by docker-java-transport-httpclient5)
 # HTTP/2 support lives in the separate httpcore5-h2 artifact we don't ship —
 # we only talk to the Docker Unix socket over HTTP/1.1.
+#
+# The transport stack is loaded via ServiceLoader / class-name lookup at
+# runtime (TLS providers, Unix-socket connection factory). Without keeping
+# the full client5/core5 packages ProGuard can strip or rename classes that
+# are never referenced by name in our own code, producing a
+# ClassNotFoundException at first connection in the release build.
 # ---------------------------------------------------------------------------
 -dontwarn org.apache.hc.core5.http2.**
+-keep class org.apache.hc.client5.** { *; }
+-keep class org.apache.hc.core5.** { *; }
 
 # ---------------------------------------------------------------------------
 # Optional TLS and compression providers referenced by Apache HC5 / Commons
