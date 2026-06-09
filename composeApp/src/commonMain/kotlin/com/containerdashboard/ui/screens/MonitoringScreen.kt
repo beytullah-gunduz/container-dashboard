@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -394,14 +395,19 @@ fun MonitoringScreen(
                             )
                         }
 
+                        // key() anchors row identity to the container so rows whose
+                        // values didn't change skip recomposition even when the
+                        // list order shifts between stats ticks.
                         stats.forEach { stat ->
-                            ContainerBarRow(
-                                containerName = stat.containerName,
-                                value = stat.cpuPercent,
-                                maxValue = 100.0,
-                                label = "%.1f%%".format(stat.cpuPercent),
-                                barColor = getCpuColor(stat.cpuPercent),
-                            )
+                            key(stat.containerId) {
+                                ContainerBarRow(
+                                    containerName = stat.containerName,
+                                    value = stat.cpuPercent,
+                                    maxValue = 100.0,
+                                    label = "%.1f%%".format(stat.cpuPercent),
+                                    barColor = getCpuColor(stat.cpuPercent),
+                                )
+                            }
                         }
                     }
                 }
@@ -437,15 +443,17 @@ fun MonitoringScreen(
                         }
 
                         stats.forEach { stat ->
-                            ContainerBarRow(
-                                containerName = stat.containerName,
-                                value = stat.memoryPercent,
-                                maxValue = 100.0,
-                                label =
-                                    "${ContainerStats.formatBytes(stat.memoryUsage)} / " +
-                                        ContainerStats.formatBytes(stat.memoryLimit),
-                                barColor = getMemoryColor(stat.memoryPercent),
-                            )
+                            key(stat.containerId) {
+                                ContainerBarRow(
+                                    containerName = stat.containerName,
+                                    value = stat.memoryPercent,
+                                    maxValue = 100.0,
+                                    label =
+                                        "${ContainerStats.formatBytes(stat.memoryUsage)} / " +
+                                            ContainerStats.formatBytes(stat.memoryLimit),
+                                    barColor = getMemoryColor(stat.memoryPercent),
+                                )
+                            }
                         }
                     }
                 }
@@ -512,8 +520,12 @@ fun MonitoringScreen(
                                 )
                             }
                         } else {
+                            // Sorting follows live values, so positions shuffle between
+                            // ticks; keying on the container keeps unchanged rows skippable.
                             filteredStats.forEach { stat ->
-                                StatsTableRow(stat = stat, isNarrow = isNarrowTable)
+                                key(stat.containerId) {
+                                    StatsTableRow(stat = stat, isNarrow = isNarrowTable)
+                                }
                             }
                         }
                     }
