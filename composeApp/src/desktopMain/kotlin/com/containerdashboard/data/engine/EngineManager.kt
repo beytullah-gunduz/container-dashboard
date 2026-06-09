@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 @Serializable
 data class ColimaStatus(
@@ -37,6 +38,11 @@ object EngineManager {
     private val logger = LoggerFactory.getLogger(EngineManager::class.java)
     private val json = Json { ignoreUnknownKeys = true }
 
+    // Named timeout budgets. Colima start can take 30-60 s; give it generous headroom.
+    private const val TIMEOUT_START_SECONDS = 180L
+    private const val TIMEOUT_STOP_SECONDS = 60L
+    private const val TIMEOUT_STATUS_SECONDS = 15L
+
     private val _output = MutableStateFlow("")
     val output: StateFlow<String> = _output.asStateFlow()
 
@@ -64,14 +70,23 @@ object EngineManager {
                     ProcessBuilder(cmd)
                         .redirectErrorStream(true)
                         .start()
-                val text = proc.inputStream.bufferedReader().readText()
-                val finished = proc.waitFor(15, TimeUnit.SECONDS)
+                // Drain stdout on a separate thread so readText() can't block the timeout wait.
+                val textHolder = arrayOfNulls<String>(1)
+                val drainThread =
+                    thread(name = "colima-status-drain") {
+                        textHolder[0] = proc.inputStream.bufferedReader().readText()
+                    }
+                val finished = proc.waitFor(TIMEOUT_STATUS_SECONDS, TimeUnit.SECONDS)
                 if (!finished) {
                     proc.destroyForcibly()
+                    drainThread.interrupt()
+                    drainThread.join(1_000)
                     logger.warn("colima status timed out for profile '{}'", profile)
                     return@withContext null
                 }
+                drainThread.join(5_000)
                 if (proc.exitValue() != 0) return@withContext null
+                val text = textHolder[0] ?: return@withContext null
                 json.decodeFromString<ColimaStatus>(text)
             } catch (e: Exception) {
                 proc?.destroyForcibly()
@@ -93,7 +108,7 @@ object EngineManager {
             try {
                 val cmd = buildCommand(type, "start", profile, cpu, memory, disk)
                 appendOutput("$ ${cmd.joinToString(" ")}")
-                val success = runProcess(cmd)
+                val success = runProcess(cmd, TIMEOUT_START_SECONDS)
                 _actionState.value =
                     if (success) {
                         EngineActionState.Done(true, "${type.displayName} started")
@@ -120,7 +135,7 @@ object EngineManager {
             try {
                 val cmd = buildCommand(type, "stop", profile)
                 appendOutput("$ ${cmd.joinToString(" ")}")
-                val success = runProcess(cmd)
+                val success = runProcess(cmd, TIMEOUT_STOP_SECONDS)
                 _actionState.value =
                     if (success) {
                         EngineActionState.Done(true, "${type.displayName} stopped")
@@ -185,22 +200,39 @@ object EngineManager {
             EngineType.UNKNOWN -> listOf("echo", "Unknown engine")
         }
 
-    private fun runProcess(cmd: List<String>): Boolean {
+    private fun runProcess(
+        cmd: List<String>,
+        timeoutSeconds: Long,
+    ): Boolean {
         val proc =
             ProcessBuilder(cmd)
                 .redirectErrorStream(true)
                 .start()
 
-        proc.inputStream.bufferedReader().forEachLine { line ->
-            appendOutput(line)
-        }
+        // Drain stdout on a separate thread so forEachLine can't block the timeout wait.
+        // appendOutput is called line-by-line so the UI receives live output as it arrives.
+        val drainThread =
+            thread(name = "engine-drain") {
+                try {
+                    proc.inputStream.bufferedReader().forEachLine { line ->
+                        appendOutput(line)
+                    }
+                } catch (_: Exception) {
+                    // Stream closed on timeout/destroy — expected.
+                }
+            }
 
-        val finished = proc.waitFor(15, TimeUnit.SECONDS)
+        val finished = proc.waitFor(timeoutSeconds, TimeUnit.SECONDS)
         if (!finished) {
             proc.destroyForcibly()
-            logger.warn("Process timed out after 15s: {}", cmd.joinToString(" "))
+            drainThread.interrupt()
+            drainThread.join(2_000)
+            val msg = "Process timed out after ${timeoutSeconds}s: ${cmd.joinToString(" ")}"
+            logger.warn(msg)
+            appendOutput("[timed out after ${timeoutSeconds}s]")
             return false
         }
+        drainThread.join(5_000) // let any remaining output flush before returning
         return proc.exitValue() == 0
     }
 }
