@@ -280,7 +280,10 @@ private fun ResizableDivider(
                     },
                 ).hoverable(interactionSource)
                 .pointerHoverIcon(PointerIcon(cursor))
-                .pointerInput(isVertical) {
+                // density is a key so the px->dp conversion below restarts with the
+                // fresh value when the window moves between displays with
+                // different scale factors.
+                .pointerInput(isVertical, density) {
                     detectDragGestures(
                         onDragStart = { isDragging = true },
                         onDragEnd = { isDragging = false },
