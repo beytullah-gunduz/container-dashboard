@@ -17,11 +17,11 @@ spotless = "7.0.2"
 slf4j = "2.0.16"
 logback = "1.5.15"
 jna = "5.14.0"
+# Both DataStore artifacts are on the same release train; bump both together by
+# updating this single alias.
+datastore = "1.2.0"
 
 [libraries]
-datastore = "1.2.0"
-# Both DataStore artifacts are on the same release train; they must stay aligned.
-# Bump both together by updating the single `datastore` version alias above.
 androidx-datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "datastore" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastore" }
 
