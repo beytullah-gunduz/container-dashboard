@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -215,13 +216,27 @@ fun AppLogsScreen(
                     )
                 }
             } else {
+                // Stable item keys so filtering/clearing preserves row identity
+                // (no animation restarts / scroll-state churn). Entries carry no
+                // unique id, so derive one from timestamp + content hash, with an
+                // occurrence counter to disambiguate identical entries logged in
+                // the same millisecond (duplicate LazyColumn keys would crash).
+                val entryKeys =
+                    remember(entries) {
+                        val seen = HashMap<String, Int>()
+                        entries.map { entry ->
+                            val base = "${entry.timestamp}:${entry.hashCode()}"
+                            val occurrence = seen.merge(base, 1, Int::plus)!!
+                            if (occurrence == 1) base else "$base:$occurrence"
+                        }
+                    }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(entries.size) { index ->
+                    items(entries.size, key = { index -> entryKeys[index] }) { index ->
                         LogEntryRow(entry = entries[index])
                     }
                 }
@@ -248,6 +263,9 @@ private fun LogEntryRow(entry: AppLogEntry) {
                 .clip(RoundedCornerShape(6.dp))
                 .background(bgColor)
                 .padding(horizontal = 10.dp, vertical = 6.dp)
+                // Per-row horizontal scroll is deliberate (each long line pans
+                // independently); with stable item keys above, this state now
+                // survives recomposition instead of resetting on identity churn.
                 .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
