@@ -58,12 +58,18 @@ class InMemoryAppender : AppenderBase<ILoggingEvent>() {
                 throwable = event.throwableProxy?.message,
             )
 
-        entries.addLast(entry)
-        while (entries.size > maxEntries) {
-            entries.pollFirst()
-        }
+        // Logback calls doAppend from arbitrary threads. Without the lock, concurrent
+        // add → evict → snapshot sequences on the deque can publish snapshots that are
+        // oversized or inconsistent with each other; synchronized keeps the whole
+        // sequence atomic (cheap at log rates).
+        synchronized(this) {
+            entries.addLast(entry)
+            while (entries.size > maxEntries) {
+                entries.pollFirst()
+            }
 
-        _entriesFlow.value = entries.toList()
+            _entriesFlow.value = entries.toList()
+        }
 
         // Push into the platform-independent AppLogStore so commonMain screens can observe
         AppLogStore.addEntry(
@@ -84,8 +90,10 @@ class InMemoryAppender : AppenderBase<ILoggingEvent>() {
 
     /** Clears all stored log entries. */
     fun clear() {
-        entries.clear()
-        _entriesFlow.value = emptyList()
+        synchronized(this) {
+            entries.clear()
+            _entriesFlow.value = emptyList()
+        }
     }
 
     /** A [StateFlow] that emits the current list of log entries whenever a new entry is appended. */
