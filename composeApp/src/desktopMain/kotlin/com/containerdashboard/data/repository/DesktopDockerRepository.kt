@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -718,6 +719,17 @@ class DesktopDockerRepository(
         }
     }
 
+    /**
+     * Split a log frame's payload into lines, PRESERVING intentional blank lines (a container
+     * printing `\n\n` shows an empty line). Only the zero-length artifact after a chunk's final
+     * `\n` is dropped — `"foo\n".split("\n")` is `["foo", ""]`, and that trailing "" is a
+     * delimiter artifact, not output.
+     */
+    private fun splitLogLines(text: String): List<String> {
+        val pieces = text.split("\n")
+        return if (text.endsWith("\n")) pieces.dropLast(1) else pieces
+    }
+
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followContainerLogs(
         id: String,
@@ -732,9 +744,7 @@ class DesktopDockerRepository(
                             val text = String(it.payload ?: ByteArray(0))
                             val snapshot =
                                 synchronized(lines) {
-                                    text.lineSequence().filter { l -> l.isNotEmpty() }.forEach { l ->
-                                        lines.add(l)
-                                    }
+                                    lines.addAll(splitLogLines(text))
                                     val cap = cachedMaxLogLines.get()
                                     if (lines.size > cap) {
                                         val excess = lines.size - cap
@@ -786,8 +796,11 @@ class DesktopDockerRepository(
             val lines = mutableListOf<String>()
             val lock = Any()
 
-            val jobs =
-                containers.map { (containerId, label) ->
+            // supervisorScope so one container's stream failing (e.g. it gets killed mid-follow)
+            // doesn't cancel the sibling streams via structured concurrency. It also suspends
+            // until every child completes, closing the channelFlow when all streams have ended.
+            supervisorScope {
+                containers.forEach { (containerId, label) ->
                     launch {
                         callbackFlow {
                             val callback =
@@ -819,13 +832,13 @@ class DesktopDockerRepository(
                                 close(e)
                             }
                             awaitClose { runCatching { callback.close() } }
+                        }.catch { e ->
+                            // Swallow this stream's failure (supervisorScope already isolates
+                            // siblings from cancellation; this keeps the error from reaching the
+                            // default handler) — the other containers keep streaming.
+                            logger.warn("Log follow stream for {} failed: {}", containerId, e.message)
                         }.collect { text ->
-                            val newLines =
-                                text
-                                    .lineSequence()
-                                    .filter { it.isNotEmpty() }
-                                    .map { "[$label] $it" }
-                                    .toList()
+                            val newLines = splitLogLines(text).map { "[$label] $it" }
                             if (newLines.isNotEmpty()) {
                                 val snapshot =
                                     synchronized(lock) {
@@ -842,7 +855,7 @@ class DesktopDockerRepository(
                         }
                     }
                 }
-            jobs.forEach { it.join() }
+            }
         }.conflate().sample(100).flowOn(Dispatchers.IO)
 
     override suspend fun startContainer(id: String): Result<Unit> =
