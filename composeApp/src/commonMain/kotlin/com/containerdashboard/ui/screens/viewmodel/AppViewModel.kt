@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -247,12 +248,23 @@ class AppViewModel(
 
     // --- Container file browsing (read-only) ---
 
-    // Lazily-loaded tree state, keyed by node path. A symlink's children are listed from its
-    // resolved target but stored under the symlink's own path, so flattening stays uniform.
-    private val childrenByPath = mutableMapOf<String, List<ContainerFileEntry>>()
-    private val expandedPaths = mutableSetOf<String>()
-    private val loadingPaths = mutableSetOf<String>()
-    private val nodeErrors = mutableMapOf<String, String>()
+    /**
+     * Lazily-loaded tree state, keyed by node path. A symlink's children are listed from its
+     * resolved target but stored under the symlink's own path, so flattening stays uniform.
+     *
+     * Immutable snapshot held in a single [MutableStateFlow] and mutated only via
+     * `update`/`updateAndGet`: the loaders run in separate [viewModelScope] coroutines, so a
+     * single atomically-swapped value keeps [flattenTree] from ever observing a half-applied
+     * mutation across the four collections.
+     */
+    private data class TreeState(
+        val childrenByPath: Map<String, List<ContainerFileEntry>> = emptyMap(),
+        val expandedPaths: Set<String> = emptySet(),
+        val loadingPaths: Set<String> = emptySet(),
+        val nodeErrors: Map<String, String> = emptyMap(),
+    )
+
+    private val treeState = MutableStateFlow(TreeState())
 
     fun openFilesTab(container: Container) {
         val state = _filesPaneState.value
@@ -276,15 +288,21 @@ class AppViewModel(
     /** Expand or collapse a directory (or symlink) node, lazily loading its children on first expand. */
     fun toggleNode(entry: ContainerFileEntry) {
         if (entry.type != FileType.DIRECTORY && entry.type != FileType.SYMLINK) return
-        if (expandedPaths.remove(entry.path)) {
-            _filesPaneState.update { it.copy(nodes = flattenTree()) }
-            return
-        }
-        expandedPaths.add(entry.path)
-        if (childrenByPath[entry.path] != null) {
-            _filesPaneState.update { it.copy(nodes = flattenTree()) }
-        } else {
+        var needsLoad = false
+        val tree =
+            treeState.updateAndGet { tree ->
+                needsLoad = false
+                if (entry.path in tree.expandedPaths) {
+                    tree.copy(expandedPaths = tree.expandedPaths - entry.path)
+                } else {
+                    needsLoad = tree.childrenByPath[entry.path] == null
+                    tree.copy(expandedPaths = tree.expandedPaths + entry.path)
+                }
+            }
+        if (needsLoad) {
             loadChildren(entry)
+        } else {
+            _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
         }
     }
 
@@ -350,10 +368,7 @@ class AppViewModel(
     }
 
     private fun resetTree() {
-        childrenByPath.clear()
-        expandedPaths.clear()
-        loadingPaths.clear()
-        nodeErrors.clear()
+        treeState.value = TreeState()
     }
 
     private fun loadRoot() {
@@ -362,8 +377,11 @@ class AppViewModel(
         viewModelScope.launch {
             repo.listContainerDirectory(containerId, ROOT_PATH).fold(
                 onSuccess = { entries ->
-                    childrenByPath[ROOT_PATH] = sortEntries(entries)
-                    _filesPaneState.update { it.copy(isLoading = false, error = null, nodes = flattenTree()) }
+                    val tree =
+                        treeState.updateAndGet {
+                            it.copy(childrenByPath = it.childrenByPath + (ROOT_PATH to sortEntries(entries)))
+                        }
+                    _filesPaneState.update { it.copy(isLoading = false, error = null, nodes = flattenTree(tree)) }
                 },
                 onFailure = { e ->
                     _filesPaneState.update {
@@ -376,21 +394,36 @@ class AppViewModel(
 
     private fun loadChildren(entry: ContainerFileEntry) {
         val containerId = _filesPaneState.value.containerId ?: return
-        loadingPaths.add(entry.path)
-        nodeErrors.remove(entry.path)
-        _filesPaneState.update { it.copy(nodes = flattenTree()) }
+        val loadingTree =
+            treeState.updateAndGet {
+                it.copy(
+                    loadingPaths = it.loadingPaths + entry.path,
+                    nodeErrors = it.nodeErrors - entry.path,
+                )
+            }
+        _filesPaneState.update { it.copy(nodes = flattenTree(loadingTree)) }
         viewModelScope.launch {
             repo.listContainerDirectory(containerId, resolveListPath(entry)).fold(
                 onSuccess = { entries ->
-                    childrenByPath[entry.path] = sortEntries(entries)
-                    loadingPaths.remove(entry.path)
-                    _filesPaneState.update { it.copy(nodes = flattenTree()) }
+                    val tree =
+                        treeState.updateAndGet {
+                            it.copy(
+                                childrenByPath = it.childrenByPath + (entry.path to sortEntries(entries)),
+                                loadingPaths = it.loadingPaths - entry.path,
+                            )
+                        }
+                    _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
                 },
                 onFailure = { e ->
-                    loadingPaths.remove(entry.path)
-                    expandedPaths.remove(entry.path) // collapse again on failure
-                    nodeErrors[entry.path] = e.message ?: "Failed to list directory"
-                    _filesPaneState.update { it.copy(nodes = flattenTree()) }
+                    val tree =
+                        treeState.updateAndGet {
+                            it.copy(
+                                loadingPaths = it.loadingPaths - entry.path,
+                                expandedPaths = it.expandedPaths - entry.path, // collapse again on failure
+                                nodeErrors = it.nodeErrors + (entry.path to (e.message ?: "Failed to list directory")),
+                            )
+                        }
+                    _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
                 },
             )
         }
@@ -415,25 +448,25 @@ class AppViewModel(
                 .thenBy { it.name.lowercase() },
         )
 
-    private fun flattenTree(): List<FileTreeNode> {
+    private fun flattenTree(tree: TreeState): List<FileTreeNode> {
         val nodes = mutableListOf<FileTreeNode>()
 
         fun appendChildren(
             parentPath: String,
             depth: Int,
         ) {
-            val children = childrenByPath[parentPath] ?: return
+            val children = tree.childrenByPath[parentPath] ?: return
             for (entry in children) {
                 val expandable = entry.type == FileType.DIRECTORY || entry.type == FileType.SYMLINK
-                val expanded = expandable && entry.path in expandedPaths
+                val expanded = expandable && entry.path in tree.expandedPaths
                 nodes.add(
                     FileTreeNode(
                         entry = entry,
                         depth = depth,
                         isExpandable = expandable,
                         isExpanded = expanded,
-                        isLoading = entry.path in loadingPaths,
-                        error = nodeErrors[entry.path],
+                        isLoading = entry.path in tree.loadingPaths,
+                        error = tree.nodeErrors[entry.path],
                     ),
                 )
                 if (expanded) appendChildren(entry.path, depth + 1)
