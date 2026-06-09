@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -78,6 +79,8 @@ import com.dockerdashboard.composeapp.generated.resources.folder
 import com.dockerdashboard.composeapp.generated.resources.hub
 import com.dockerdashboard.composeapp.generated.resources.image
 import com.dockerdashboard.composeapp.generated.resources.inventory_2
+import com.dockerdashboard.composeapp.generated.resources.visibility
+import com.dockerdashboard.composeapp.generated.resources.visibility_off
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -711,18 +714,119 @@ private fun CopyIconButton(
     }
 }
 
+/** Keys whose values should be masked unless the user explicitly reveals them. */
+private val SECRET_KEY_PATTERNS =
+    listOf(
+        "PASSWORD",
+        "PASSWD",
+        "SECRET",
+        "TOKEN",
+        "API_KEY",
+        "APIKEY",
+        "ACCESS_KEY",
+        "PRIVATE_KEY",
+        "CREDENTIAL",
+    )
+
+private fun isSecretKey(key: String): Boolean = SECRET_KEY_PATTERNS.any { pattern -> key.uppercase().contains(pattern) }
+
 @Composable
 private fun EnvironmentTab(env: List<EnvVar>) {
     if (env.isEmpty()) {
         TabEmptyPlaceholder("No environment variables")
         return
     }
-    TwoColumnTable(
-        left = "Key",
-        right = "Value",
-        rows = env.map { it.key to it.value },
-        monospace = true,
-    )
+    // Track which secret rows have been revealed; keyed by index to handle duplicate key names.
+    val revealed = remember { mutableStateMapOf<Int, Boolean>() }
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Header row
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(horizontal = 20.dp, vertical = Spacing.sm),
+        ) {
+            Text(
+                text = "Key",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(220.dp),
+            )
+            Text(
+                text = "Value",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+        ) {
+            env.forEachIndexed { index, envVar ->
+                val secret = isSecretKey(envVar.key)
+                val isRevealed = revealed[index] == true
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    SelectionContainer(modifier = Modifier.width(220.dp)) {
+                        Text(
+                            text = envVar.key,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    if (secret && !isRevealed) {
+                        Text(
+                            text = "••••••••",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        SelectionContainer(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = envVar.value,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                    if (secret) {
+                        IconButton(
+                            onClick = { revealed[index] = !isRevealed },
+                            modifier = Modifier.size(20.dp),
+                        ) {
+                            Icon(
+                                painter =
+                                    painterResource(
+                                        if (isRevealed) Res.drawable.visibility_off else Res.drawable.visibility,
+                                    ),
+                                contentDescription = if (isRevealed) "Hide value" else "Reveal value",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    thickness = 0.5.dp,
+                )
+            }
+        }
+    }
 }
 
 @Composable
