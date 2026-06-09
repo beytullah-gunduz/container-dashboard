@@ -1745,8 +1745,11 @@ class DesktopDockerRepository(
             name = this.name ?: "",
             driver = this.driver ?: "",
             mountpoint = this.mountpoint ?: "",
-            scope = "",
-            createdAt = "",
+            // docker-java 3.3.4's typed InspectVolumeResponse exposes neither Scope nor
+            // CreatedAt; both are present in the raw response map its deserializer attaches to
+            // every DockerObject, so read them from there (empty when the daemon omits them).
+            scope = this.rawValues["Scope"] as? String ?: "",
+            createdAt = this.rawValues["CreatedAt"] as? String ?: "",
             options = this.options ?: emptyMap(),
             labels = this.labels ?: emptyMap(),
             rawJson = toPrettyJson(this),
