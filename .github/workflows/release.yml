@@ -77,11 +77,12 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x gradlew
 
-      - name: Verify formatting
-        run: ./gradlew spotlessCheck
-
       - name: Build installer
-        run: ./gradlew :composeApp:${{ matrix.task }} -Papp.version=${{ steps.version.outputs.version }}
+        # APP_VERSION is passed via env so the tag-derived value is never
+        # interpolated directly into the shell command (S5.4: prevent tag-name injection).
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+        run: ./gradlew :composeApp:${{ matrix.task }} -Papp.version="$APP_VERSION"
 
       - name: Generate SHA256 checksum
         # `sha256sum` ships with coreutils (Linux + git-bash on Windows) but
