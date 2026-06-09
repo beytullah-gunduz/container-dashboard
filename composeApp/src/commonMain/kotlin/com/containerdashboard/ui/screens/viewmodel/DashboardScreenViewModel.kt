@@ -32,35 +32,38 @@ class DashboardScreenViewModel(
     private val _version = MutableStateFlow<DockerVersion?>(null)
     val version: StateFlow<DockerVersion?> = _version.asStateFlow()
 
-    // Shared source for the list; `hasLoaded` must derive from this raw flow rather than the
-    // seeded `containers` StateFlow, which would replay its emptyList seed and flip `hasLoaded`
-    // true before the first real fetch (see ContainersScreenViewModel for the full rationale).
+    // Each card is fed by an independent repo flow. Both the list StateFlow and its "loaded" flag
+    // derive from the SAME raw flow (captured here once) — the flag must come from the raw flow,
+    // not the seeded list StateFlow, which would replay its emptyList seed and flip the flag true
+    // before the first real fetch (see ContainersScreenViewModel for the full rationale).
     private val containersFlow: Flow<List<Container>> = repo.getContainers(all = true)
+    private val imagesFlow: Flow<List<DockerImage>> = repo.getImages()
+    private val volumesFlow: Flow<List<Volume>> = repo.getVolumes()
+    private val networksFlow: Flow<List<DockerNetwork>> = repo.getNetworks()
 
     val containers: StateFlow<List<Container>> =
-        containersFlow
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        containersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val images: StateFlow<List<DockerImage>> =
-        repo
-            .getImages()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        imagesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val volumes: StateFlow<List<Volume>> =
-        repo
-            .getVolumes()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        volumesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val networks: StateFlow<List<DockerNetwork>> =
-        repo
-            .getNetworks()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        networksFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Emits `false` until the first containers list has been delivered. */
-    val hasLoaded: StateFlow<Boolean> =
-        containersFlow
-            .map { true }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    // Per-card loaded flags: each stays false until ITS list has first arrived. Gating the
+    // Images/Volumes/Networks cards behind the containers flag alone flashed a premature "0" the
+    // instant containers loaded, before those (independently-fetched) lists actually arrived.
+    val hasLoaded: StateFlow<Boolean> = containersFlow.firstEmissionFlag()
+    val imagesLoaded: StateFlow<Boolean> = imagesFlow.firstEmissionFlag()
+    val volumesLoaded: StateFlow<Boolean> = volumesFlow.firstEmissionFlag()
+    val networksLoaded: StateFlow<Boolean> = networksFlow.firstEmissionFlag()
+
+    /** `false` until this flow delivers its first value, then `true`. */
+    private fun Flow<*>.firstEmissionFlag(): StateFlow<Boolean> =
+        map { true }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

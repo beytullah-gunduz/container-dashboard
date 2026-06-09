@@ -1,6 +1,7 @@
 package com.containerdashboard
 
 import com.containerdashboard.data.models.Container
+import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
@@ -88,6 +89,41 @@ class LoadingStateTest {
             assertEquals(true, vm.hasLoaded.value, "an empty-but-delivered list still means loaded")
 
             job.cancel()
+        }
+
+    @Test
+    fun `Dashboard per-card loaded flags resolve independently`() =
+        runTest {
+            // Containers and images are fetched by separate flows; the images card's loading flag
+            // must not flip just because containers arrived (which flashed a premature "0 Images").
+            val containersSource = MutableSharedFlow<List<Container>>(replay = 1)
+            val imagesSource = MutableSharedFlow<List<DockerImage>>(replay = 1)
+            val fake =
+                FakeDockerRepository(
+                    containersFlowOverride = containersSource,
+                    imagesFlowOverride = imagesSource,
+                )
+            val vm = DashboardScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+
+            val jobs =
+                listOf(
+                    launch { vm.hasLoaded.collect {} },
+                    launch { vm.imagesLoaded.collect {} },
+                )
+            advanceUntilIdle()
+            assertEquals(false, vm.hasLoaded.value)
+            assertEquals(false, vm.imagesLoaded.value)
+
+            containersSource.tryEmit(listOf(container()))
+            advanceUntilIdle()
+            assertEquals(true, vm.hasLoaded.value, "containers loaded")
+            assertEquals(false, vm.imagesLoaded.value, "images card stays in skeleton until images arrive")
+
+            imagesSource.tryEmit(emptyList())
+            advanceUntilIdle()
+            assertEquals(true, vm.imagesLoaded.value, "images loaded once delivered")
+
+            jobs.forEach { it.cancel() }
         }
 
     // -------------------------------------------------------------------------

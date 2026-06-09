@@ -54,6 +54,7 @@ class FakeDockerRepository(
     var containersFlowOverride: Flow<List<Container>>? = null,
     var availabilityFlowOverride: Flow<Boolean>? = null,
     var containerStatsFlowOverride: Flow<List<ContainerStats>>? = null,
+    var imagesFlowOverride: Flow<List<DockerImage>>? = null,
 ) : DockerRepository {
     // --- Availability ---
 
@@ -159,7 +160,7 @@ class FakeDockerRepository(
 
     // --- Images ---
 
-    override fun getImages(): Flow<List<DockerImage>> = flowOf(images)
+    override fun getImages(): Flow<List<DockerImage>> = imagesFlowOverride ?: flowOf(images)
 
     override suspend fun getImage(id: String): Result<DockerImage> =
         images

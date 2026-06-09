@@ -72,6 +72,9 @@ fun DashboardScreen(
     val error by viewModel.error.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val hasLoaded by viewModel.hasLoaded.collectAsState()
+    val imagesLoaded by viewModel.imagesLoaded.collectAsState()
+    val volumesLoaded by viewModel.volumesLoaded.collectAsState()
+    val networksLoaded by viewModel.networksLoaded.collectAsState()
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isCompactMode = maxWidth < COMPACT_THRESHOLD
@@ -171,7 +174,7 @@ fun DashboardScreen(
                     subtitle = formatBytes(totalImageSize),
                     icon = Res.drawable.layers,
                     iconTint = AppColors.Running,
-                    isLoading = !hasLoaded,
+                    isLoading = !imagesLoaded,
                     onClick = { onNavigate(Screen.Images) },
                     modifier = m,
                 )
@@ -183,7 +186,7 @@ fun DashboardScreen(
                     subtitle = "${volumes.size} total",
                     icon = Res.drawable.storage,
                     iconTint = AppColors.Warning,
-                    isLoading = !hasLoaded,
+                    isLoading = !volumesLoaded,
                     onClick = { onNavigate(Screen.Volumes) },
                     modifier = m,
                 )
@@ -195,7 +198,7 @@ fun DashboardScreen(
                     subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                     icon = Res.drawable.hub,
                     iconTint = AppColors.AccentBlueDark,
-                    isLoading = !hasLoaded,
+                    isLoading = !networksLoaded,
                     onClick = { onNavigate(Screen.Networks) },
                     modifier = m,
                 )
