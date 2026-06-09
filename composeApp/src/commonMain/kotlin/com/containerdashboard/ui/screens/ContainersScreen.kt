@@ -185,19 +185,21 @@ fun ContainersScreen(
     var pendingConfirmBody by remember { mutableStateOf("") }
     var pendingConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    fun askConfirm(
-        title: String,
-        body: String,
-        action: () -> Unit,
-    ) {
-        if (confirmBeforeDelete) {
-            pendingConfirmTitle = title
-            pendingConfirmBody = body
-            pendingConfirmAction = action
-        } else {
-            action()
+    // Remembered once (it only captures stable snapshot-state delegates), so
+    // per-row onRemove lambdas that call it stay memoized across stats ticks
+    // instead of being recreated — which would defeat row skipping (S4.2).
+    val askConfirm =
+        remember {
+            { title: String, body: String, action: () -> Unit ->
+                if (confirmBeforeDelete) {
+                    pendingConfirmTitle = title
+                    pendingConfirmBody = body
+                    pendingConfirmAction = action
+                } else {
+                    action()
+                }
+            }
         }
-    }
 
     val filteredContainers =
         remember(containers, searchQuery, containerFilter, sortColumn, sortDirection) {
@@ -936,6 +938,9 @@ fun ContainersScreen(
                                 ) {
                                     when (item) {
                                         is ContainerListItem.ComposeGroupHeader -> {
+                                            // Stable primitives instead of the whole stats map, so the
+                                            // card skips ticks that don't change this group's totals.
+                                            val groupStats = item.containers.mapNotNull { statsById[it.id] }
                                             ComposeProjectCard(
                                                 item = item,
                                                 sectionPrefix = "running",
@@ -945,7 +950,10 @@ fun ContainersScreen(
                                                 columnWidths = columnWidths,
                                                 currentLogsContainerId = currentLogsContainerId,
                                                 actionInProgress = effectiveActionInProgress,
-                                                statsById = statsById,
+                                                groupCpuPercent =
+                                                    groupStats.takeIf { it.isNotEmpty() }?.sumOf { it.cpuPercent },
+                                                groupMemoryUsage =
+                                                    groupStats.takeIf { it.isNotEmpty() }?.sumOf { it.memoryUsage },
                                                 onToggle = { toggleRunningGroup(item.projectName) },
                                                 onSelectAll = { selectAll ->
                                                     if (selectAll) {
@@ -1107,6 +1115,7 @@ fun ContainersScreen(
                                 ) {
                                     when (item) {
                                         is ContainerListItem.ComposeGroupHeader -> {
+                                            val groupStats = item.containers.mapNotNull { statsById[it.id] }
                                             ComposeProjectCard(
                                                 item = item,
                                                 sectionPrefix = "other",
@@ -1116,7 +1125,10 @@ fun ContainersScreen(
                                                 columnWidths = columnWidths,
                                                 currentLogsContainerId = currentLogsContainerId,
                                                 actionInProgress = effectiveActionInProgress,
-                                                statsById = statsById,
+                                                groupCpuPercent =
+                                                    groupStats.takeIf { it.isNotEmpty() }?.sumOf { it.cpuPercent },
+                                                groupMemoryUsage =
+                                                    groupStats.takeIf { it.isNotEmpty() }?.sumOf { it.memoryUsage },
                                                 onToggle = { toggleOtherGroup(item.projectName) },
                                                 onSelectAll = { selectAll ->
                                                     if (selectAll) {

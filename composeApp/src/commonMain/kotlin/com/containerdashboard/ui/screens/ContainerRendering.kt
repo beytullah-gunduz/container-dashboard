@@ -313,7 +313,10 @@ internal fun ComposeProjectCard(
     columnWidths: ContainerColumnWidths,
     currentLogsContainerId: String?,
     actionInProgress: String?,
-    statsById: Map<String, ContainerStats>,
+    // Precomputed at the call site (stable primitives) so the card can skip
+    // recomposition on stats ticks that don't change this group's totals.
+    groupCpuPercent: Double?,
+    groupMemoryUsage: Long?,
     onToggle: () -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onCheckedChange: (String, Boolean) -> Unit,
@@ -370,10 +373,6 @@ internal fun ComposeProjectCard(
                     },
             ),
     ) {
-        val groupStats = item.containers.mapNotNull { statsById[it.id] }
-        val totalCpu = groupStats.sumOf { it.cpuPercent }
-        val totalMem = groupStats.sumOf { it.memoryUsage }
-
         ComposeProjectHeader(
             projectName = item.projectName,
             containerCount = item.containers.size,
@@ -389,8 +388,8 @@ internal fun ComposeProjectCard(
             onPauseAll = { onPauseAll(item.containers.filter { it.isRunning }.map { it.id }) },
             onUnpauseAll = { onUnpauseAll(item.containers.filter { it.isPaused }.map { it.id }) },
             onRemoveAll = { onRemoveAll(item.containers.map { it.id }) },
-            cpuPercent = if (groupStats.isNotEmpty()) totalCpu else null,
-            memoryUsage = if (groupStats.isNotEmpty()) totalMem else null,
+            cpuPercent = groupCpuPercent,
+            memoryUsage = groupMemoryUsage,
         )
         AnimatedVisibility(
             visible = item.expanded,
