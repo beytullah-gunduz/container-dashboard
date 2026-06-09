@@ -42,7 +42,10 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
+import com.containerdashboard.ui.chrome.DesktopOs
 import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
+import com.containerdashboard.ui.chrome.NativeMacApp
+import com.containerdashboard.ui.chrome.currentDesktopOs
 import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
@@ -172,6 +175,29 @@ fun main() {
         var pendingRoute by remember { mutableStateOf<String?>(null) }
         var pendingAbout by remember { mutableStateOf(false) }
 
+        // On macOS, hiding/showing the window goes through AppKit's app-level
+        // hide/unhide (NativeMacApp) rather than toggling Compose's `visible`.
+        // That lets the Dock tile and ⌘-Tab restore the window natively — the
+        // JetBrains Runtime has stripped the `com.apple.eawt` reopen-listener
+        // API, so there's no pure-JVM way to catch the Dock click. `visible`
+        // therefore stays `true` for the app's lifetime on macOS; Windows and
+        // Linux keep the original `isWindowVisible` toggle.
+        val isMac = currentDesktopOs == DesktopOs.MAC
+        val hideWindow = {
+            if (isMac) {
+                NativeMacApp.hide()
+            } else {
+                isWindowVisible = false
+            }
+        }
+        val showWindow = {
+            if (isMac) {
+                NativeMacApp.unhide()
+            } else {
+                isWindowVisible = true
+            }
+        }
+
         DisposableEffect(Unit) {
             onDispose {
                 AppModule.dockerRepository.close()
@@ -246,12 +272,22 @@ fun main() {
         Tray(
             icon = currentIcon,
             tooltip = statsTooltip,
-            onAction = { isWindowVisible = !isWindowVisible },
+            onAction = {
+                if (isMac) {
+                    showWindow()
+                } else {
+                    isWindowVisible = !isWindowVisible
+                }
+            },
             menu = {
-                Item(
-                    text = if (isWindowVisible) "Hide Dashboard" else "Show Dashboard",
-                    onClick = { isWindowVisible = !isWindowVisible },
-                )
+                if (isMac) {
+                    Item(text = "Show Dashboard", onClick = { showWindow() })
+                } else {
+                    Item(
+                        text = if (isWindowVisible) "Hide Dashboard" else "Show Dashboard",
+                        onClick = { isWindowVisible = !isWindowVisible },
+                    )
+                }
                 Separator()
                 val runningCount = trayStats.runningContainers
                 val plural = if (runningCount != 1) "s" else ""
@@ -275,11 +311,11 @@ fun main() {
                 )
                 Separator()
                 Item("Settings…", onClick = {
-                    isWindowVisible = true
+                    showWindow()
                     pendingRoute = Screen.Settings.route
                 })
                 Item("About Container Dashboard", onClick = {
-                    isWindowVisible = true
+                    showWindow()
                     pendingAbout = true
                 })
                 Separator()
@@ -288,7 +324,7 @@ fun main() {
         )
 
         Window(
-            onCloseRequest = { isWindowVisible = false },
+            onCloseRequest = { hideWindow() },
             title = "Container Dashboard",
             state = windowState,
             icon = appIcon,
@@ -298,7 +334,7 @@ fun main() {
             val desktopChrome =
                 rememberDesktopWindowChrome(
                     windowState = windowState,
-                    onClose = { isWindowVisible = false },
+                    onClose = { hideWindow() },
                 )
             CompositionLocalProvider(LocalDesktopWindowChrome provides desktopChrome) {
                 App(
