@@ -17,6 +17,8 @@ plugins {
 kotlin {
     jvm("desktop")
 
+    jvmToolchain(21)
+
     // Suppress Beta warning for expect/actual classes
     targets.all {
         compilations.all {
