@@ -83,23 +83,28 @@ private data class DerivedState(
 )
 
 class MonitoringScreenViewModel(
-    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
     private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : ViewModel() {
-    private val repo: DockerRepository get() = repoProvider()
-
     private val maxHistorySize = 60
 
     private val _refreshRate = MutableStateFlow(1f) // seconds
 
     val refreshRate: StateFlow<Float> = _refreshRate.asStateFlow()
 
+    // WhileSubscribed (not Eagerly) so the 2 s retry loop stops once the Monitoring screen
+    // has been off-composition for >5 s, instead of polling a downed daemon forever for the
+    // VM's whole lifetime. Re-binds via repoFlow so an engine-host reconnect fetches system
+    // info from the new repository, matching rawStats below.
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val systemInfo: StateFlow<SystemInfo?> =
-        flow { emit(repo.getSystemInfo().getOrThrow()) }
-            .retryWhen { _, _ ->
-                delay(2_000)
-                true
-            }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        repoFlow
+            .flatMapLatest { repo ->
+                flow { emit(repo.getSystemInfo().getOrThrow()) }
+                    .retryWhen { _, _ ->
+                        delay(2_000)
+                        true
+                    }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val aggregation: StateFlow<MonitoringAggregation> =
         PreferenceRepository

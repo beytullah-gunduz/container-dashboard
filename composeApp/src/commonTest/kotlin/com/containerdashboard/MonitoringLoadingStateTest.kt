@@ -50,7 +50,7 @@ class MonitoringLoadingStateTest {
         runTest {
             val statsSource = MutableSharedFlow<List<ContainerStats>>(replay = 1)
             val fake = FakeDockerRepository(containerStatsFlowOverride = statsSource)
-            val vm = MonitoringScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+            val vm = MonitoringScreenViewModel(repoFlow = MutableStateFlow(fake))
             vm.setRefreshRate(0.05f) // 50ms sample window keeps the test fast
 
             assertNull(vm.derivedStats.value, "seed must be null = no snapshot yet")
@@ -76,7 +76,7 @@ class MonitoringLoadingStateTest {
             val fake1 = FakeDockerRepository(containerStatsFlowOverride = source1)
             val fake2 = FakeDockerRepository(containerStatsFlowOverride = source2)
             val repoFlow = MutableStateFlow<DockerRepository>(fake1)
-            val vm = MonitoringScreenViewModel(repoProvider = { repoFlow.value }, repoFlow = repoFlow)
+            val vm = MonitoringScreenViewModel(repoFlow = repoFlow)
             vm.setRefreshRate(0.05f)
 
             val job = launch { vm.derivedStats.collect {} }

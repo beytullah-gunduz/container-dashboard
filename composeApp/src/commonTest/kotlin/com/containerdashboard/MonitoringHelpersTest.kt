@@ -25,7 +25,7 @@ class MonitoringHelpersTest {
     fun setUp() {
         Dispatchers.setMain(StandardTestDispatcher())
         val fake = FakeDockerRepository()
-        vm = MonitoringScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+        vm = MonitoringScreenViewModel(repoFlow = MutableStateFlow(fake))
     }
 
     @AfterTest
