@@ -111,7 +111,6 @@ fun JediTermConsole(
             if (connector != null) {
                 val conn = connector!!
                 SwingPanel(
-                    background = Color.Black,
                     modifier = Modifier.fillMaxSize(),
                     factory = {
                         // This runs on the Swing/Compose render thread. An uncaught throwable
@@ -192,7 +191,10 @@ private fun createTerminalWidget(
     val widget = JediTermWidget(settings)
     widget.setTtyConnector(connector)
     widget.start()
-    return widget.component
+    // Black backdrop behind the terminal until JediTerm paints its own default-style
+    // background (and for any area it leaves unpainted). Compose 1.12 deprecated
+    // `SwingPanel(background = ...)` in favour of setting this on the component itself.
+    return widget.component.apply { background = java.awt.Color.BLACK }
 }
 
 /**
