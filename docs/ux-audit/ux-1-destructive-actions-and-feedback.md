@@ -133,6 +133,11 @@ stopped containers"); for N > 10 require typing the count or the word DELETE.
 **Acceptance:** no filled-error button in the default Containers header; Delete All is
 two deliberate steps away and states exactly what set it will remove.
 
+**Plan:** [`docs/u1.4-delete-all-plan.md`](../u1.4-delete-all-plan.md).
+**Status:** fixed — "More actions" overflow (Refresh + scoped delete), the
+item acts on the visible set, the dialog states scope and running count and requires
+the count to be typed above 10. Live-smoked; found **U1.11** in the process.
+
 ---
 
 ## U1.5 — Confirmation policy is inconsistent across entry points
@@ -245,3 +250,53 @@ red for Delete only; ≥8 dp gap after the divider; or move Delete into the row'
 menu and keep only reversible actions inline.
 
 **Acceptance:** exactly one red glyph per row; hovering any row icon names it.
+
+---
+
+## U1.11 — `enabled = false` is not a safety boundary under the desktop accessibility bridge
+
+- **Severity:** P1 (platform) · **Effort:** S per control
+- **Found:** 2026-09-13, during the U1.4 live smoke, on the first build with accessibility
+  re-enabled (U4.1).
+
+Compose Multiplatform 1.12.0 registers the `OnClick` semantics action on every
+`clickable` regardless of `enabled` (`foundation` `Clickable.kt:2009-2025`;
+`performClick()` at `:1703-1706` has no enabled check). The desktop bridge exposes it as
+`AccessibleAction.CLICK` and `ComposeAccessible.doAccessibleAction` (`ui-desktop`
+`ComposeAccessible.kt:329-335`) invokes it **without consulting
+`SemanticsProperties.Disabled`**; `isEnabled()` only feeds the state set. JBR's
+`CAccessibility.doAccessibleAction` adds no gate. M3 `Button`, `IconButton` and
+`DropdownMenuItem` all route through `clickable(enabled = …)`, so every control in the
+app is affected.
+
+Reproduced live: an AXPress on the *disabled* typed-count **Delete** button of the U1.4
+dialog ran `onConfirm` and removed 11 containers without the count ever being typed; an
+AXPress on the disabled overflow item opened a "Delete 0 matching containers?" dialog.
+Any AX client — VoiceOver, Accessibility Inspector, macOS automation — can do this.
+
+**Rule:** for any destructive or irreversible handler, `enabled` is presentation only.
+Re-check the precondition inside the handler (`onClick = { if (precondition) act() }`, as
+U1.4 now does in `DeleteAllContainersDialog.kt` and `ContainersScreen.kt`) and/or make the
+ViewModel operation re-entrancy-guarded (`if (_isDeletingSelected.value) return`).
+
+**Apply to (highest impact first):**
+1. Settings › Engine **Restart / Start / Stop** (`SettingsScreen.kt:703-745`,
+   `!isBusy && quotasValid`): a restart kills every running container and the quota
+   validation is bypassed; `EngineManager.startEngine` has no busy guard.
+2. *Delete N selected* / *Stop N selected* on all four list screens
+   (`ContainersScreen.kt:439,464,518,542`, `ImagesScreen.kt:200`, `VolumesScreen.kt:249`,
+   `NetworksScreen.kt:234`) and the ViewModel methods behind them
+   (`ContainersScreenViewModel.{stopSelectedContainers,deleteSelectedContainers,deleteAllContainers}`,
+   `ListScreenViewModel.deleteSelected`): no re-entrancy guard → duplicate `rm -f`,
+   spurious "Failed to delete" errors, stale selection.
+3. System-network Delete (`NetworksScreen.kt:798`, `NetworkContextMenu.kt:64`) and
+   `CompactCheckbox` on system / pending-delete rows: the daemon refuses today; make the
+   boundary ours.
+4. Pane actions, Prune / Stop-all: a null-return or confirm dialog already stands behind
+   them — low priority.
+
+**Upstream:** report to JetBrains (compose-multiplatform) — the bridge should refuse
+actions on nodes carrying `Disabled`, as the Android delegate does.
+
+**Acceptance:** an AXPress on any disabled destructive control is a no-op (verify with
+Accessibility Inspector); the ViewModel methods above ignore re-entrant calls.
