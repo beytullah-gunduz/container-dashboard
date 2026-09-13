@@ -68,6 +68,11 @@ object EngineManager {
     }
 
     fun clearState() {
+        // U1.11: an operation in flight owns the output buffer and the action state.
+        // Restart reports Done(stopped) between its two legs, which briefly re-enables
+        // the buttons; a press landing in that window must not wipe the output of the
+        // restart that is still running.
+        if (operationLock.isLocked) return
         _actionState.value = EngineActionState.Idle
         _output.value = ""
     }
@@ -260,6 +265,10 @@ object EngineManager {
             if (!stopEngineLocked(type, profile)) {
                 false
             } else {
+                // Keep the action Running across the seam: the stop leg ends on
+                // Done(true), which would otherwise re-enable the buttons for the
+                // moment it takes the start leg to set its own Running state.
+                _actionState.value = EngineActionState.Running("Restarting ${type.displayName}...")
                 startEngineLocked(type, profile, cpu, memory, disk)
             }
         } finally {
