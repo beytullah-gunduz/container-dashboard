@@ -75,6 +75,12 @@ class FakeDockerRepository(
     /** Ids passed to [stopContainer], in call order. */
     val stoppedContainerIds = mutableListOf<String>()
 
+    /** Ids passed to [removeContainer], in call order. */
+    val removedContainerIds = mutableListOf<String>()
+
+    /** Names passed to [removeVolume], in call order. */
+    val removedVolumeNames = mutableListOf<String>()
+
     /** Paths passed to [listContainerDirectory], in call order. */
     val listedDirectoryPaths = mutableListOf<String>()
 
@@ -170,7 +176,10 @@ class FakeDockerRepository(
     override suspend fun removeContainer(
         id: String,
         force: Boolean,
-    ): Result<Unit> = removeContainerResult
+    ): Result<Unit> {
+        removedContainerIds.add(id)
+        return removeContainerResult
+    }
 
     override suspend fun listContainerDirectory(
         id: String,
@@ -266,7 +275,10 @@ class FakeDockerRepository(
         driver: String,
     ): Result<Volume> = createVolumeResult ?: Result.success(Volume(name = name, driver = driver))
 
-    override suspend fun removeVolume(name: String): Result<Unit> = removeVolumeResult
+    override suspend fun removeVolume(name: String): Result<Unit> {
+        removedVolumeNames.add(name)
+        return removeVolumeResult
+    }
 
     // --- Networks ---
 

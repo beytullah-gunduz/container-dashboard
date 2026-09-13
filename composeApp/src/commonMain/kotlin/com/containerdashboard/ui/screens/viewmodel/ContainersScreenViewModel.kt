@@ -162,42 +162,59 @@ class ContainersScreenViewModel(
     private val _isStoppingSelected = MutableStateFlow(false)
     val isStoppingSelected: StateFlow<Boolean> = _isStoppingSelected.asStateFlow()
 
+    // U1.11: the busy flag is raised here, synchronously, not inside the coroutine —
+    // a second call (a double-press, or an accessibility-bridge press on the button
+    // while it renders disabled) must be rejected before it can launch a duplicate
+    // pass. `finally` guarantees the flag clears even if the repository throws or the
+    // scope is cancelled mid-pass.
     fun stopSelectedContainers(runningIds: List<String>) {
+        if (_isStoppingSelected.value || runningIds.isEmpty()) return
+        _isStoppingSelected.value = true
         viewModelScope.launch {
-            _isStoppingSelected.value = true
             val errors = mutableListOf<String>()
-            for (id in runningIds) {
-                repo.stopContainer(id).onFailure {
-                    errors.add(it.message ?: "Failed to stop container")
+            try {
+                for (id in runningIds) {
+                    repo.stopContainer(id).onFailure {
+                        errors.add(it.message ?: "Failed to stop container")
+                    }
                 }
+                repo.refreshContainers()
+            } finally {
+                _isStoppingSelected.value = false
             }
-            repo.refreshContainers()
-            _isStoppingSelected.value = false
             if (errors.isNotEmpty()) {
                 _error.value = "Failed to stop ${errors.size} container(s)"
             }
         }
     }
 
+    // U1.11 — see stopSelectedContainers. The selection is also snapshotted at the
+    // press, not at coroutine start, so a selection change that races the dispatch
+    // cannot widen the set being deleted.
     fun deleteSelectedContainers() {
+        if (_isDeletingSelected.value) return
+        val idsToDelete = _selectedContainerIds.value.toList()
+        if (idsToDelete.isEmpty()) return
+        _isDeletingSelected.value = true
         viewModelScope.launch {
-            _isDeletingSelected.value = true
-            val idsToDelete = _selectedContainerIds.value.toList()
             _pendingDeleteIds.update { it + idsToDelete }
             val failedIds = mutableSetOf<String>()
             val errors = mutableListOf<String>()
 
-            for (id in idsToDelete) {
-                repo.removeContainer(id, force = true).onFailure {
-                    failedIds.add(id)
-                    errors.add(it.message ?: "Failed to delete container")
+            try {
+                for (id in idsToDelete) {
+                    repo.removeContainer(id, force = true).onFailure {
+                        failedIds.add(id)
+                        errors.add(it.message ?: "Failed to delete container")
+                    }
                 }
-            }
 
-            repo.refreshContainers()
-            _pendingDeleteIds.update { it - idsToDelete.toSet() }
-            _selectedContainerIds.value = failedIds
-            _isDeletingSelected.value = false
+                repo.refreshContainers()
+            } finally {
+                _pendingDeleteIds.update { it - idsToDelete.toSet() }
+                _selectedContainerIds.value = failedIds
+                _isDeletingSelected.value = false
+            }
 
             if (errors.isNotEmpty()) {
                 _error.value = "Failed to delete ${errors.size} container(s)"
@@ -205,25 +222,30 @@ class ContainersScreenViewModel(
         }
     }
 
+    // U1.11 — see stopSelectedContainers.
     fun deleteAllContainers(containers: List<Container>) {
+        if (_isDeletingAll.value || containers.isEmpty()) return
+        _isDeletingAll.value = true
         viewModelScope.launch {
-            _isDeletingAll.value = true
             val allIds = containers.map { it.id }
             _pendingDeleteIds.update { it + allIds }
             val failedIds = mutableSetOf<String>()
             val errors = mutableListOf<String>()
 
-            for (container in containers) {
-                repo.removeContainer(container.id, force = true).onFailure {
-                    failedIds.add(container.id)
-                    errors.add(it.message ?: "Failed to delete container ${container.displayName}")
+            try {
+                for (container in containers) {
+                    repo.removeContainer(container.id, force = true).onFailure {
+                        failedIds.add(container.id)
+                        errors.add(it.message ?: "Failed to delete container ${container.displayName}")
+                    }
                 }
-            }
 
-            repo.refreshContainers()
-            _pendingDeleteIds.update { it - allIds.toSet() }
-            _selectedContainerIds.value = failedIds
-            _isDeletingAll.value = false
+                repo.refreshContainers()
+            } finally {
+                _pendingDeleteIds.update { it - allIds.toSet() }
+                _selectedContainerIds.value = failedIds
+                _isDeletingAll.value = false
+            }
 
             if (errors.isNotEmpty()) {
                 _error.value = "Failed to delete ${errors.size} container(s)"

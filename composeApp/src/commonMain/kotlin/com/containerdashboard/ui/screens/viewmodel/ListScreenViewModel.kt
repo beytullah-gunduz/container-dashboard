@@ -107,21 +107,28 @@ abstract class ListScreenViewModel<T>(
     /**
      * Deletes every currently-checked key by calling [delete] for each one.
      * Always clears the checked set and resets [isDeletingSelected] when done.
+     * U1.11: re-entrant calls (double-press, or an accessibility press on the
+     * disabled button) are rejected — the flag is raised before the launch.
      * Sets [error] if any individual deletion failed.
      */
     protected fun deleteSelected(
         resourceLabel: String,
         delete: suspend (String) -> Result<Unit>,
     ) {
+        if (_isDeletingSelected.value) return
+        val keys = _checkedKeys.value.toList()
+        if (keys.isEmpty()) return
+        _isDeletingSelected.value = true
         viewModelScope.launch {
-            _isDeletingSelected.value = true
-            val keys = _checkedKeys.value.toList()
             val errors = mutableListOf<String>()
-            for (k in keys) {
-                delete(k).onFailure { errors.add(it.message ?: "Failed to delete $resourceLabel") }
+            try {
+                for (k in keys) {
+                    delete(k).onFailure { errors.add(it.message ?: "Failed to delete $resourceLabel") }
+                }
+            } finally {
+                _checkedKeys.value = emptySet()
+                _isDeletingSelected.value = false
             }
-            _checkedKeys.value = emptySet()
-            _isDeletingSelected.value = false
             if (errors.isNotEmpty()) {
                 _error.value = "Failed to delete ${errors.size} $resourceLabel(s)"
             }
