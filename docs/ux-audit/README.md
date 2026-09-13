@@ -44,8 +44,10 @@ U4.3 → U1.7) and counted once.
 
 1. **[U1.1](ux-1-destructive-actions-and-feedback.md)** The trash icon in the logs/console
    pane header **force-deletes the container with no confirmation**, ignores the
-   *Confirm Before Delete* setting, and sits 27 px from the Close button. In group mode it
-   deletes every container in the compose project.
+   *Confirm Before Delete* setting, and sits 27 px from the Close button. (In group-logs
+   mode the button is disabled, so a single click cannot take out a whole compose
+   project — corrected on second review; the ViewModel path would remove all of them
+   if that gate were ever relaxed.)
 2. **[U1.2](ux-1-destructive-actions-and-feedback.md)** `AppViewModel.error` is never
    rendered anywhere. Pause / resume / restart / delete from the pane, group-log fetch,
    file download and log export **fail silently**. There is no app-wide notification
@@ -141,6 +143,11 @@ Second pass re-verified every story against source. Changes made:
 - **U6.5** added the Container Status count gap (created/restarting/dead excluded).
 - **U3.9** new (P3): no manual refresh on list screens; the `onRefresh` plumbing in
   `AppShortcutScope` has no key bound to it.
+- **U1.1** (found by the plan reviewer for the fix, 2026-09-13): the claim that the pane
+  trash "deletes every container in the compose project" was wrong — in group-logs mode
+  the button is disabled (`LogsPaneState.container` is `singleOrNull()`;
+  `ConsolePane.kt:180` gates on it). The single-container path is still an unconfirmed
+  force-delete, so the P0 stands; the group wording is corrected.
 
 Everything else stood up. The three P0s and the "fix these first" list are unchanged.
 

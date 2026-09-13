@@ -30,20 +30,25 @@ applies, or where a failure is reported. Fix the policy once, then apply it ever
 
 The extra pane toolbar is `[download] [pause] [restart] [delete] [close]`. `onRemoveContainer`
 in `App.kt:364` calls `viewModel.removeLogsContainer()` directly; that method removes with
-`force = true` (`AppViewModel.kt:589`) for **every** container in `logsPaneState.containers`
-— in group-logs mode that is the whole compose project. No `ConfirmActionDialog`, no
-check of `PreferenceRepository.confirmBeforeDelete()`. Observed in the live app: the
+`force = true` (`AppViewModel.kt:589`) for **every** container in `logsPaneState.containers`.
+No `ConfirmActionDialog`, no check of `PreferenceRepository.confirmBeforeDelete()`.
+(Correction on review: in group-logs mode the button is *disabled* — `LogsPaneState.container`
+is `containers.singleOrNull()` and `ConsolePane.kt:180` gates `enabled` on it — so the
+whole-project case is not reachable from the UI today. The ViewModel would still remove all
+of them if that gate were relaxed, which is why the fix confirms unconditionally for >1.) Observed in the live app: the
 trash sits at x≈1325 and Close at x≈1352 in a 1372-wide window — 27 px apart, same size,
 same row, the trash tinted red being the only cue.
 
 **Fix:** route through the same `askConfirm` policy as the row action (`ContainersScreen.kt`
-`askConfirm`), naming the container(s): "Delete *name*?" / "Delete all 7 containers in
-*example-stack*?". Move Delete out of the pane toolbar into an overflow menu (`⋯`) or at
-minimum put a divider and a gap between Delete and Close.
+`askConfirm`), naming the container: "Delete *name*?"; keep an always-confirm rule for the
+>1 case so the ViewModel path is safe if the gate is ever relaxed. Move Delete out of the
+pane toolbar into an overflow menu (`⋯`) or at minimum put a divider and a gap between
+Delete and Close.
 
 **Acceptance:** with *Confirm Before Delete* on, the pane trash shows the dialog; with it
-off, single-container delete proceeds but group delete still confirms; Delete is not
-adjacent to Close.
+off, single-container delete proceeds; Delete is not adjacent to Close.
+
+**Plan:** [`docs/u1.1-pane-delete-confirm-plan.md`](../u1.1-pane-delete-confirm-plan.md).
 
 ---
 
