@@ -45,6 +45,7 @@ import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.chrome.TopBarDragArea
 import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
+import com.containerdashboard.ui.components.AppSnackbarHost
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.FilesTabContent
@@ -70,6 +71,7 @@ import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
+import com.containerdashboard.ui.state.UiMessages
 import com.containerdashboard.ui.state.paneDeleteConfirmation
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
@@ -228,6 +230,25 @@ fun App(
                     var pendingDeleteConfirmLabel by remember { mutableStateOf("Delete") }
                     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
                     val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
+
+                    // U1.2: surface errors that have no inline home on the current screen.
+                    // AppViewModel errors (pane actions, downloads, log export) never had
+                    // one; ContainersScreenViewModel errors have an inline card only while
+                    // the Containers screen is showing.
+                    val appError by viewModel.error.collectAsState()
+                    LaunchedEffect(appError) {
+                        val message = appError ?: return@LaunchedEffect
+                        UiMessages.error(message)
+                        viewModel.clearError()
+                    }
+                    val containersError by containersVm.error.collectAsState()
+                    LaunchedEffect(containersError, currentRoute) {
+                        val message = containersError ?: return@LaunchedEffect
+                        if (currentRoute != Screen.Containers.route) {
+                            UiMessages.error(message)
+                            containersVm.clearError()
+                        }
+                    }
 
                     // All lambda captures are stable across compositions (view models,
                     // the remembered navigator, and snapshot-state setters), so the
@@ -436,6 +457,15 @@ fun App(
                             onDismiss = { pendingDeleteAction = null },
                         )
                     }
+
+                    // U1.2: app-wide transient feedback, drawn over whatever screen or
+                    // pane is showing.
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        AppSnackbarHost(modifier = Modifier.padding(bottom = Spacing.xl))
+                    }
                 }
             }
         }
@@ -519,7 +549,10 @@ private fun buildPaletteActions(
                     id = "stop-${c.id}",
                     label = "Stop: $name",
                     section = "Containers",
-                    onRun = { onStop(c.id) },
+                    onRun = {
+                        UiMessages.info("Stopping $name…")
+                        onStop(c.id)
+                    },
                 ),
             )
             actions.add(
@@ -527,7 +560,10 @@ private fun buildPaletteActions(
                     id = "restart-${c.id}",
                     label = "Restart: $name",
                     section = "Containers",
-                    onRun = { onRestart(c.id) },
+                    onRun = {
+                        UiMessages.info("Restarting $name…")
+                        onRestart(c.id)
+                    },
                 ),
             )
         } else {
@@ -536,7 +572,10 @@ private fun buildPaletteActions(
                     id = "start-${c.id}",
                     label = "Start: $name",
                     section = "Containers",
-                    onRun = { onStart(c.id) },
+                    onRun = {
+                        UiMessages.info("Starting $name…")
+                        onStart(c.id)
+                    },
                 ),
             )
         }
@@ -545,8 +584,13 @@ private fun buildPaletteActions(
                 id = "remove-${c.id}",
                 label = "Delete: $name",
                 section = "Containers",
-                // P0 fix: funnel through confirm dialog instead of calling removeContainer directly
-                onRun = { onAskConfirmRemove(name) { onRemove(c.id) } },
+                // Funnel through the confirm dialog; acknowledge only once confirmed.
+                onRun = {
+                    onAskConfirmRemove(name) {
+                        UiMessages.info("Deleting $name…")
+                        onRemove(c.id)
+                    }
+                },
             ),
         )
     }
