@@ -43,7 +43,9 @@ per container). ↓ moves `selectedIndex` but nothing calls
 Enter fires an invisible action — including "Delete: …". Observed rows truncate as
 `View logs: example-job-20260101120000-1a2b3c4d-5e6f-4a7b-8…` — five consecutive
 rows identical to the eye. Navigation rows show no ⌘1–7 hint (only Settings shows ⌘,).
-Filtering is plain substring; no fuzzy/subsequence match.
+Filtering is plain substring; no fuzzy/subsequence match. The container subtitle reads
+"Stopped" for a *paused* container (`subtitle = if (c.isRunning) "Running" else "Stopped"`,
+`App.kt` `buildPaletteActions`) while the list badge says Paused.
 
 **Fix:** `LaunchedEffect(selectedIndex) { listState.animateScrollToItem(...) }`; show
 the short ID as subtitle; middle-ellipsis labels; style "Delete:" rows as destructive
