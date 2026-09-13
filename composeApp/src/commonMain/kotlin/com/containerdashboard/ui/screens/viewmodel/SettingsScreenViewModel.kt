@@ -122,6 +122,25 @@ class SettingsScreenViewModel(
         }
     }
 
+    /**
+     * U1.11: restart as ONE coroutine. The Settings screen used to call
+     * [stopEngine] and [startEngine] back to back, which launched two independent
+     * coroutines and let `stop` and `start` run concurrently.
+     */
+    fun restartEngine(
+        cpu: Int? = null,
+        memory: Int? = null,
+        disk: Int? = null,
+    ) {
+        viewModelScope.launch {
+            val type = engineType.value
+            val profile = colimaProfile.value
+            if (!EngineOperations.restartEngine(type, profile, cpu, memory, disk)) return@launch
+            val host = PreferenceRepository.engineHost().first()
+            AppModule.reconnect(host)
+        }
+    }
+
     fun clearEngineState() {
         EngineOperations.clearState()
     }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -54,6 +55,13 @@ object EngineManager {
 
     private val _actionState = MutableStateFlow<EngineActionState>(EngineActionState.Idle)
     val actionState: StateFlow<EngineActionState> = _actionState.asStateFlow()
+
+    // U1.11: one engine operation at a time. `tryLock` REJECTS a concurrent call
+    // rather than queueing it, so a double-press — or an accessibility-bridge press
+    // on the button while it renders disabled — is a no-op instead of a second
+    // `colima` invocation racing the first over the same VM and the same output
+    // buffer. Restart takes this lock once for both legs.
+    private val operationLock = Mutex()
 
     private fun appendOutput(line: String) {
         _output.value = (_output.value + line + "\n").takeLast(4000)
@@ -108,7 +116,25 @@ object EngineManager {
         memory: Int? = null,
         disk: Int? = null,
     ): Boolean {
-        _output.value = ""
+        if (!operationLock.tryLock()) {
+            logger.warn("Ignoring start request: another engine operation is already running")
+            return false
+        }
+        return try {
+            _output.value = ""
+            startEngineLocked(type, profile, cpu, memory, disk)
+        } finally {
+            operationLock.unlock()
+        }
+    }
+
+    private suspend fun startEngineLocked(
+        type: EngineType,
+        profile: String?,
+        cpu: Int?,
+        memory: Int?,
+        disk: Int?,
+    ): Boolean {
         // S3.5 — validate Colima profile before passing to argv
         if (type == EngineType.COLIMA && !profile.isNullOrEmpty() && profile != "default") {
             if (!COLIMA_PROFILE_REGEX.matches(profile)) {
@@ -152,7 +178,22 @@ object EngineManager {
         type: EngineType,
         profile: String? = null,
     ): Boolean {
-        _output.value = ""
+        if (!operationLock.tryLock()) {
+            logger.warn("Ignoring stop request: another engine operation is already running")
+            return false
+        }
+        return try {
+            _output.value = ""
+            stopEngineLocked(type, profile)
+        } finally {
+            operationLock.unlock()
+        }
+    }
+
+    private suspend fun stopEngineLocked(
+        type: EngineType,
+        profile: String?,
+    ): Boolean {
         // S3.5 — validate Colima profile before passing to argv
         if (type == EngineType.COLIMA && !profile.isNullOrEmpty() && profile != "default") {
             if (!COLIMA_PROFILE_REGEX.matches(profile)) {
@@ -189,6 +230,40 @@ object EngineManager {
                 _actionState.value = EngineActionState.Done(false, e.message ?: "Unknown error")
                 false
             }
+        }
+    }
+
+    /**
+     * Stops the engine and starts it again as ONE operation (UX audit U1.11).
+     * Previously the Settings screen fired `stopEngine()` and `startEngine()` as two
+     * independent coroutines, so `colima stop` and `colima start` ran concurrently and
+     * fought over [output]. Holding [operationLock] across both legs also makes a
+     * second Restart press a no-op while the first is still running.
+     *
+     * A failed stop aborts the restart: the failure state stands and no start is
+     * attempted, because starting on top of a half-stopped VM produces a state neither
+     * the user nor the app can reason about.
+     */
+    suspend fun restartEngine(
+        type: EngineType,
+        profile: String? = null,
+        cpu: Int? = null,
+        memory: Int? = null,
+        disk: Int? = null,
+    ): Boolean {
+        if (!operationLock.tryLock()) {
+            logger.warn("Ignoring restart request: another engine operation is already running")
+            return false
+        }
+        return try {
+            _output.value = ""
+            if (!stopEngineLocked(type, profile)) {
+                false
+            } else {
+                startEngineLocked(type, profile, cpu, memory, disk)
+            }
+        } finally {
+            operationLock.unlock()
         }
     }
 
