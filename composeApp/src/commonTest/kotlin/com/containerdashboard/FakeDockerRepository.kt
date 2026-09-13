@@ -17,6 +17,7 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PruneResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.yield
 
 /**
  * Test double for [DockerRepository].
@@ -74,6 +75,12 @@ class FakeDockerRepository(
 
     /** Ids passed to [stopContainer], in call order. */
     val stoppedContainerIds = mutableListOf<String>()
+
+    /** Ids passed to [removeContainer], in call order. */
+    val removedContainerIds = mutableListOf<String>()
+
+    /** Names passed to [removeVolume], in call order. */
+    val removedVolumeNames = mutableListOf<String>()
 
     /** Paths passed to [listContainerDirectory], in call order. */
     val listedDirectoryPaths = mutableListOf<String>()
@@ -170,7 +177,15 @@ class FakeDockerRepository(
     override suspend fun removeContainer(
         id: String,
         force: Boolean,
-    ): Result<Unit> = removeContainerResult
+    ): Result<Unit> {
+        removedContainerIds.add(id)
+        // U1.11: suspend at least once so a second coroutine can interleave. Without
+        // this the fake returns synchronously, the first bulk pass runs to completion
+        // before the second starts, and a re-entrancy test passes even with the guard
+        // removed — the real repository always suspends on IO.
+        yield()
+        return removeContainerResult
+    }
 
     override suspend fun listContainerDirectory(
         id: String,
@@ -266,7 +281,12 @@ class FakeDockerRepository(
         driver: String,
     ): Result<Volume> = createVolumeResult ?: Result.success(Volume(name = name, driver = driver))
 
-    override suspend fun removeVolume(name: String): Result<Unit> = removeVolumeResult
+    override suspend fun removeVolume(name: String): Result<Unit> {
+        removedVolumeNames.add(name)
+        // U1.11: see removeContainer.
+        yield()
+        return removeVolumeResult
+    }
 
     // --- Networks ---
 

@@ -270,7 +270,8 @@ Compose Multiplatform 1.12.0 registers the `OnClick` semantics action on every
 app is affected.
 
 Reproduced live: an AXPress on the *disabled* typed-count **Delete** button of the U1.4
-dialog ran `onConfirm` and removed 11 containers without the count ever being typed; an
+dialog ran `onConfirm` and removed every container in the list without the count ever
+being typed; an
 AXPress on the disabled overflow item opened a "Delete 0 matching containers?" dialog.
 Any AX client — VoiceOver, Accessibility Inspector, macOS automation — can do this.
 
@@ -295,8 +296,62 @@ ViewModel operation re-entrancy-guarded (`if (_isDeletingSelected.value) return`
 4. Pane actions, Prune / Stop-all: a null-return or confirm dialog already stands behind
    them — low priority.
 
-**Upstream:** report to JetBrains (compose-multiplatform) — the bridge should refuse
-actions on nodes carrying `Disabled`, as the Android delegate does.
-
 **Acceptance:** an AXPress on any disabled destructive control is a no-op (verify with
 Accessibility Inspector); the ViewModel methods above ignore re-entrant calls.
+
+**Status:** FIXED on `feature/u1.11-disabled-guards` (2026-09-13) — with the
+verification gaps recorded below. Suite 259 -> 265, 0 failures; spotless clean.
+Plan: `docs/u1.11-disabled-guards-plan.md`.
+
+Blast-radius items above:
+
+1. Settings Engine Restart / Start / Stop — FIXED. All three handlers re-check their
+   own enabling condition. `EngineManager` serializes every operation behind a `Mutex`
+   taken with `tryLock`, which rejects rather than queues, and Restart is now one
+   operation holding that lock across both legs; a failed stop aborts the restart
+   rather than starting on top of a half-stopped VM. This also closes a pre-existing
+   race that had nothing to do with accessibility: Restart used to dispatch `stop` and
+   `start` as two independent coroutines that ran concurrently against the same VM.
+2. *Delete N selected* / *Stop N selected* on all four list screens and the four
+   ViewModel methods behind them — FIXED. The busy flag is raised synchronously before
+   `viewModelScope.launch` and cleared in a `finally`, which also closes the older hole
+   where a throwing refresh left the control disabled for the rest of the session.
+   Empty input is rejected outright.
+3. System-network Delete and `CompactCheckbox` — FIXED in code: the row trash, the
+   context-menu Delete and the checkbox all re-check.
+4. Pane actions, Prune / Stop-all — DEFERRED, unchanged. See the Non-goals section of
+   the plan, which names each deferred site.
+
+**Verified at runtime through the accessibility client:**
+
+- The bulk *Stop N selected* path: repeated presses on the button while it rendered
+  disabled and spinning produced exactly one stop pass, confirmed against the daemon's
+  own event stream rather than the app's reporting. This confirms the outcome, not
+  which of the two layers (ViewModel guard or handler re-check) rejected the extra
+  presses — either alone yields the same trace.
+- The system-network row trash while disabled: no confirmation dialog appeared.
+  Survival of the network is not by itself evidence, since the daemon refuses these
+  deletions anyway (item 3); the absent dialog is the load-bearing result.
+
+**Still unverified — guarded by code reading, compile and unit gates only:**
+
+- ALL engine-side behaviour (item 1). Settings exposes no Colima-profile field, so the
+  throwaway-profile route planned for the smoke does not exist, and the automation tool
+  refused every attempt to type into the quota fields — so a disabled Restart could not
+  be produced without stopping a real engine. The `tryLock` rejection path, the
+  abort-on-failed-stop rule and the single-operation Restart have never been exercised
+  at runtime. Accepted on the grounds that the extracted `*Locked` bodies are the
+  original code minus only the output reset, and that the behaviour being replaced was
+  itself a live race. The realistic failure mode if this is wrong: a stop that reports
+  failure (the 60 s stop timeout is the reachable path) leaves the engine stopped with
+  no start attempted — visible, and recoverable with one press of Start.
+- The network context-menu Delete: right-click context menus cannot be driven by the
+  automation tool.
+- `CompactCheckbox` in any state: presses route to the row's static text in the
+  accessibility tree, so the checkbox could not be targeted on enabled or disabled rows.
+- The *Delete N selected* re-entrancy on the Images, Volumes and Networks screens (the
+  shared `ListScreenViewModel.deleteSelected`) — unit-covered only.
+
+**Upstream:** still open — report to JetBrains (compose-multiplatform) that the bridge
+should refuse actions on nodes carrying `Disabled`, as the Android delegate does. Not
+addressed by this change.

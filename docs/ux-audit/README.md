@@ -63,21 +63,26 @@ U4.3 → U1.7) and counted once.
    **[U1.11](ux-1-destructive-actions-and-feedback.md)** (P1, platform): the desktop
    accessibility bridge presses *disabled* controls, so `enabled = false` is not a
    safety boundary — destructive handlers must re-check their preconditions.
-5. **[U2.1](ux-2-containers-list.md)** The list never shows exit code or uptime: every
+5. **[U1.11](ux-1-destructive-actions-and-feedback.md)** — **fixed**. Bulk operations now reject re-entrant calls at the
+   ViewModel, engine operations are serialized behind one lock and Restart is a
+   single operation, and ten handlers re-check the condition that disables their
+   control. The engine half has no runtime verification — see the story's status
+   note for exactly what is and is not proven. Reported upstream is still owed.
+6. **[U2.1](ux-2-containers-list.md)** The list never shows exit code or uptime: every
    exited row reads "Stopped" whether it exited 0 or 137. `docker ps` shows this by default.
-6. **[U2.2](ux-2-containers-list.md)** The Ports cell shows an arbitrary port from an
+7. **[U2.2](ux-2-containers-list.md)** The Ports cell shows an arbitrary port from an
    unordered set — for a container exposing dozens of ports it showed a different unpublished
    port on each refresh and never the one published port.
-7. **[U3.1](ux-3-shell-navigation-keyboard.md)** Typing `?` in **any** text field
+8. **[U3.1](ux-3-shell-navigation-keyboard.md)** Typing `?` in **any** text field
    (search, log filter, engine host, palette) opens the shortcuts dialog and eats the
    character — the root key handler intercepts Shift+/.
-8. **[U8.3](ux-8-settings-and-copy.md)** Settings › Engine Management shows
+9. **[U8.3](ux-8-settings-and-copy.md)** Settings › Engine Management shows
    "Colima · Stopped" with a *Start* button while the status probe runs (observed ~3 s
    in, probe timeout 15 s), directly under a sidebar that says "Connected · Colima" —
    and "Running" unconditionally for every non-Colima engine.
-9. **[U7.1](ux-7-images-volumes-networks.md)** Networks › CONTAINERS column is always 0
+10. **[U7.1](ux-7-images-volumes-networks.md)** Networks › CONTAINERS column is always 0
    (the list API doesn't populate it) — it read 0 for a network with 7 attached containers.
-10. **[U8.1](ux-8-settings-and-copy.md)** The engine host is written to preferences
+11. **[U8.1](ux-8-settings-and-copy.md)** The engine host is written to preferences
     on **every keystroke**; a half-typed host survives quit and breaks the next launch.
     "Save & Reconnect" only reconnects — it doesn't save anything.
 

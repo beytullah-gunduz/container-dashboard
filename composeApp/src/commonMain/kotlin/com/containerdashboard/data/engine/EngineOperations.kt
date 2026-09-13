@@ -41,4 +41,12 @@ expect object EngineOperations {
         type: EngineType,
         profile: String? = null,
     ): Boolean
+
+    suspend fun restartEngine(
+        type: EngineType,
+        profile: String? = null,
+        cpu: Int? = null,
+        memory: Int? = null,
+        disk: Int? = null,
+    ): Boolean
 }

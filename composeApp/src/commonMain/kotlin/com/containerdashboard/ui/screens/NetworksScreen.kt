@@ -226,6 +226,8 @@ fun NetworksScreen(
                     if (checkedNetworkIds.isNotEmpty()) {
                         Button(
                             onClick = {
+                                // U1.11: enabled is presentation only — re-check.
+                                if (isDeletingSelected) return@Button
                                 askConfirm(
                                     "Delete selected networks?",
                                     "This will delete ${checkedNetworkIds.size} network(s).",
@@ -793,7 +795,8 @@ private fun NetworkRow(
 
             // Actions
             IconButton(
-                onClick = onRemove,
+                // U1.11: `enabled` does not gate the accessibility bridge.
+                onClick = { if (!isSystem) onRemove() },
                 modifier = Modifier.size(24.dp),
                 enabled = !isSystem,
             ) {

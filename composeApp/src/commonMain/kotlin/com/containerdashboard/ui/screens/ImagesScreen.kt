@@ -192,6 +192,8 @@ fun ImagesScreen(
                     if (checkedImageIds.isNotEmpty()) {
                         Button(
                             onClick = {
+                                // U1.11: enabled is presentation only — re-check.
+                                if (isDeletingSelected) return@Button
                                 askConfirm(
                                     "Delete selected images?",
                                     "This will delete ${checkedImageIds.size} image(s).",

@@ -270,6 +270,7 @@ fun SettingsScreen(
             actionStatus = engineActionStatus,
             commandOutput = engineCommandOutput,
             onStart = { cpu, mem, disk -> viewModel.startEngine(cpu, mem, disk) },
+            onRestart = { cpu, mem, disk -> viewModel.restartEngine(cpu, mem, disk) },
             onStop = { viewModel.stopEngine() },
             onClearState = { viewModel.clearEngineState() },
         )
@@ -509,6 +510,7 @@ private fun EngineManagementSection(
     actionStatus: EngineActionStatus,
     commandOutput: String,
     onStart: (cpu: Int?, memory: Int?, disk: Int?) -> Unit,
+    onRestart: (cpu: Int?, memory: Int?, disk: Int?) -> Unit,
     onStop: () -> Unit,
     onClearState: () -> Unit,
 ) {
@@ -697,6 +699,9 @@ private fun EngineManagementSection(
                 // Engine is running — show Stop
                 OutlinedButton(
                     onClick = {
+                        // U1.11: `enabled` is presentation only — the desktop
+                        // accessibility bridge fires onClick on disabled controls.
+                        if (isBusy) return@OutlinedButton
                         onClearState()
                         onStop()
                     },
@@ -715,9 +720,12 @@ private fun EngineManagementSection(
                 if (isColima) {
                     Button(
                         onClick = {
+                            // U1.11: re-check — `enabled` does not gate the
+                            // accessibility bridge, and an unchecked press here would
+                            // restart the VM with the quota fields still invalid.
+                            if (isBusy || !quotasValid) return@Button
                             onClearState()
-                            onStop()
-                            onStart(
+                            onRestart(
                                 cpu.toIntOrNull(),
                                 memory.toIntOrNull(),
                                 disk.toIntOrNull(),
@@ -735,6 +743,8 @@ private fun EngineManagementSection(
                 // Engine is stopped — show Start
                 Button(
                     onClick = {
+                        // U1.11: re-check — see the Stop button.
+                        if (isBusy || (isColima && !quotasValid)) return@Button
                         onClearState()
                         onStart(
                             if (isColima) cpu.toIntOrNull() else null,

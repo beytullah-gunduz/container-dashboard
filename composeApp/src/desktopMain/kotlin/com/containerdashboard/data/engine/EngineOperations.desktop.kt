@@ -49,4 +49,12 @@ actual object EngineOperations {
         type: EngineType,
         profile: String?,
     ): Boolean = EngineManager.stopEngine(type, profile)
+
+    actual suspend fun restartEngine(
+        type: EngineType,
+        profile: String?,
+        cpu: Int?,
+        memory: Int?,
+        disk: Int?,
+    ): Boolean = EngineManager.restartEngine(type, profile, cpu, memory, disk)
 }
