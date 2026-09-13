@@ -33,11 +33,11 @@ disconnected-engine screens, and Windows/Linux window chrome.
 | Severity | Count |
 |---|---|
 | P0 | 3 |
-| P1 | 17 |
+| P1 | 18 |
 | P2 | 29 |
 | P3 | 12 |
 
-61 unique stories. Two stories are cross-referenced in a second epic (U5.1 → U1.1,
+62 unique stories. Two stories are cross-referenced in a second epic (U5.1 → U1.1,
 U4.3 → U1.7) and counted once.
 
 ## Fix these first
@@ -56,9 +56,13 @@ U4.3 → U1.7) and counted once.
 3. **[U4.1](ux-4-accessibility-and-theming.md)** ~~Accessibility is switched off globally~~
    — **fixed 2026-09-13**: the workaround was obsolete on Compose 1.12; the tree is now
    exposed. A manual VoiceOver pass is still owed (see the story's status note).
-4. **[U1.4](ux-1-destructive-actions-and-feedback.md)** *Delete All* is the only
-   permanent primary button on the Containers screen — top-right, filled red, and it
-   deletes every container including running ones, regardless of the active filter.
+4. **[U1.4](ux-1-destructive-actions-and-feedback.md)** — **fixed**.
+   *Delete All* was the only permanent primary button on the Containers screen and
+   deleted every container regardless of the active filter; it is now a scoped item in
+   an overflow menu with a typed-count gate above 10. The smoke surfaced
+   **[U1.11](ux-1-destructive-actions-and-feedback.md)** (P1, platform): the desktop
+   accessibility bridge presses *disabled* controls, so `enabled = false` is not a
+   safety boundary — destructive handlers must re-check their preconditions.
 5. **[U2.1](ux-2-containers-list.md)** The list never shows exit code or uptime: every
    exited row reads "Stopped" whether it exited 0 or 137. `docker ps` shows this by default.
 6. **[U2.2](ux-2-containers-list.md)** The Ports cell shows an arbitrary port from an
@@ -81,7 +85,7 @@ U4.3 → U1.7) and counted once.
 
 | Epic | Title | Stories | P0 | P1 | Theme |
 |---|---|---|---|---|---|
-| [UX-1](ux-1-destructive-actions-and-feedback.md) | Destructive actions & feedback | 10 | 2 | 3 | Confirmation policy, silent failures, false success, dangerous defaults |
+| [UX-1](ux-1-destructive-actions-and-feedback.md) | Destructive actions & feedback | 11 | 2 | 4 | Confirmation policy, silent failures, false success, dangerous defaults |
 | [UX-2](ux-2-containers-list.md) | Containers list — information design | 12 | 0 | 4 | Missing exit codes/age, jittery ports, double grouping, lost filter state |
 | [UX-3](ux-3-shell-navigation-keyboard.md) | Shell, navigation & keyboard | 9 | 0 | 2 | `?` intercept, palette can't scroll, pane width, window chrome, dead ⌘R |
 | [UX-4](ux-4-accessibility-and-theming.md) | Accessibility & theming | 6 (+1 xref) | 1 | 1 | A11y disabled, light-theme contrast, hit targets, focus |

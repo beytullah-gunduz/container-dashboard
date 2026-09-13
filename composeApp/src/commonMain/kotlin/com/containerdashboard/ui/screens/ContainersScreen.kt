@@ -37,9 +37,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -80,6 +82,8 @@ import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.delete
 import com.dockerdashboard.composeapp.generated.resources.delete_forever
 import com.dockerdashboard.composeapp.generated.resources.error
+import com.dockerdashboard.composeapp.generated.resources.more_vert
+import com.dockerdashboard.composeapp.generated.resources.refresh
 import com.dockerdashboard.composeapp.generated.resources.remove_done
 import com.dockerdashboard.composeapp.generated.resources.search_off
 import com.dockerdashboard.composeapp.generated.resources.stop
@@ -251,13 +255,19 @@ fun ContainersScreen(
             }
         }
 
-    // Delete All Confirmation Dialog
+    // Delete-visible confirmation (U1.4): scoped to the current search + filter,
+    // never to the whole engine unless nothing is narrowed.
     if (showDeleteAllDialog) {
+        val isSubset = filteredContainers.size != containers.size
         DeleteAllContainersDialog(
-            containerCount = containers.size,
+            title = deleteVisibleTitle(filteredContainers.size, isSubset),
+            containerCount = filteredContainers.size,
+            runningCount = filteredContainers.count { it.isRunning },
+            isFilteredSubset = isSubset,
+            requireTypedCount = requiresTypedConfirmation(filteredContainers.size),
             onConfirm = {
                 showDeleteAllDialog = false
-                viewModel.deleteAllContainers(containers)
+                viewModel.deleteAllContainers(filteredContainers)
             },
             onDismiss = { showDeleteAllDialog = false },
         )
@@ -322,13 +332,11 @@ fun ContainersScreen(
                     val showClear = hasSelection
                     val showStop = hasSelection && runningSelectedCount > 0
                     val showDelSel = hasSelection
-                    val showDelAll = containers.isNotEmpty()
                     val order =
                         buildList {
                             if (showClear) add("clear")
                             if (showStop) add("stop")
                             if (showDelSel) add("delSel")
-                            if (showDelAll) add("delAll")
                         }
                     val solo = order.size <= 1
                     val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShape
@@ -553,66 +561,24 @@ fun ContainersScreen(
                                 }
                             }
                         }
-
-                        // Delete All Button
-                        if (containers.isNotEmpty()) {
-                            AnimatedContent(
-                                targetState = iconOnly,
-                                transitionSpec = {
-                                    (fadeIn(tween(200)) togetherWith fadeOut(tween(150)))
-                                        .using(SizeTransform(clip = false))
-                                },
-                                label = "DeleteAllCompactToggle",
-                            ) { compact ->
-                                if (compact) {
-                                    AppTooltip(label = "Delete all containers") {
-                                        IconButton(
-                                            onClick = { showDeleteAllDialog = true },
-                                            enabled = !isDeletingAll && !isDeletingSelected,
-                                        ) {
-                                            if (isDeletingAll) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(18.dp),
-                                                    strokeWidth = 2.dp,
-                                                )
-                                            } else {
-                                                Icon(
-                                                    painterResource(Res.drawable.delete_forever),
-                                                    contentDescription = "Delete All",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = { showDeleteAllDialog = true },
-                                        enabled = !isDeletingAll && !isDeletingSelected,
-                                        shape = shapeFor("delAll"),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    ) {
-                                        if (isDeletingAll) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(18.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.onError,
-                                            )
-                                        } else {
-                                            Icon(painterResource(Res.drawable.delete_forever), null, modifier = Modifier.size(18.dp))
-                                        }
-                                        Spacer(modifier = Modifier.width(Spacing.sm))
-                                        Text("Delete All")
-                                    }
-                                }
-                            }
-                        }
                     }
 
-                    // Layout toggle
-                    VerticalDivider(
-                        modifier = Modifier.height(24.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
+                    // Layout toggle. The divider separates the selection actions
+                    // from the view controls, so it animates in and out with them.
+                    AnimatedVisibility(
+                        visible = hasSelection,
+                        enter =
+                            expandHorizontally(animationSpec = tween(durationMillis = 200)) +
+                                fadeIn(animationSpec = tween(durationMillis = 200)),
+                        exit =
+                            shrinkHorizontally(animationSpec = tween(durationMillis = 150)) +
+                                fadeOut(animationSpec = tween(durationMillis = 150)),
+                    ) {
+                        VerticalDivider(
+                            modifier = Modifier.height(24.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
                     Box {
                         var showLayoutMenu by remember { mutableStateOf(false) }
                         val layoutIcon =
@@ -701,6 +667,54 @@ fun ContainersScreen(
                                             },
                                     )
                                 },
+                            )
+                        }
+                    }
+
+                    // More actions (U1.4): the destructive bulk delete lives here,
+                    // scoped to the containers currently shown, instead of as a
+                    // permanent primary button.
+                    Box {
+                        var showMoreMenu by remember { mutableStateOf(false) }
+                        AppTooltip(label = "More actions") {
+                            IconButton(onClick = { showMoreMenu = true }) {
+                                Icon(
+                                    painterResource(Res.drawable.more_vert),
+                                    contentDescription = "More actions",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Refresh") },
+                                onClick = {
+                                    showMoreMenu = false
+                                    viewModel.refresh()
+                                },
+                                leadingIcon = { Icon(painterResource(Res.drawable.refresh), null) },
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(deleteVisibleLabel(filteredContainers.size, containers.size)) },
+                                enabled = filteredContainers.isNotEmpty() && !isDeletingAll && !isDeletingSelected,
+                                onClick = {
+                                    showMoreMenu = false
+                                    // Re-check: the accessibility bridge can press disabled items.
+                                    if (filteredContainers.isNotEmpty() && !isDeletingAll && !isDeletingSelected) {
+                                        showDeleteAllDialog = true
+                                    }
+                                },
+                                leadingIcon = { Icon(painterResource(Res.drawable.delete_forever), null) },
+                                colors =
+                                    MenuDefaults.itemColors(
+                                        textColor = MaterialTheme.colorScheme.error,
+                                        leadingIconColor = MaterialTheme.colorScheme.error,
+                                    ),
                             )
                         }
                     }
