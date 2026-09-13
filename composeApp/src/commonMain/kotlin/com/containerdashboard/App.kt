@@ -40,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.chrome.TopBarDragArea
 import com.containerdashboard.ui.chrome.WindowChromeLeading
@@ -69,6 +70,7 @@ import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.KeyboardShortcutsOverlay
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.shortcuts.PaletteAction
+import com.containerdashboard.ui.state.paneDeleteConfirmation
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
@@ -219,9 +221,13 @@ fun App(
                     val searchFocus = remember { FocusRequester() }
                     val coroutineScope = rememberCoroutineScope()
 
-                    // P0 fix: palette-triggered delete confirmation state
-                    var pendingPaletteDeleteName by remember { mutableStateOf("") }
-                    var pendingPaletteDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    // Shared delete-confirmation state for the palette and the detail
+                    // pane (U1.1). A non-null action shows the dialog.
+                    var pendingDeleteTitle by remember { mutableStateOf("") }
+                    var pendingDeleteBody by remember { mutableStateOf("") }
+                    var pendingDeleteConfirmLabel by remember { mutableStateOf("Delete") }
+                    var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+                    val confirmBeforeDelete by PreferenceRepository.confirmBeforeDelete().collectAsState(initial = true)
 
                     // All lambda captures are stable across compositions (view models,
                     // the remembered navigator, and snapshot-state setters), so the
@@ -240,8 +246,10 @@ fun App(
                                 onRestart = { id -> containersVm.restartContainer(id) },
                                 onRemove = { id -> containersVm.removeContainer(id) },
                                 onAskConfirmRemove = { name, action ->
-                                    pendingPaletteDeleteName = name
-                                    pendingPaletteDeleteAction = action
+                                    pendingDeleteTitle = "Delete container?"
+                                    pendingDeleteBody = "This will force-stop and remove \"$name\"."
+                                    pendingDeleteConfirmLabel = "Delete"
+                                    pendingDeleteAction = action
                                 },
                             )
                         }
@@ -362,8 +370,19 @@ fun App(
                                         onUnpauseContainer = { viewModel.unpauseLogsContainer() },
                                         onRestartContainer = { viewModel.restartLogsContainer() },
                                         onRemoveContainer = {
-                                            viewModel.removeLogsContainer()
-                                            navigator.hideExtraPane()
+                                            val confirmation = paneDeleteConfirmation(logsPaneState)
+                                            val remove = {
+                                                viewModel.removeLogsContainer()
+                                                navigator.hideExtraPane()
+                                            }
+                                            if (confirmBeforeDelete || confirmation.alwaysConfirm) {
+                                                pendingDeleteTitle = confirmation.title
+                                                pendingDeleteBody = confirmation.body
+                                                pendingDeleteConfirmLabel = confirmation.confirmLabel
+                                                pendingDeleteAction = remove
+                                            } else {
+                                                remove()
+                                            }
                                         },
                                         consoleContent = {
                                             logsPaneState.container?.let { container ->
@@ -403,18 +422,18 @@ fun App(
                         KeyboardShortcutsOverlay(onDismiss = { showCheatsheet = false })
                     }
 
-                    // P0 fix: confirm dialog for palette-triggered deletes
-                    pendingPaletteDeleteAction?.let { action ->
+                    // Confirm dialog for palette- and pane-triggered deletes.
+                    pendingDeleteAction?.let { action ->
                         ConfirmActionDialog(
-                            title = "Delete container?",
-                            body = "This will force-stop and remove \"$pendingPaletteDeleteName\".",
-                            confirmLabel = "Delete",
+                            title = pendingDeleteTitle,
+                            body = pendingDeleteBody,
+                            confirmLabel = pendingDeleteConfirmLabel,
                             destructive = true,
                             onConfirm = {
                                 action()
-                                pendingPaletteDeleteAction = null
+                                pendingDeleteAction = null
                             },
-                            onDismiss = { pendingPaletteDeleteAction = null },
+                            onDismiss = { pendingDeleteAction = null },
                         )
                     }
                 }
