@@ -49,6 +49,12 @@ Delete and Close.
 off, single-container delete proceeds; Delete is not adjacent to Close.
 
 **Plan:** [`docs/u1.1-pane-delete-confirm-plan.md`](../u1.1-pane-delete-confirm-plan.md).
+**Status:** fixed (dialog via the shared `ConfirmActionDialog`, preference
+honoured for a single container, always-confirm for >1, divider before Close). Live-smoked
+on the packaged app. Result-review note for later: the confirmed action re-reads
+`logsPaneState.containers` at confirm time rather than capturing the id at click time —
+safe today because the pane target cannot change under the modal, but capture the id if
+that ever changes.
 
 ---
 
