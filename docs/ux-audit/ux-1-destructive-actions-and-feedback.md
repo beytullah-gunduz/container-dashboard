@@ -75,8 +75,24 @@ Dashboard and a failure is invisible.
 `UiMessage` flow (error + success + undo). Route `AppViewModel.error`, palette results and
 danger-zone results through it. Keep the per-screen inline banners for load failures.
 
-**Acceptance:** stop the daemon mid-action → a visible message; success toasts for
-palette actions ("Stopped *name*") appear on whatever screen is showing.
+**Acceptance:** stop the daemon mid-action → a visible message; palette actions give
+visible feedback on whatever screen is showing.
+
+**Plan:** [`docs/u1.2-app-feedback-plan.md`](../u1.2-app-feedback-plan.md).
+**Status:** fixed — `UiMessages` bus + `AppSnackbarHost` (latest-wins,
+error styling), bridges for `AppViewModel.error` and off-screen
+`ContainersScreenViewModel.error`, in-progress acknowledgements for palette actions
+(deliberately not success toasts — see U1.3). Live-smoked on the packaged app.
+Follow-ups from the result review:
+- **Snackbar is occluded by the Console tab.** JediTerm is a heavyweight `SwingPanel`
+  (`JediTermConsole.kt:113`) and the repo does not enable `compose.interop.blending`, so
+  with the Console tab active the bottom-centre snackbar draws *under* the terminal —
+  exactly for pane-toolbar errors. Anchor the host to the detail pane or evaluate
+  interop blending on macOS. (Inferred from source; not observed live.)
+- Daemon errors surface as raw docker-java text (`Status 409: {"message":…}`) — map to a
+  human sentence at the repository boundary.
+- Palette subtitle reads "Stopped" for a paused container (`App.kt`, `buildPaletteActions`:
+  `if (c.isRunning) "Running" else "Stopped"`).
 
 ---
 
