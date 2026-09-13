@@ -241,6 +241,8 @@ fun VolumesScreen(
                     if (checkedVolumeNames.isNotEmpty()) {
                         Button(
                             onClick = {
+                                // U1.11: enabled is presentation only — re-check.
+                                if (isDeletingSelected) return@Button
                                 askConfirm(
                                     "Delete selected volumes?",
                                     "This will delete ${checkedVolumeNames.size} volume(s).",

@@ -430,6 +430,8 @@ fun ContainersScreen(
                                     AppTooltip(label = "Stop $runningSelectedCount selected") {
                                         IconButton(
                                             onClick = {
+                                                // U1.11: enabled is presentation only — re-check.
+                                                if (isStoppingSelected) return@IconButton
                                                 val runningIds =
                                                     selectedContainerIds.filter { id ->
                                                         containers.find { it.id == id }?.isRunning == true
@@ -455,6 +457,7 @@ fun ContainersScreen(
                                 } else {
                                     Button(
                                         onClick = {
+                                            if (isStoppingSelected) return@Button
                                             val runningIds =
                                                 selectedContainerIds.filter { id ->
                                                     containers.find { it.id == id }?.isRunning == true
@@ -510,6 +513,7 @@ fun ContainersScreen(
                                     AppTooltip(label = "Delete ${selectedContainerIds.size} selected") {
                                         IconButton(
                                             onClick = {
+                                                if (isDeletingSelected) return@IconButton
                                                 askConfirm(
                                                     "Delete selected containers?",
                                                     "This will force-stop and delete ${selectedContainerIds.size} container(s).",
@@ -534,6 +538,7 @@ fun ContainersScreen(
                                 } else {
                                     Button(
                                         onClick = {
+                                            if (isDeletingSelected) return@Button
                                             askConfirm(
                                                 "Delete selected containers?",
                                                 "This will force-stop and delete ${selectedContainerIds.size} container(s).",

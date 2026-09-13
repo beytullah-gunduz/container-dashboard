@@ -41,6 +41,10 @@ internal fun CompactCheckbox(
             checked -> MaterialTheme.colorScheme.primary
             else -> Color.Transparent
         }
+    // U1.11: `clickable(enabled = …)` still registers the OnClick semantics action, and
+    // the desktop accessibility bridge invokes it without consulting the disabled state —
+    // so the click lambda re-checks `enabled`. Used on system networks and pending-delete
+    // rows, where the checkbox is disabled for a reason.
     Box(
         modifier =
             Modifier
@@ -51,7 +55,7 @@ internal fun CompactCheckbox(
                     width = 1.2.dp,
                     color = if (checked && enabled) MaterialTheme.colorScheme.primary else outlineColor,
                     shape = RoundedCornerShape(Radius.xs),
-                ).clickable(enabled = enabled) { onCheckedChange(!checked) },
+                ).clickable(enabled = enabled) { if (enabled) onCheckedChange(!checked) },
         contentAlignment = Alignment.Center,
     ) {
         if (checked) {

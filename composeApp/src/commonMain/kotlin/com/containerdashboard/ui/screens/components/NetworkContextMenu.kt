@@ -64,7 +64,8 @@ fun NetworkContextMenu(
             enabled = canDelete,
             onClick = {
                 onDismiss()
-                onRemove()
+                // U1.11: `enabled` does not gate the accessibility bridge.
+                if (canDelete) onRemove()
             },
             leadingIcon = {
                 Icon(
