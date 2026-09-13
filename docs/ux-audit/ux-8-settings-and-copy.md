@@ -89,8 +89,14 @@ connected.
 Observed at 1372 pt window: "Engine | Per containe" — the second segment is cut. The
 segmented row is unconstrained and the label + icon exceed the remaining width.
 
+Worse below the compact threshold: with the detail pane open (list pane at its 450 dp
+minimum) the whole Settings screen degrades — observed 2026-09-13: the "Usage
+aggregation" row and several labels wrap **one character per line** into a tall column,
+and the segmented controls stack vertically. Settings has no compact layout at all.
+
 **Fix:** put the label column in `weight(1f)` and let the control take intrinsic width,
-or stack label above control below ~1000 dp.
+or stack label above control below ~1000 dp; give Settings a single-column compact
+layout under `COMPACT_THRESHOLD` like the list screens have.
 
 ---
 

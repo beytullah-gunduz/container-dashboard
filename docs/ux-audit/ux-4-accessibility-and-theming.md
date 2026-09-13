@@ -35,6 +35,21 @@ that asserts the AX tree is non-empty.
 **Acceptance:** VoiceOver announces sidebar items, rows and buttons; `contentDescription`
 values are audible.
 
+**Status (2026-09-13):** the unconditional disable is removed in the U4.1 commit; the app
+now exposes its accessibility tree (buttons announce their `contentDescription`s, filter
+chips are checkboxes, tabs are radio buttons, the search box is a text field). Evidence:
+debug and ProGuard release builds each survived several minutes of an AX client walking
+the tree and driving every screen, the pane, the palette and the console — no exception,
+no crash report. Compose's own escape hatches (`COMPOSE_DISABLE_ACCESSIBILITY`,
+`-Dcompose.accessibility.enable=false`) are documented in the README.
+Still open: (a) a manual VoiceOver pass — focus tracking and keyboard traversal are not
+exercised by an AX walker, and the story's acceptance criterion is literally VoiceOver;
+(b) the CI smoke test from step (3) was not added (needs a display); (c) while the
+Console tab's JediTerm `SwingPanel` is mounted, AX queries into it wait up to 1 s on the
+EDT and are abandoned (`InvocationEvent has timed out` at INFO) — a VoiceOver cursor over
+the Console will feel sluggish for a few seconds; pre-existing SwingPanel cost, tracked
+under U5.5.
+
 ---
 
 ## U4.2 — Status colours are theme-independent and fail contrast in light theme

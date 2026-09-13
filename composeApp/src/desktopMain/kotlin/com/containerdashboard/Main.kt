@@ -149,9 +149,14 @@ private fun trayStatsFlow(refreshRateSeconds: Int): Flow<TrayStats> =
         }.catch { emit(TrayStats()) }
 
 fun main() {
-    // Workaround for macOS accessibility crash (NPE in SemanticsOwnerAccessibility.onNodeRemoved)
-    System.setProperty("compose.accessibility.enable", "false")
-
+    // Accessibility (VoiceOver, Switch Control, UI automation) is ON — Compose's default.
+    // It was disabled from 2026-02 (Compose 1.11.0-alpha03) to work around an NPE in
+    // SemanticsOwnerAccessibility.onNodeRemoved; on Compose 1.12.0 the packaged app
+    // survived a sustained AX-client walk across every screen, the detail pane, the
+    // palette and the console without a fault (UX audit U4.1). Compose's own escape
+    // hatches still apply if it resurfaces: the COMPOSE_DISABLE_ACCESSIBILITY env var
+    // (terminal launches) or -Dcompose.accessibility.enable=false in the packaged
+    // app's Contents/app/ContainerDashboard.cfg [JavaOptions] — see README.
     configureLogging()
 
     // Set the macOS Dock icon for dev runs (`./gradlew run`). Packaged

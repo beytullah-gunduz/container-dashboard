@@ -117,6 +117,20 @@ The first socket that exists on disk is used as the default. You can also select
 
 If the container engine is not running at launch, the app shows a waiting screen with a **Settings** button so you can configure the connection before the engine starts.
 
+### Accessibility
+
+Compose's accessibility bridge is on by default, so VoiceOver, Switch Control and UI
+automation can read the interface. Custom controls are not yet fully labelled or
+keyboard-operable — see `docs/ux-audit/ux-4-accessibility-and-theming.md`.
+
+If an assistive client misbehaves on your setup, turn the bridge off:
+
+- terminal launches (`./gradlew run`, or running `Contents/MacOS/ContainerDashboard`
+  directly): set the environment variable `COMPOSE_DISABLE_ACCESSIBILITY=1`;
+- the packaged app (Finder/Dock launches do not see shell variables): add
+  `java-options=-Dcompose.accessibility.enable=false` under `[JavaOptions]` in
+  `ContainerDashboard.app/Contents/app/ContainerDashboard.cfg`.
+
 ### Custom Hosts
 
 Besides Unix sockets, you can configure:

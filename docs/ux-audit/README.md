@@ -42,20 +42,20 @@ U4.3 → U1.7) and counted once.
 
 ## Fix these first
 
-1. **[U1.1](ux-1-destructive-actions-and-feedback.md)** The trash icon in the logs/console
+1. **[U1.1](ux-1-destructive-actions-and-feedback.md)** — **fixed**. The trash icon in the logs/console
    pane header **force-deletes the container with no confirmation**, ignores the
    *Confirm Before Delete* setting, and sits 27 px from the Close button. (In group-logs
    mode the button is disabled, so a single click cannot take out a whole compose
    project — corrected on second review; the ViewModel path would remove all of them
    if that gate were ever relaxed.)
-2. **[U1.2](ux-1-destructive-actions-and-feedback.md)** `AppViewModel.error` is never
+2. **[U1.2](ux-1-destructive-actions-and-feedback.md)** — **fixed**. `AppViewModel.error` was never
    rendered anywhere. Pause / resume / restart / delete from the pane, group-log fetch,
    file download and log export **fail silently**. There is no app-wide notification
    channel at all (no snackbar/toast), so palette actions fired from another screen also
    have nowhere to report.
-3. **[U4.1](ux-4-accessibility-and-theming.md)** Accessibility is switched off globally
-   (`compose.accessibility.enable=false`, `Main.kt:153`). VoiceOver, Switch Control and any
-   automation see an empty window; every `contentDescription` in the codebase is dead code.
+3. **[U4.1](ux-4-accessibility-and-theming.md)** ~~Accessibility is switched off globally~~
+   — **fixed 2026-09-13**: the workaround was obsolete on Compose 1.12; the tree is now
+   exposed. A manual VoiceOver pass is still owed (see the story's status note).
 4. **[U1.4](ux-1-destructive-actions-and-feedback.md)** *Delete All* is the only
    permanent primary button on the Containers screen — top-right, filled red, and it
    deletes every container including running ones, regardless of the active filter.
