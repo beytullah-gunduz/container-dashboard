@@ -614,3 +614,23 @@ Each MAJOR was re-checked against the cited source before applying.
 - **Recorded — MINOR-5:** Esc-inside-a-dialog check owed to the user (WS-C acceptance).
 - **Recorded — MINOR-7:** `TerminalWidgetCloseTest` was only run headless on macOS; Linux CI
   (fontconfig for AWT's "Monospaced") is unproven until the branch's first CI run.
+
+## Result audit
+
+Fresh Opus subagent, after the three workstream commits: **PASS WITH FINDINGS** (0 BLOCKER,
+0 MAJOR, 4 MINOR). It re-ran the suite from the XML (284 tests), ran the acceptance greps, ruled on
+every declared deviation (all justified), checked that the real settings directory's mtimes did not
+move, and ran a throwaway probe (6 cases: B3 recovery, real empty list, shared-flow restart with a
+failing first call, a slow first call racing the stop; G5 target change while open, cancellation on
+close) — all passed.
+
+- **Fixed — MINOR-2:** with G6 the palette's list can change while open, and its index-based
+  selection then made Enter run the neighbouring action. Selection now holds the action id; a test
+  reproduced the wrong action first.
+- **Fixed — MINOR-1:** a list-refresh failure reported while the engine was unavailable surfaced as
+  a stale snackbar after the reconnect. Posted only while connected now; a test pins it.
+- **Fixed — MINOR-3:** the audit doc now records G7 as not reproducible and the fixes' status.
+- **Recorded — MINOR-4:** G5 starts its load from inside `remember`; works (probe), not idiomatic.
+- **Recorded:** two pre-existing issues outside the diff, R1 and R2 in `docs/audit/review-2026-10.md`.
+- **Plan defect found during WS-C:** the G7 test as planned (scroll-to-index only) could not see the
+  bug; the implementer added a real swipe and the negative control then failed as it should.

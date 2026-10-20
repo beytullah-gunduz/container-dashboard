@@ -42,8 +42,9 @@ of commit `63440c8`.
 
 Two independent read-only reviews (GUI, backend) of `c1b0c19`, re-anchored on `c813407`:
 **22 findings — 2 High · 6 Medium · 14 Low** (G1–G13, B1–B10, B10 and G12 merged), plus six
-prior stories reopened or partially reopened (S2.1, S2.2, S5.3, S3.3, S4.6, S1.7). G1, B1 and
-S5.3 have since been fixed; G1 and B1 were also checked in the running app against the fake engine.
+prior stories reopened or partially reopened (S2.1, S2.2, S5.3, S3.3, S4.6, S1.7). Fixed since, in
+the agreed order: G1, B1, S5.3, B3, B2, G3, G4, G2, G5, G6; G7 did not reproduce. G1, B1, G3 and G4
+were also checked in the running app against the fake engine. The other Low findings are open.
 See [review-2026-10.md](review-2026-10.md).
 
 ## Dispatch guidance for parallel agents
