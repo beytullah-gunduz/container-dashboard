@@ -96,6 +96,8 @@ per-row (keep, now stable) or shared (hoist one state).
 
 ## S4.6 — `ThreePaneScaffold`: stale `density` captured by `pointerInput(isVertical)`
 
+> **Partially reopened 2026-10-20:** the divider drag is fixed, but the same stale-`LocalDensity` capture remains in five other `pointerInput` blocks (row context menus, column-resize handle) — see [review-2026-10.md](review-2026-10.md) G8.
+
 - **Severity:** Medium · **Effort:** S
 - **File:** `ui/components/ThreePaneScaffold.kt:260-294`
 

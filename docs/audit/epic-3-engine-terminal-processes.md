@@ -54,6 +54,8 @@ see project memory).
 
 ## S3.3 — `JediTermConsole` leaks the exec session when disposed mid-connect
 
+> **Partially reopened 2026-10-20:** the mid-connect exec leak is fixed, but the normal dispose path never closes the `JediTermWidget`, so its executor thread outlives the tab — see [review-2026-10.md](review-2026-10.md) G3.
+
 - **Severity:** Medium · **Effort:** M
 - **File:** `terminal/JediTermConsole.kt:54-83`
 
