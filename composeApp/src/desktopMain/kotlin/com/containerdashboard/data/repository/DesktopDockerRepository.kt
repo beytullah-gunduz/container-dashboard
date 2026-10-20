@@ -258,7 +258,17 @@ class DesktopDockerRepository(
 
                                     override fun onError(throwable: Throwable?) {
                                         logger.warn("Docker event stream error", throwable)
-                                        close()
+                                        // Qualified on purpose: inside this object a bare close() is the
+                                        // callback's own Closeable.close(), which leaves the flow suspended
+                                        // in awaitClose forever, so the loop below never re-subscribes.
+                                        this@callbackFlow.close()
+                                    }
+
+                                    // The engine ended the stream (a daemon restart, a replaced HTTP
+                                    // client): end the flow so the loop re-subscribes. The inherited
+                                    // onComplete only closes the callback.
+                                    override fun onComplete() {
+                                        this@callbackFlow.close()
                                     }
                                 }
                             try {
@@ -740,13 +750,14 @@ class DesktopDockerRepository(
                         }
                     }
 
+                    // this@callbackFlow, not a bare close(): see dockerEvents.
                     override fun onError(throwable: Throwable?) {
                         logger.warn("Log follow stream error for {}: {}", id, throwable?.message)
-                        close()
+                        this@callbackFlow.close()
                     }
 
                     override fun onComplete() {
-                        close()
+                        this@callbackFlow.close()
                     }
                 }
 
@@ -796,12 +807,14 @@ class DesktopDockerRepository(
                                         }
                                     }
 
+                                    // this@callbackFlow, not a bare close(): see dockerEvents. The
+                                    // cause reaches the .catch below, which logs it.
                                     override fun onError(throwable: Throwable?) {
-                                        close()
+                                        this@callbackFlow.close(throwable)
                                     }
 
                                     override fun onComplete() {
-                                        close()
+                                        this@callbackFlow.close()
                                     }
                                 }
                             try {
@@ -1328,8 +1341,9 @@ class DesktopDockerRepository(
                         close(throwable)
                     }
 
+                    // this@callbackFlow, not a bare close(): see dockerEvents.
                     override fun onComplete() {
-                        close()
+                        this@callbackFlow.close()
                     }
                 }
             try {

@@ -340,6 +340,17 @@ compose.desktop {
     }
 }
 
+// Tests that build a real DesktopDockerRepository reach PreferenceRepository's DataStore; keep it
+// in build/ rather than in the developer's real settings.
+val testDataDir: File =
+    layout.buildDirectory
+        .dir("test-data")
+        .get()
+        .asFile
+tasks.withType<Test>().configureEach {
+    systemProperty("containerdashboard.dataDir", testDataDir.absolutePath)
+}
+
 // ---------------------------------------------------------------------------
 // Hot reload (dev only). `hotRunDesktopAsync` launches the app under Compose Hot Reload and
 // `hotMcpServerDesktop` serves an MCP server that drives it (semantic tree, clicks, screenshots).
