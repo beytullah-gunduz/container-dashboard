@@ -54,6 +54,8 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -855,7 +857,10 @@ class DesktopDockerRepository(
     ): Flow<List<String>> =
         channelFlow {
             val lines = mutableListOf<String>()
-            val lock = Any()
+            // Each snapshot is built and sent under one lock. Built under a lock but sent after it,
+            // two streams could send out of order: the older, shorter snapshot then replaced the
+            // newer one, and the last lines of a stream that had just ended never showed.
+            val mutex = Mutex()
 
             // supervisorScope so one container's stream failing (e.g. it gets killed mid-follow)
             // doesn't cancel the sibling streams via structured concurrency. It also suspends
@@ -903,17 +908,15 @@ class DesktopDockerRepository(
                         }.collect { text ->
                             val newLines = splitLogLines(text).map { "[$label] $it" }
                             if (newLines.isNotEmpty()) {
-                                val snapshot =
-                                    synchronized(lock) {
-                                        lines.addAll(newLines)
-                                        val cap = cachedMaxLogLines.get()
-                                        if (lines.size > cap) {
-                                            val excess = lines.size - cap
-                                            repeat(excess) { lines.removeFirst() }
-                                        }
-                                        lines.toList()
+                                mutex.withLock {
+                                    lines.addAll(newLines)
+                                    val cap = cachedMaxLogLines.get()
+                                    if (lines.size > cap) {
+                                        val excess = lines.size - cap
+                                        repeat(excess) { lines.removeFirst() }
                                     }
-                                send(snapshot)
+                                    send(lines.toList())
+                                }
                             }
                         }
                     }
