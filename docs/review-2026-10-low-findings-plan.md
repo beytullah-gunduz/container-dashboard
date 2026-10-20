@@ -595,3 +595,24 @@ BLOCKER/MAJOR was re-checked against the cited source before applying.
   the progress update, keep `val drainThread`, KDoc wording, a timing-safe negative control, test
   comments, the Settings test guard.
 - **Recorded — MINOR-5, MINOR-7:** in "Accepted behaviour changes and known gaps".
+
+## Result audit
+
+Fresh Opus subagent after the four code commits: **PASS WITH FINDINGS** (0 BLOCKER, 0 MAJOR,
+4 MINOR). Six full-suite runs green (311 tests), every declared deviation justified, the real
+settings directory untouched, and a probe (B4/R1 transitions and close races, B6 interrupt timing,
+the group-log ordering fix under cancellation, G9 through the real Containers screen).
+
+- **Fixed — MINOR-1:** a B6 cancel that landed before the engine's response headers was undone by
+  docker-java's `onStart`; the callback now closes a stream that arrives after it was abandoned. A
+  lifecycle test reproduced it first.
+- **Fixed — MINOR-2:** the G9 screen wiring had no test; `ContainersScreenSelectionUiTest` renders
+  the real screen and fails both without the wiring and with the composed-list version this plan's
+  review rejected.
+- **Recorded — MINOR-3:** the group-log race fix (`e4ca5bc`) is correct by construction and the
+  delay probe shows the mechanism, but the original flake's log was overwritten, so it is not proven
+  to be that flake's cause.
+- **Fixed — MINOR-4:** the audit doc now carries a Status line for every finding of this batch.
+
+Process note: the WS-F commit was created by a command chain whose full-suite run had that one
+failing test; the failure was the pre-existing race above, fixed in the next commit.
