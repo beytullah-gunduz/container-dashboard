@@ -73,6 +73,14 @@ Accepted behaviour changes and known gaps (so the result audit does not file the
   `StrictConnPool.java:136-151`: `pendingRequests.clear()` at `:147`), so a call queued on a pool
   that a rebuild closes waits out the 3-minute lease timeout. Pre-existing; rarer after this
   change because command calls no longer queue behind streams.
+- (Result audit) httpclient5 does not check for a closed pool when it connects a leased connection,
+  and `release` returns early on a closed pool without closing it: a lease granted just before a
+  rebuild or `close()` and connected just after leaves a socket no pool tracks, closed only by the
+  garbage collector's cleaner. Pre-existing (the single client had it); seen in 5 of 120 iterations
+  of a probe racing 60 rebuilds against `close()` each time, far beyond what the app does.
+- (Result audit) `JediTermConsole` reads `client` and `commandClient` separately, so a rebuild
+  between the two reads pairs clients of two generations; `start()` then fails with "Connection pool
+  shut down" and the Console shows Retry. No worse than a rebuild landing just after the connect.
 - Thread and socket cost per stream is unchanged (one socket and one `docker-java-stream-*` thread
   each); the second pool has no threads of its own.
 
@@ -505,3 +513,33 @@ against the cited source before applying.
   running the acceptance greps.
 
 ## Result audit
+
+Implementation (`27e133e`) by a Sonnet implementer: no deviation from the plan; the 9 negative
+controls each failed their test with the plan's message (NC 3 re-run by the orchestrator). Gates on
+the committed bytes: `desktopTest` 319 tests, 0 failures, 0 errors (XML); `spotlessCheck` green; the
+new class 6/6 headless. Live check under hot reload against the fake engine: an idle Console was
+still open after 67 s (exec thread alive in the app, the engine's shell still holding its socket),
+and the event stream was subscribed once in 4 min 43 s. Negative control in the app: with `client`
+hot-reloaded to the command client, the reopened session was gone by 55 s.
+
+Result audit by a fresh Opus subagent: **PASS WITH FINDINGS** (0 BLOCKER, 0 MAJOR, 4 MINOR). It
+re-ran the gates (319/0/0, spotless, headless 6/6), checked the G11 greps against positive controls,
+and probed through reflection: a rebuild with a Console, stats, events and log follows open (both
+old pools closed, streams re-opened on the new client, no thread left behind), 120 iterations of
+rebuilds racing `close()`, a host switch with eight connections open, a control proving its leak
+checks were not vacuous, and a follow cancelled before its response headers.
+
+- **Fixed — MINOR 1** (`16da78a`): docker-java's `onStart` resets the closed flag, so a stream
+  cancelled before the response headers kept running (the B6 race, fixed then for `execCapture`
+  only). Without a read timeout, a quiet stream orphaned this way no longer ended after 45 s.
+  `StreamCallback` keeps a close that lands before `onStart`; the four repository streams,
+  `execCapture` and the Console use it. Pinned by a new lifecycle test; with the re-close removed,
+  it and the B6 download test fail. Suite after the fix: 320 tests, 0 failures, 0 errors.
+- **Recorded — MINOR 2, MINOR 3:** under "Accepted behaviour changes and known gaps".
+- **Accepted — MINOR 4:** `close()` now logs a failure to close a client at debug level, as G8
+  specified.
+
+Owed to the user (runtime only): an idle Console, a quiet followed log and a quiet engine's event
+stream on Docker Desktop, Colima and Podman; more than 100 running containers on a real engine; a
+remote `tcp://` host dropping off the network and coming back; a host switch with the Console open;
+the release (ProGuard) build's Console and log follows.
