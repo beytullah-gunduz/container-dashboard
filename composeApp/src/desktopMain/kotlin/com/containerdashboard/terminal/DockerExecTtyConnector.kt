@@ -1,5 +1,6 @@
 package com.containerdashboard.terminal
 
+import com.containerdashboard.data.repository.StreamCallback
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Frame
 import com.jediterm.core.util.TermSize
@@ -66,7 +67,7 @@ class DockerExecTtyConnector(
             execId = execCreate.id
 
             callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Frame>() {
+                object : StreamCallback<Frame>() {
                     override fun onNext(frame: Frame?) {
                         frame?.payload?.let { data ->
                             try {

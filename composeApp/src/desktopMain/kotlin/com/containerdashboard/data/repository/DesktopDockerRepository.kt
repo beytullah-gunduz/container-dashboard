@@ -300,7 +300,7 @@ class DesktopDockerRepository(
                     val events =
                         callbackFlow {
                             val callback =
-                                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
+                                object : StreamCallback<Event>() {
                                     override fun onNext(event: Event?) {
                                         event?.let { trySend(it) }
                                     }
@@ -773,20 +773,7 @@ class DesktopDockerRepository(
                 val out = java.io.ByteArrayOutputStream()
                 val err = java.io.ByteArrayOutputStream()
                 val callback =
-                    object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
-                        // Set (under this callback's lock) when the caller is cancelled. docker-java
-                        // hands over the stream only in onStart, after the response headers, and
-                        // onStart also resets the closed flag: a cancel that landed before it was
-                        // undone and the transfer ran to its end (review-2026-10 B6).
-                        var abandoned = false
-
-                        override fun onStart(stream: java.io.Closeable?) {
-                            synchronized(this) {
-                                super.onStart(stream)
-                                if (abandoned) close()
-                            }
-                        }
-
+                    object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                         override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                             val payload = frame?.payload ?: return
                             if (frame.streamType == com.github.dockerjava.api.model.StreamType.STDERR) {
@@ -799,23 +786,16 @@ class DesktopDockerRepository(
 
                 // Cancellable (review-2026-10 B6): awaitCompletion blocks this IO thread until the
                 // exec ends or times out, and cancelling the calling coroutine used to leave it
-                // blocked. runInterruptible turns cancellation into an interrupt; the stream is then
-                // closed here, or in onStart if docker-java has not handed it over yet.
+                // blocked. runInterruptible turns cancellation into an interrupt, and awaitCompletion
+                // then closes the callback; a StreamCallback keeps that close even if docker-java has
+                // not handed over the stream yet.
                 val completed =
-                    try {
-                        runInterruptible {
-                            dockerClient
-                                .execStartCmd(execId)
-                                .withDetach(false)
-                                .exec(callback)
-                                .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
-                        }
-                    } catch (e: CancellationException) {
-                        synchronized(callback) {
-                            callback.abandoned = true
-                            runCatching { callback.close() }
-                        }
-                        throw e
+                    runInterruptible {
+                        dockerClient
+                            .execStartCmd(execId)
+                            .withDetach(false)
+                            .exec(callback)
+                            .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
                     }
 
                 if (!completed) {
@@ -853,7 +833,7 @@ class DesktopDockerRepository(
         callbackFlow {
             val lines = mutableListOf<String>()
             val callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                     override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                         frame?.let {
                             val text = String(it.payload ?: ByteArray(0))
@@ -928,7 +908,7 @@ class DesktopDockerRepository(
                     launch {
                         callbackFlow {
                             val callback =
-                                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                                object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                                     override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                                         frame?.let {
                                             val text = String(it.payload ?: ByteArray(0))
@@ -1398,7 +1378,7 @@ class DesktopDockerRepository(
     ): Flow<ContainerStats> =
         callbackFlow<ContainerStats> {
             val callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
+                object : StreamCallback<com.github.dockerjava.api.model.Statistics>() {
                     override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
                         s?.let {
                             val (diskR, diskW) = extractDiskIo(it)

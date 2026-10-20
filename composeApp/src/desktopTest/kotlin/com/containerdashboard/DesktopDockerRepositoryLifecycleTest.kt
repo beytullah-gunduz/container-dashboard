@@ -30,7 +30,8 @@ import kotlin.test.assertTrue
 /**
  * Client lifecycle of the real repository against a tiny in-process engine: the first availability
  * poll must not replace the client the app's streams already run on, a closed repository must not
- * build a new client, and cancelling a file transfer must free the caller.
+ * build a new client, cancelling a file transfer must free the caller, and a transfer or stream
+ * cancelled before the engine answers must not keep running.
  */
 class DesktopDockerRepositoryLifecycleTest {
     private lateinit var server: HttpServer
@@ -44,6 +45,10 @@ class DesktopDockerRepositoryLifecycleTest {
     // Answer exec start only after a delay, then stream until the client goes away.
     private val delayExecStartHeaders = AtomicBoolean(false)
     private val execStreamClosedByClient = CountDownLatch(1)
+
+    // A followed log whose headers come late, streaming until the client goes away.
+    private val logRequests = AtomicInteger()
+    private val logStreamClosedByClient = CountDownLatch(1)
 
     @BeforeTest
     fun setUp() {
@@ -102,7 +107,7 @@ class DesktopDockerRepositoryLifecycleTest {
             "/exec/e1/start" -> {
                 execStarts.incrementAndGet()
                 if (delayExecStartHeaders.get()) {
-                    streamUntilClientCloses(exchange)
+                    streamUntilClientCloses(exchange, execStreamClosedByClient)
                     return
                 }
                 exchange.responseHeaders.add("Content-Type", "application/vnd.docker.multiplexed-stream")
@@ -110,6 +115,11 @@ class DesktopDockerRepositoryLifecycleTest {
                 exchange.responseBody.flush()
                 // Held open only when a test wants a transfer that does not finish by itself.
                 if (holdExecStart.get()) release.await(30, TimeUnit.SECONDS)
+            }
+
+            "/containers/c1/logs" -> {
+                logRequests.incrementAndGet()
+                streamUntilClientCloses(exchange, logStreamClosedByClient)
             }
 
             "/exec/e1/json" -> {
@@ -123,7 +133,10 @@ class DesktopDockerRepositoryLifecycleTest {
     }
 
     /** A transfer that never ends by itself: headers after 400 ms, then a frame every 50 ms. */
-    private fun streamUntilClientCloses(exchange: HttpExchange) {
+    private fun streamUntilClientCloses(
+        exchange: HttpExchange,
+        closedByClient: CountDownLatch,
+    ) {
         Thread.sleep(400)
         exchange.responseHeaders.add("Content-Type", "application/vnd.docker.multiplexed-stream")
         exchange.sendResponseHeaders(200, 0)
@@ -144,7 +157,7 @@ class DesktopDockerRepositoryLifecycleTest {
                 Thread.sleep(50)
             }
         } catch (_: IOException) {
-            execStreamClosedByClient.countDown()
+            closedByClient.countDown()
         }
     }
 
@@ -218,6 +231,21 @@ class DesktopDockerRepositoryLifecycleTest {
             assertTrue(
                 execStreamClosedByClient.await(5, TimeUnit.SECONDS),
                 "the transfer must stop once its caller is cancelled",
+            )
+        }
+
+    @Test
+    fun `a log follow cancelled before the engine answers does not keep streaming`() =
+        runBlocking {
+            // The same race on the stream client, which has no read timeout: a follow cancelled
+            // before the headers kept its stream open until the engine ended it (review-2026-10 B8).
+            val job = launch(Dispatchers.IO) { repo.followContainerLogs("c1", tail = 10).collect {} }
+            withTimeout(10_000) { while (logRequests.get() < 1) delay(20) }
+            job.cancelAndJoin() // well inside the 400 ms before the headers
+
+            assertTrue(
+                logStreamClosedByClient.await(5, TimeUnit.SECONDS),
+                "the log stream must stop once its follower is gone",
             )
         }
 }
