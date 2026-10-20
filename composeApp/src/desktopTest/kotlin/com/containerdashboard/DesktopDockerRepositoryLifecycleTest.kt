@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -38,6 +40,10 @@ class DesktopDockerRepositoryLifecycleTest {
     private val execStarts = AtomicInteger()
     private val release = CountDownLatch(1)
     private val holdExecStart = AtomicBoolean(false)
+
+    // Answer exec start only after a delay, then stream until the client goes away.
+    private val delayExecStartHeaders = AtomicBoolean(false)
+    private val execStreamClosedByClient = CountDownLatch(1)
 
     @BeforeTest
     fun setUp() {
@@ -95,6 +101,10 @@ class DesktopDockerRepositoryLifecycleTest {
 
             "/exec/e1/start" -> {
                 execStarts.incrementAndGet()
+                if (delayExecStartHeaders.get()) {
+                    streamUntilClientCloses(exchange)
+                    return
+                }
                 exchange.responseHeaders.add("Content-Type", "application/vnd.docker.multiplexed-stream")
                 exchange.sendResponseHeaders(200, 0)
                 exchange.responseBody.flush()
@@ -109,6 +119,32 @@ class DesktopDockerRepositoryLifecycleTest {
             else -> {
                 respond(exchange, "application/json", """{"message":"not found"}""".toByteArray(), status = 404)
             }
+        }
+    }
+
+    /** A transfer that never ends by itself: headers after 400 ms, then a frame every 50 ms. */
+    private fun streamUntilClientCloses(exchange: HttpExchange) {
+        Thread.sleep(400)
+        exchange.responseHeaders.add("Content-Type", "application/vnd.docker.multiplexed-stream")
+        exchange.sendResponseHeaders(200, 0)
+        val payload = "x".repeat(1024).toByteArray()
+        val frame =
+            ByteBuffer
+                .allocate(8 + payload.size)
+                .put(1)
+                .put(ByteArray(3))
+                .putInt(payload.size)
+                .put(payload)
+                .array()
+        val deadline = System.currentTimeMillis() + 20_000
+        try {
+            while (System.currentTimeMillis() < deadline) {
+                exchange.responseBody.write(frame)
+                exchange.responseBody.flush()
+                Thread.sleep(50)
+            }
+        } catch (_: IOException) {
+            execStreamClosedByClient.countDown()
         }
     }
 
@@ -166,5 +202,22 @@ class DesktopDockerRepositoryLifecycleTest {
             withTimeout(10_000) { while (execStarts.get() < 1) delay(50) }
 
             withTimeout(5_000) { job.cancelAndJoin() }
+        }
+
+    @Test
+    fun `a download cancelled before the engine answers does not keep streaming`() =
+        runBlocking {
+            // docker-java hands the callback its stream only after the response headers, and that
+            // onStart also resets the callback's closed flag: a cancel that landed earlier was undone
+            // and the transfer ran to its end into a discarded buffer (review-2026-10 B6).
+            delayExecStartHeaders.set(true)
+            val job = launch(Dispatchers.IO) { repo.downloadContainerFile("c1", "/big") }
+            withTimeout(10_000) { while (execStarts.get() < 1) delay(20) }
+            job.cancelAndJoin() // well inside the 400 ms before the headers
+
+            assertTrue(
+                execStreamClosedByClient.await(5, TimeUnit.SECONDS),
+                "the transfer must stop once its caller is cancelled",
+            )
         }
 }

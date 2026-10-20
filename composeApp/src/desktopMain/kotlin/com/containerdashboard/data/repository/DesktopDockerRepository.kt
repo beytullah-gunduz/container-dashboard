@@ -737,6 +737,19 @@ class DesktopDockerRepository(
                 val err = java.io.ByteArrayOutputStream()
                 val callback =
                     object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                        // Set (under this callback's lock) when the caller is cancelled. docker-java
+                        // hands over the stream only in onStart, after the response headers, and
+                        // onStart also resets the closed flag: a cancel that landed before it was
+                        // undone and the transfer ran to its end (review-2026-10 B6).
+                        var abandoned = false
+
+                        override fun onStart(stream: java.io.Closeable?) {
+                            synchronized(this) {
+                                super.onStart(stream)
+                                if (abandoned) close()
+                            }
+                        }
+
                         override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                             val payload = frame?.payload ?: return
                             if (frame.streamType == com.github.dockerjava.api.model.StreamType.STDERR) {
@@ -749,15 +762,23 @@ class DesktopDockerRepository(
 
                 // Cancellable (review-2026-10 B6): awaitCompletion blocks this IO thread until the
                 // exec ends or times out, and cancelling the calling coroutine used to leave it
-                // blocked. runInterruptible turns cancellation into an interrupt, and an interrupted
-                // awaitCompletion closes the callback in its own finally.
+                // blocked. runInterruptible turns cancellation into an interrupt; the stream is then
+                // closed here, or in onStart if docker-java has not handed it over yet.
                 val completed =
-                    runInterruptible {
-                        dockerClient
-                            .execStartCmd(execId)
-                            .withDetach(false)
-                            .exec(callback)
-                            .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    try {
+                        runInterruptible {
+                            dockerClient
+                                .execStartCmd(execId)
+                                .withDetach(false)
+                                .exec(callback)
+                                .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                        }
+                    } catch (e: CancellationException) {
+                        synchronized(callback) {
+                            callback.abandoned = true
+                            runCatching { callback.close() }
+                        }
+                        throw e
                     }
 
                 if (!completed) {
