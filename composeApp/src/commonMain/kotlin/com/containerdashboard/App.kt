@@ -281,9 +281,20 @@ fun App(
                             onOpenPalette = { showPalette = true },
                             onCloseOverlays = {
                                 when {
-                                    showPalette -> showPalette = false
-                                    showCheatsheet -> showCheatsheet = false
-                                    else -> navigator.hideExtraPane()
+                                    showPalette -> {
+                                        showPalette = false
+                                    }
+
+                                    showCheatsheet -> {
+                                        showCheatsheet = false
+                                    }
+
+                                    // Same as the pane's Close button: hiding alone left the
+                                    // follow running and the row highlighted (review-2026-10 G2).
+                                    else -> {
+                                        navigator.hideExtraPane()
+                                        viewModel.clearLogs()
+                                    }
                                 }
                             },
                             onFocusSearch = {

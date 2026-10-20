@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,9 +57,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.AttachedContainer
 import com.containerdashboard.data.models.ContainerInspect
 import com.containerdashboard.data.models.EnvVar
@@ -69,6 +67,7 @@ import com.containerdashboard.data.models.NetworkAttachment
 import com.containerdashboard.data.models.NetworkInspect
 import com.containerdashboard.data.models.PortMapping
 import com.containerdashboard.data.models.VolumeInspect
+import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
@@ -81,6 +80,7 @@ import com.dockerdashboard.composeapp.generated.resources.image
 import com.dockerdashboard.composeapp.generated.resources.inventory_2
 import com.dockerdashboard.composeapp.generated.resources.visibility
 import com.dockerdashboard.composeapp.generated.resources.visibility_off
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -146,11 +146,16 @@ private sealed interface DetailsState {
     ) : DetailsState
 }
 
-private class ResourceDetailsViewModel(
+/**
+ * Loads one inspect for [target]. Remembered per open dialog and run in the dialog's scope, so
+ * every open loads afresh and nothing outlives the dialog — a window-scoped ViewModel showed the
+ * first inspect forever (review-2026-10 G5).
+ */
+private class ResourceDetailsLoader(
     private val target: DetailsTarget,
-) : ViewModel() {
-    private val repo get() = AppModule.dockerRepository
-
+    private val repo: DockerRepository,
+    private val scope: CoroutineScope,
+) {
     private val _state = MutableStateFlow<DetailsState>(DetailsState.Loading)
     val state: StateFlow<DetailsState> = _state.asStateFlow()
 
@@ -160,7 +165,7 @@ private class ResourceDetailsViewModel(
 
     fun load() {
         _state.value = DetailsState.Loading
-        viewModelScope.launch {
+        scope.launch {
             val next =
                 when (val t = target) {
                     is DetailsTarget.ContainerTarget -> {
@@ -201,12 +206,11 @@ private class ResourceDetailsViewModel(
 fun ResourceDetailsDialog(
     target: DetailsTarget,
     onDismiss: () -> Unit,
+    repository: () -> DockerRepository = { AppModule.dockerRepository },
 ) {
-    val vm =
-        viewModel(key = detailsKey(target)) {
-            ResourceDetailsViewModel(target)
-        }
-    val state by collectStateAsState(vm.state)
+    val scope = rememberCoroutineScope()
+    val loader = remember(target) { ResourceDetailsLoader(target, repository(), scope) }
+    val state by collectStateAsState(loader.state)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -253,7 +257,7 @@ fun ResourceDetailsDialog(
                     }
 
                     is DetailsState.Error -> {
-                        ErrorState(message = s.message, onRetry = { vm.load() })
+                        ErrorState(message = s.message, onRetry = { loader.load() })
                     }
 
                     is DetailsState.ContainerLoaded -> {
@@ -276,14 +280,6 @@ fun ResourceDetailsDialog(
         }
     }
 }
-
-private fun detailsKey(target: DetailsTarget): String =
-    when (target) {
-        is DetailsTarget.ContainerTarget -> "container:${target.id}"
-        is DetailsTarget.ImageTarget -> "image:${target.id}"
-        is DetailsTarget.NetworkTarget -> "network:${target.id}"
-        is DetailsTarget.VolumeTarget -> "volume:${target.name}"
-    }
 
 @Composable
 private fun <T> collectStateAsState(flow: StateFlow<T>): androidx.compose.runtime.State<T> {

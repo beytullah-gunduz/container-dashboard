@@ -91,7 +91,8 @@ fun CommandPalette(
             runCatching { focusRequester.requestFocus() }
         }
 
-        val filtered by remember {
+        // Keyed on actions: unkeyed, the palette kept the list it opened with (review-2026-10 G6).
+        val filtered by remember(actions) {
             derivedStateOf {
                 if (query.isBlank()) {
                     actions
@@ -104,13 +105,13 @@ fun CommandPalette(
             }
         }
 
-        val sectioned by remember {
+        val sectioned by remember(actions) {
             derivedStateOf {
                 filtered.groupBy { it.section }.toList()
             }
         }
 
-        val flatActions by remember {
+        val flatActions by remember(actions) {
             derivedStateOf {
                 sectioned.flatMap { it.second }
             }
@@ -118,7 +119,7 @@ fun CommandPalette(
 
         // Selection highlighting looks rows up by id instead of relying on the
         // order in which lazy item blocks happen to compose.
-        val actionIndexById by remember {
+        val actionIndexById by remember(actions) {
             derivedStateOf {
                 buildMap {
                     flatActions.forEachIndexed { index, action -> put(action.id, index) }

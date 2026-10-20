@@ -91,6 +91,10 @@ class FakeDockerRepository(
     var closeCount = 0
         private set
 
+    /** Number of times [inspectContainer] was invoked. */
+    var inspectContainerCalls = 0
+        private set
+
     // --- Availability ---
 
     override fun isDockerAvailable(checkIntervalMillis: Long): Flow<Boolean> = availabilityFlowOverride ?: flowOf(true)
@@ -122,8 +126,9 @@ class FakeDockerRepository(
             ?.let { Result.success(it) }
             ?: Result.failure(NoSuchElementException("Container $id not found"))
 
-    override suspend fun inspectContainer(id: String): Result<ContainerInspect> =
-        Result.success(
+    override suspend fun inspectContainer(id: String): Result<ContainerInspect> {
+        inspectContainerCalls++
+        return Result.success(
             ContainerInspect(
                 id = id,
                 name = "fake-container",
@@ -148,6 +153,7 @@ class FakeDockerRepository(
                 rawJson = "{}",
             ),
         )
+    }
 
     override suspend fun getContainerLogs(
         id: String,
