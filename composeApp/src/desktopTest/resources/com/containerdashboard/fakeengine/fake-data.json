@@ -193,7 +193,8 @@
           "Image": "demo/db:2.3",
           "Env": [
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "DEMO=1"
+            "DEMO=1",
+            "POSTGRES_PASSWORD=fake-password-for-tests"
           ],
           "Cmd": [
             "postgres"

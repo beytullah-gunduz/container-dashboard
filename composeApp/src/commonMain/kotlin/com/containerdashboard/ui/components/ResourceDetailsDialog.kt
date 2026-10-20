@@ -751,7 +751,23 @@ private val SECRET_KEY_PATTERNS =
         "CREDENTIAL",
     )
 
-private fun isSecretKey(key: String): Boolean = SECRET_KEY_PATTERNS.any { pattern -> key.uppercase().contains(pattern) }
+internal fun isSecretKey(key: String): Boolean = SECRET_KEY_PATTERNS.any { pattern -> key.uppercase().contains(pattern) }
+
+private const val SECRET_MASK = "••••••••"
+
+/** A JSON string literal holding one `NAME=value` pair, as in the `Env` arrays of an inspect. */
+private val ENV_PAIR_LITERAL = Regex("\"([A-Za-z_][A-Za-z0-9_.-]*)=((?:[^\"\\\\]|\\\\.)*)\"")
+
+/**
+ * [json] with the value of every `NAME=value` string whose name looks secret ([isSecretKey])
+ * replaced by a mask; everything else is kept as is. The Raw JSON tab shows this by default, so
+ * it no longer prints what the Environment tab hides.
+ */
+internal fun maskSecretEnvValues(json: String): String =
+    ENV_PAIR_LITERAL.replace(json) { match ->
+        val name = match.groupValues[1]
+        if (isSecretKey(name)) "\"$name=$SECRET_MASK\"" else match.value
+    }
 
 @Composable
 private fun EnvironmentTab(env: List<EnvVar>) {
@@ -810,7 +826,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
                     }
                     if (secret && !isRevealed) {
                         Text(
-                            text = "••••••••",
+                            text = SECRET_MASK,
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1196,21 +1212,43 @@ private fun Badge(
 }
 
 @Composable
-private fun RawJsonTab(json: String) {
+internal fun RawJsonTab(json: String) {
+    // Secret env values are masked here too, behind one reveal toggle for the whole document;
+    // Copy copies what is shown.
+    val masked = remember(json) { maskSecretEnvValues(json) }
+    val hasSecrets = masked != json
+    var revealSecrets by remember(json) { mutableStateOf(false) }
+    val shown = if (revealSecrets) json else masked
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = Spacing.sm),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (hasSecrets) {
+                IconButton(
+                    onClick = { revealSecrets = !revealSecrets },
+                    modifier = Modifier.size(20.dp),
+                ) {
+                    Icon(
+                        painter =
+                            painterResource(
+                                if (revealSecrets) Res.drawable.visibility_off else Res.drawable.visibility,
+                            ),
+                        contentDescription = if (revealSecrets) "Hide secret values" else "Reveal secret values",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             @Suppress("DEPRECATION")
             val clipboard = LocalClipboardManager.current
             CopyIconButton(
                 tooltip = "Copy JSON",
-                onClick = { clipboard.setText(AnnotatedString(json)) },
+                onClick = { clipboard.setText(AnnotatedString(shown)) },
             )
         }
         Box(
@@ -1237,7 +1275,7 @@ private fun RawJsonTab(json: String) {
                         .padding(Spacing.md),
             ) {
                 Text(
-                    text = json,
+                    text = shown,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
