@@ -51,11 +51,15 @@ fun CreateResourceDialog(
                             false
                         }
                     }
+
                     Key.Escape -> {
                         onDismiss()
                         true
                     }
-                    else -> false
+
+                    else -> {
+                        false
+                    }
                 }
             },
         icon = {

@@ -93,10 +93,17 @@ fun ThreePaneScaffold(
         val totalHeight = maxHeight
         val effectiveLayout =
             when (paneLayout) {
-                LogsPaneLayout.RIGHT -> LogsPaneLayout.RIGHT
-                LogsPaneLayout.BOTTOM -> LogsPaneLayout.BOTTOM
-                LogsPaneLayout.AUTO ->
+                LogsPaneLayout.RIGHT -> {
+                    LogsPaneLayout.RIGHT
+                }
+
+                LogsPaneLayout.BOTTOM -> {
+                    LogsPaneLayout.BOTTOM
+                }
+
+                LogsPaneLayout.AUTO -> {
                     if (availableContentWidth < AUTO_BREAKPOINT) LogsPaneLayout.BOTTOM else LogsPaneLayout.RIGHT
+                }
             }
 
         Row(modifier = Modifier.fillMaxSize()) {

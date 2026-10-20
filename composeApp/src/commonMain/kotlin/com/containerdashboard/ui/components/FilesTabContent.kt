@@ -153,6 +153,7 @@ private fun FileTree(
                 )
             }
         }
+
         state.error != null -> {
             Column(
                 modifier = Modifier.fillMaxSize().padding(Spacing.xl),
@@ -169,6 +170,7 @@ private fun FileTree(
                 Button(onClick = onRefresh) { Text("Retry") }
             }
         }
+
         state.nodes.isEmpty() -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
@@ -178,6 +180,7 @@ private fun FileTree(
                 )
             }
         }
+
         else -> {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(state.nodes, key = { it.entry.path }) { node ->
@@ -217,13 +220,15 @@ private fun TreeRow(
         // Expand/collapse affordance (or a per-node spinner / alignment spacer).
         Box(modifier = Modifier.size(18.dp), contentAlignment = Alignment.Center) {
             when {
-                node.isLoading ->
+                node.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(12.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                node.isExpandable ->
+                }
+
+                node.isExpandable -> {
                     Icon(
                         painter =
                             painterResource(
@@ -233,6 +238,7 @@ private fun TreeRow(
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
             }
         }
         Spacer(modifier = Modifier.width(2.dp))
@@ -345,14 +351,17 @@ private fun FileViewer(
                     )
                 }
             }
+
             state.fileError != null -> {
                 FileViewerNotice(message = state.fileError)
             }
+
             content != null && content.isBinary -> {
                 FileViewerNotice(
                     message = "Binary file — ${formatBytes(content.totalBytesShown.toLong())} shown. Use Download to view it.",
                 )
             }
+
             content != null -> {
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (content.truncated) {

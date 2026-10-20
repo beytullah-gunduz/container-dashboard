@@ -131,30 +131,37 @@ fun ImagesScreen(
                 }.let { list: List<DockerImage> ->
                     val ascending = sortDirection == SortDirection.ASC
                     when (sortColumn) {
-                        ImageSortColumn.REPOSITORY ->
+                        ImageSortColumn.REPOSITORY -> {
                             if (ascending) {
                                 list.sortedBy { it.repository.lowercase() }
                             } else {
                                 list.sortedByDescending { it.repository.lowercase() }
                             }
-                        ImageSortColumn.TAG ->
+                        }
+
+                        ImageSortColumn.TAG -> {
                             if (ascending) {
                                 list.sortedBy { it.tag.lowercase() }
                             } else {
                                 list.sortedByDescending { it.tag.lowercase() }
                             }
-                        ImageSortColumn.IMAGE_ID ->
+                        }
+
+                        ImageSortColumn.IMAGE_ID -> {
                             if (ascending) {
                                 list.sortedBy { it.shortId.lowercase() }
                             } else {
                                 list.sortedByDescending { it.shortId.lowercase() }
                             }
-                        ImageSortColumn.SIZE ->
+                        }
+
+                        ImageSortColumn.SIZE -> {
                             if (ascending) {
                                 list.sortedBy { it.size }
                             } else {
                                 list.sortedByDescending { it.size }
                             }
+                        }
                     }
                 }
         }
@@ -589,11 +596,17 @@ private fun ImageRow(
                     .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
                     .background(
                         when {
-                            isChecked ->
+                            isChecked -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                            isSelected ->
+                            }
+
+                            isSelected -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
-                            else -> MaterialTheme.colorScheme.surface
+                            }
+
+                            else -> {
+                                MaterialTheme.colorScheme.surface
+                            }
                         },
                     ).hoverHighlight()
                     .clickable(onClick = onClick)

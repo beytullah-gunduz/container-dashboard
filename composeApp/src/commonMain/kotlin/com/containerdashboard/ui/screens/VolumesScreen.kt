@@ -156,24 +156,29 @@ fun VolumesScreen(
                 }.let { list ->
                     val ascending = sortDirection == SortDirection.ASC
                     when (sortColumn) {
-                        VolumeSortColumn.NAME ->
+                        VolumeSortColumn.NAME -> {
                             if (ascending) {
                                 list.sortedBy { it.name.lowercase() }
                             } else {
                                 list.sortedByDescending { it.name.lowercase() }
                             }
-                        VolumeSortColumn.DRIVER ->
+                        }
+
+                        VolumeSortColumn.DRIVER -> {
                             if (ascending) {
                                 list.sortedBy { it.driver.lowercase() }
                             } else {
                                 list.sortedByDescending { it.driver.lowercase() }
                             }
-                        VolumeSortColumn.MOUNTPOINT ->
+                        }
+
+                        VolumeSortColumn.MOUNTPOINT -> {
                             if (ascending) {
                                 list.sortedBy { it.mountpoint.lowercase() }
                             } else {
                                 list.sortedByDescending { it.mountpoint.lowercase() }
                             }
+                        }
                     }
                 }
         }
@@ -662,11 +667,17 @@ private fun VolumeRow(
                     .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
                     .background(
                         when {
-                            isChecked ->
+                            isChecked -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                            isSelected ->
+                            }
+
+                            isSelected -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
-                            else -> MaterialTheme.colorScheme.surface
+                            }
+
+                            else -> {
+                                MaterialTheme.colorScheme.surface
+                            }
                         },
                     ).hoverHighlight()
                     .clickable(onClick = onClick)

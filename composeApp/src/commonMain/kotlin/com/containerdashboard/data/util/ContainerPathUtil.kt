@@ -23,8 +23,12 @@ fun normalizePath(
     val segments = ArrayDeque<String>()
     for (seg in raw.split('/')) {
         when (seg) {
-            "", "." -> Unit // skip empties (collapses //) and "."
-            ".." -> if (segments.isNotEmpty()) segments.removeLast() // pop, clamp at root
+            "", "." -> Unit
+
+            // skip empties (collapses //) and "."
+            ".." -> if (segments.isNotEmpty()) segments.removeLast()
+
+            // pop, clamp at root
             else -> segments.addLast(seg)
         }
     }

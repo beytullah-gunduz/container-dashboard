@@ -93,6 +93,7 @@ fun ContainerContextMenu(
                     leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
                 )
             }
+
             container.isPaused -> {
                 DropdownMenuItem(
                     text = { Text("Resume") },
@@ -103,6 +104,7 @@ fun ContainerContextMenu(
                     leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                 )
             }
+
             else -> {
                 DropdownMenuItem(
                     text = { Text("Start") },

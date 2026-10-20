@@ -777,6 +777,7 @@ internal fun CompactContainerRow(
                                 leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
                             )
                         }
+
                         container.isPaused -> {
                             DropdownMenuItem(
                                 text = { Text("Resume") },
@@ -787,6 +788,7 @@ internal fun CompactContainerRow(
                                 leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
                             )
                         }
+
                         else -> {
                             DropdownMenuItem(
                                 text = { Text("Start") },
@@ -1127,6 +1129,7 @@ internal fun ExpandedContainerRow(
                                 )
                             }
                         }
+
                         container.isPaused -> {
                             IconButton(
                                 onClick = {
@@ -1143,6 +1146,7 @@ internal fun ExpandedContainerRow(
                                 )
                             }
                         }
+
                         else -> {
                             IconButton(
                                 onClick = {

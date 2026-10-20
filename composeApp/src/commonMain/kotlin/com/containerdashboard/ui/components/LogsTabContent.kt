@@ -101,6 +101,7 @@ internal fun LogsTabContent(
                     )
                 }
             }
+
             state.error != null -> {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(Spacing.xl),
@@ -116,6 +117,7 @@ internal fun LogsTabContent(
                     Button(onClick = onRefresh) { Text("Retry") }
                 }
             }
+
             state.logs.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -125,6 +127,7 @@ internal fun LogsTabContent(
                     )
                 }
             }
+
             else -> {
                 val filterText by LogsFilterState.filterText.collectAsState()
                 val selectedService by LogsFilterState.selectedService.collectAsState()

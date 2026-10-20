@@ -172,6 +172,7 @@ fun SettingsScreen(
                         Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
                     }
                 }
+
                 is ConnectionTestState.Success -> {
                     Text(
                         text = state.message,
@@ -180,6 +181,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(bottom = Spacing.sm),
                     )
                 }
+
                 is ConnectionTestState.Error -> {
                     Text(
                         text = state.message,
@@ -188,6 +190,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(bottom = Spacing.sm),
                     )
                 }
+
                 ConnectionTestState.Idle -> {}
             }
 
@@ -380,6 +383,7 @@ fun SettingsScreen(
                             Text(state.message, style = MaterialTheme.typography.bodySmall)
                         }
                     }
+
                     is ActionState.Success -> {
                         Text(
                             text = state.message,
@@ -387,6 +391,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
+
                     is ActionState.Error -> {
                         Text(
                             text = state.message,
@@ -394,7 +399,8 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
-                    ActionState.Idle -> Unit
+
+                    ActionState.Idle -> {}
                 }
             }
 
@@ -552,18 +558,31 @@ private fun EngineManagementSection(
             ) {
                 val statusColor =
                     when (actionStatus) {
-                        is EngineActionStatus.Running -> MaterialTheme.colorScheme.tertiary
-                        is EngineActionStatus.Done ->
+                        is EngineActionStatus.Running -> {
+                            MaterialTheme.colorScheme.tertiary
+                        }
+
+                        is EngineActionStatus.Done -> {
                             if (actionStatus.success) AppColors.Running else AppColors.Stopped
-                        else ->
+                        }
+
+                        else -> {
                             if (colimaConfig != null) AppColors.Running else AppColors.Stopped
+                        }
                     }
                 val statusText =
                     when (actionStatus) {
-                        is EngineActionStatus.Running -> actionStatus.message
-                        is EngineActionStatus.Done -> actionStatus.message
-                        else ->
+                        is EngineActionStatus.Running -> {
+                            actionStatus.message
+                        }
+
+                        is EngineActionStatus.Done -> {
+                            actionStatus.message
+                        }
+
+                        else -> {
                             if (colimaConfig != null || !isColima) "Running" else "Stopped"
+                        }
                     }
                 androidx.compose.material3.Surface(
                     modifier = Modifier.size(8.dp),

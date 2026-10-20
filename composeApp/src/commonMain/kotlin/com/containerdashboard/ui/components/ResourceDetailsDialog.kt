@@ -163,29 +163,33 @@ private class ResourceDetailsViewModel(
         viewModelScope.launch {
             val next =
                 when (val t = target) {
-                    is DetailsTarget.ContainerTarget ->
+                    is DetailsTarget.ContainerTarget -> {
                         repo.inspectContainer(t.id).fold(
                             onSuccess = { DetailsState.ContainerLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect container") },
                         )
+                    }
 
-                    is DetailsTarget.ImageTarget ->
+                    is DetailsTarget.ImageTarget -> {
                         repo.inspectImage(t.id).fold(
                             onSuccess = { DetailsState.ImageLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect image") },
                         )
+                    }
 
-                    is DetailsTarget.NetworkTarget ->
+                    is DetailsTarget.NetworkTarget -> {
                         repo.inspectNetwork(t.id).fold(
                             onSuccess = { DetailsState.NetworkLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect network") },
                         )
+                    }
 
-                    is DetailsTarget.VolumeTarget ->
+                    is DetailsTarget.VolumeTarget -> {
                         repo.inspectVolume(t.name).fold(
                             onSuccess = { DetailsState.VolumeLoaded(it) },
                             onFailure = { DetailsState.Error(it.message ?: "Failed to inspect volume") },
                         )
+                    }
                 }
             _state.value = next
         }
@@ -244,13 +248,29 @@ fun ResourceDetailsDialog(
                 )
 
                 when (val s = state) {
-                    is DetailsState.Loading -> LoadingState()
-                    is DetailsState.Error ->
+                    is DetailsState.Loading -> {
+                        LoadingState()
+                    }
+
+                    is DetailsState.Error -> {
                         ErrorState(message = s.message, onRetry = { vm.load() })
-                    is DetailsState.ContainerLoaded -> ContainerTabs(s.inspect)
-                    is DetailsState.ImageLoaded -> ImageTabs(s.inspect)
-                    is DetailsState.NetworkLoaded -> NetworkTabs(s.inspect)
-                    is DetailsState.VolumeLoaded -> VolumeTabs(s.inspect)
+                    }
+
+                    is DetailsState.ContainerLoaded -> {
+                        ContainerTabs(s.inspect)
+                    }
+
+                    is DetailsState.ImageLoaded -> {
+                        ImageTabs(s.inspect)
+                    }
+
+                    is DetailsState.NetworkLoaded -> {
+                        NetworkTabs(s.inspect)
+                    }
+
+                    is DetailsState.VolumeLoaded -> {
+                        VolumeTabs(s.inspect)
+                    }
                 }
             }
         }
@@ -286,14 +306,17 @@ private fun DetailsHeader(
             icon = Res.drawable.inventory_2
             subtitle = "Container details"
         }
+
         is DetailsTarget.ImageTarget -> {
             icon = Res.drawable.image
             subtitle = "Image details"
         }
+
         is DetailsTarget.NetworkTarget -> {
             icon = Res.drawable.hub
             subtitle = "Network details"
         }
+
         is DetailsTarget.VolumeTarget -> {
             icon = Res.drawable.folder
             subtitle = "Volume details"

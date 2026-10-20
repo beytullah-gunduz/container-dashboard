@@ -53,34 +53,63 @@ fun AppShortcutScope(
                             onOpenPalette()
                             true
                         }
+
                         mod && ev.key == Key.F -> {
                             onFocusSearch()
                             true
                         }
+
                         mod && ev.key == Key.Comma -> {
                             onNavigate(Screen.Settings)
                             true
                         }
+
                         mod && ev.key == Key.Slash -> {
                             onShowCheatsheet()
                             true
                         }
-                        mod && ev.key == Key.One -> nav(onNavigate, 0)
-                        mod && ev.key == Key.Two -> nav(onNavigate, 1)
-                        mod && ev.key == Key.Three -> nav(onNavigate, 2)
-                        mod && ev.key == Key.Four -> nav(onNavigate, 3)
-                        mod && ev.key == Key.Five -> nav(onNavigate, 4)
-                        mod && ev.key == Key.Six -> nav(onNavigate, 5)
-                        mod && ev.key == Key.Seven -> nav(onNavigate, 6)
+
+                        mod && ev.key == Key.One -> {
+                            nav(onNavigate, 0)
+                        }
+
+                        mod && ev.key == Key.Two -> {
+                            nav(onNavigate, 1)
+                        }
+
+                        mod && ev.key == Key.Three -> {
+                            nav(onNavigate, 2)
+                        }
+
+                        mod && ev.key == Key.Four -> {
+                            nav(onNavigate, 3)
+                        }
+
+                        mod && ev.key == Key.Five -> {
+                            nav(onNavigate, 4)
+                        }
+
+                        mod && ev.key == Key.Six -> {
+                            nav(onNavigate, 5)
+                        }
+
+                        mod && ev.key == Key.Seven -> {
+                            nav(onNavigate, 6)
+                        }
+
                         ev.key == Key.Escape -> {
                             onCloseOverlays()
                             true
                         }
+
                         ev.isShiftPressed && ev.key == Key.Slash -> {
                             onShowCheatsheet()
                             true
                         }
-                        else -> false
+
+                        else -> {
+                            false
+                        }
                     }
                 },
     ) { content() }
