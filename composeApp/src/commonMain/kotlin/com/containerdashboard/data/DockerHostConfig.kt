@@ -43,7 +43,15 @@ object DockerHostConfig {
 
     val fallbackUri: String = "unix:///var/run/docker.sock"
 
+    /**
+     * Dev/test override, read before any socket detection. The hotRun tasks point it at the fake
+     * engine (the fakeDockerEngine Gradle task), so a hot-reload session never reaches the
+     * developer's real engine and its containers.
+     */
+    const val HOST_PROPERTY = "containerdashboard.dockerHost"
+
     fun detectDockerHost(): String {
+        System.getProperty(HOST_PROPERTY)?.takeIf { it.isNotBlank() }?.let { return it }
         val socket = presets.firstOrNull { File(it.socketPath).exists() }
         return socket?.uri ?: fallbackUri
     }

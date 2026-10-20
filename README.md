@@ -154,6 +154,25 @@ The `DockerRepository` interface in `data/repository/` defines all container ope
 2. Connect to the API via Unix socket or TCP
 3. Replace `MockDockerRepository` with your implementation
 
+### Hot reload against a fake engine
+
+`hotRunDesktopAsync` runs the app under Compose Hot Reload, and `hotMcpServerDesktop` serves an MCP
+server that an agent (or any MCP client) can use to read the UI's semantic tree, click, type and
+take screenshots. A hot run is isolated from your real setup: it talks to a fake Docker engine with
+made-up containers, and keeps its settings in `composeApp/build/hot-run-data`.
+
+```bash
+./gradlew :composeApp:fakeDockerEngine       # tcp://127.0.0.1:23750 until stopped; logs every request
+./gradlew :composeApp:hotRunDesktopAsync     # from another terminal
+./gradlew :composeApp:hotMcpServerDesktop    # stdio MCP server attached to the running app
+```
+
+`-PfakeEnginePort=<port>` moves the fake engine and the hot run off 23750, `-PhotRunDockerHost=<uri>`
+points a hot run at another engine and `-PhotRunDataDir=<dir>` at another data directory. The fake engine covers listing, inspect, stats, logs, events and exec (the Console
+tab gets a small echoing shell); other endpoints answer 404. Its containers, images, volumes and
+networks are plain Engine API JSON in
+`composeApp/src/desktopTest/resources/com/containerdashboard/fakeengine/fake-data.json`.
+
 ## Releasing
 
 Releases are produced by pushing a semver-prefixed git tag. The tag is the single source of truth for the version — there is no version bookkeeping in source files.

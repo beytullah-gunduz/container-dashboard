@@ -12,6 +12,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.serialization)
+    // Dev only (hotRunDesktop + hotMcpServerDesktop, see the end of this file). Bundled with the
+    // Compose Multiplatform plugin, so no version here.
+    id("org.jetbrains.compose.hot-reload")
 }
 
 kotlin {
@@ -334,5 +337,51 @@ compose.desktop {
             // See the `proguard` entry in gradle/libs.versions.toml for why this is pinned.
             version.set(libs.versions.proguard)
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Hot reload (dev only). `hotRunDesktopAsync` launches the app under Compose Hot Reload and
+// `hotMcpServerDesktop` serves an MCP server that drives it (semantic tree, clicks, screenshots).
+// A hot run never reaches the developer's real engine or settings: it talks to the fake engine
+// (start `fakeDockerEngine` first, it runs until stopped) and keeps its settings in
+// build/hot-run-data. -PfakeEnginePort=<port> moves both off 23750, -PhotRunDockerHost=<uri> points
+// a hot run at another engine, -PhotRunDataDir=<dir> at another data directory. System properties
+// rather than environment variables, because they ride the argfile that the async launcher hands
+// to the app.
+// ---------------------------------------------------------------------------
+val fakeEnginePort: String = providers.gradleProperty("fakeEnginePort").getOrElse("23750")
+
+// The fake engine lives in the desktopTest source set, so it never ships in the app.
+tasks.register<JavaExec>("fakeDockerEngine") {
+    group = "development"
+    description = "Serves a fake Docker Engine API on 127.0.0.1 for hot runs (-PfakeEnginePort=<port>)."
+    val testCompilation =
+        kotlin.targets
+            .getByName("desktop")
+            .compilations
+            .getByName("test")
+    dependsOn(testCompilation.compileTaskProvider)
+    classpath(testCompilation.output.allOutputs, testCompilation.runtimeDependencyFiles)
+    mainClass.set("com.containerdashboard.fakeengine.FakeDockerEngineKt")
+    args("--port", fakeEnginePort)
+}
+
+val hotRunDockerHost: String = providers.gradleProperty("hotRunDockerHost").getOrElse("tcp://127.0.0.1:$fakeEnginePort")
+val hotRunDataDir: File =
+    providers
+        .gradleProperty("hotRunDataDir")
+        .map { file(it) }
+        .getOrElse(
+            layout.buildDirectory
+                .dir("hot-run-data")
+                .get()
+                .asFile,
+        )
+
+tasks.matching { it.name.startsWith("hotRun") }.configureEach {
+    if (this is JavaExec) {
+        systemProperty("containerdashboard.dockerHost", hotRunDockerHost)
+        systemProperty("containerdashboard.dataDir", hotRunDataDir.absolutePath)
     }
 }
