@@ -171,7 +171,9 @@ made-up containers, and keeps its settings in `composeApp/build/hot-run-data`.
 points a hot run at another engine and `-PhotRunDataDir=<dir>` at another data directory. The fake engine covers listing, inspect, stats, logs, events and exec (the Console
 tab gets a small echoing shell); other endpoints answer 404. Its containers, images, volumes and
 networks are plain Engine API JSON in
-`composeApp/src/desktopTest/resources/com/containerdashboard/fakeengine/fake-data.json`.
+`composeApp/src/desktopTest/resources/com/containerdashboard/fakeengine/fake-data.json`;
+`-PfakeEngineData=<file>` serves another file in that format, e.g. a second engine on another port
+to switch hosts to in Settings.
 
 ## Releasing
 

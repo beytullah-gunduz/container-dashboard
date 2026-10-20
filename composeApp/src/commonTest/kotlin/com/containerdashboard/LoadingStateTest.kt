@@ -2,6 +2,9 @@ package com.containerdashboard
 
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.DockerImage
+import com.containerdashboard.data.models.DockerNetwork
+import com.containerdashboard.data.models.DockerVersion
+import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
@@ -77,7 +80,7 @@ class LoadingStateTest {
         runTest {
             val source = MutableSharedFlow<List<Container>>(replay = 1)
             val fake = FakeDockerRepository(containersFlowOverride = source)
-            val vm = DashboardScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+            val vm = DashboardScreenViewModel(repoFlow = MutableStateFlow(fake))
 
             assertEquals(false, vm.hasLoaded.value)
 
@@ -104,7 +107,7 @@ class LoadingStateTest {
                     containersFlowOverride = containersSource,
                     imagesFlowOverride = imagesSource,
                 )
-            val vm = DashboardScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+            val vm = DashboardScreenViewModel(repoFlow = MutableStateFlow(fake))
 
             val jobs =
                 listOf(
@@ -152,6 +155,52 @@ class LoadingStateTest {
             jobs.forEach { it.cancel() }
         }
 
+    @Test
+    fun `Dashboard cards rebind to the new repository after an engine reconnect`() =
+        runTest {
+            val fake1 =
+                FakeDockerRepository(
+                    containers = listOf(container("old")),
+                    images = listOf(DockerImage(id = "old-image")),
+                    volumes = listOf(Volume(name = "old-volume")),
+                    networks = listOf(DockerNetwork(id = "old-net", name = "old-net")),
+                    dockerVersion = DockerVersion(version = "old-engine"),
+                )
+            val fake2 =
+                FakeDockerRepository(
+                    containers = listOf(container("new")),
+                    images = listOf(DockerImage(id = "new-image")),
+                    volumes = listOf(Volume(name = "new-volume")),
+                    networks = listOf(DockerNetwork(id = "new-net", name = "new-net")),
+                    dockerVersion = DockerVersion(version = "new-engine"),
+                )
+            val repoFlow = MutableStateFlow<DockerRepository>(fake1)
+            val vm = DashboardScreenViewModel(repoFlow = repoFlow)
+
+            val jobs =
+                listOf(
+                    launch { vm.containers.collect {} },
+                    launch { vm.images.collect {} },
+                    launch { vm.volumes.collect {} },
+                    launch { vm.networks.collect {} },
+                    launch { vm.hasLoaded.collect {} },
+                )
+            advanceUntilIdle()
+            assertEquals(listOf("old"), vm.containers.value.map { it.id })
+            assertEquals("old-engine", vm.version.value?.version)
+
+            repoFlow.value = fake2 // AppModule.reconnect() swaps the repository
+            advanceUntilIdle()
+            assertEquals(listOf("new"), vm.containers.value.map { it.id }, "containers card must come from the new repository")
+            assertEquals(listOf("new-image"), vm.images.value.map { it.id })
+            assertEquals(listOf("new-volume"), vm.volumes.value.map { it.name })
+            assertEquals(listOf("new-net"), vm.networks.value.map { it.id })
+            assertEquals("new-engine", vm.version.value?.version, "version card must come from the new repository")
+            assertEquals(true, vm.hasLoaded.value, "hasLoaded stays true across a reconnect — no skeleton flash")
+
+            jobs.forEach { it.cancel() }
+        }
+
     // -------------------------------------------------------------------------
     // connectionState
     // -------------------------------------------------------------------------
@@ -189,7 +238,7 @@ class LoadingStateTest {
         runTest {
             val availability = MutableSharedFlow<Boolean>(replay = 1)
             val fake = FakeDockerRepository(availabilityFlowOverride = availability)
-            val vm = DashboardScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+            val vm = DashboardScreenViewModel(repoFlow = MutableStateFlow(fake))
 
             assertEquals(EngineConnectionState.CHECKING, vm.connectionState.value)
 

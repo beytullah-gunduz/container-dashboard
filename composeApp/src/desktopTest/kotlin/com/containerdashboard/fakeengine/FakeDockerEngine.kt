@@ -48,7 +48,14 @@ fun main(args: Array<String>) {
             .takeIf { it >= 0 }
             ?.let { args.getOrNull(it + 1)?.toIntOrNull() }
             ?: DEFAULT_FAKE_ENGINE_PORT
-    val engine = FakeDockerEngine(port)
+    // --data <file>: serve another fake-data.json, e.g. a second engine to switch hosts to.
+    val dataJson =
+        args
+            .indexOf("--data")
+            .takeIf { it >= 0 }
+            ?.let { args.getOrNull(it + 1) }
+            ?.let { java.io.File(it).readText() }
+    val engine = FakeDockerEngine(port, dataJson = dataJson)
     engine.start(daemon = false)
     println("fake docker engine listening on tcp://127.0.0.1:${engine.port}")
 }
@@ -72,6 +79,8 @@ fun main(args: Array<String>) {
  */
 class FakeDockerEngine(
     port: Int = DEFAULT_FAKE_ENGINE_PORT,
+    /** Content in the format of `fake-data.json`; null serves that bundled file. */
+    dataJson: String? = null,
     private val log: (String) -> Unit = { println("${LocalTime.now().format(TIME_FORMAT)} $it") },
 ) : AutoCloseable {
     private val server =
@@ -82,7 +91,7 @@ class FakeDockerEngine(
 
     val port: Int get() = server.localPort
 
-    private val data = FakeData.load()
+    private val data = dataJson?.let { FakeData.parse(it) } ?: FakeData.load()
     private val execs = ConcurrentHashMap<String, FakeExec>()
     private val execCounter = AtomicInteger()
 
@@ -652,8 +661,10 @@ private class FakeData(
             val text =
                 FakeDockerEngine::class.java.getResource("fake-data.json")?.readText()
                     ?: error("fake-data.json is missing from the test resources")
-            return FakeData(Json.parseToJsonElement(text).jsonObject)
+            return parse(text)
         }
+
+        fun parse(text: String): FakeData = FakeData(Json.parseToJsonElement(text).jsonObject)
     }
 }
 

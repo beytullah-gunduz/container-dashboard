@@ -373,7 +373,7 @@ val fakeEnginePort: String = providers.gradleProperty("fakeEnginePort").getOrEls
 // The fake engine lives in the desktopTest source set, so it never ships in the app.
 tasks.register<JavaExec>("fakeDockerEngine") {
     group = "development"
-    description = "Serves a fake Docker Engine API on 127.0.0.1 for hot runs (-PfakeEnginePort=<port>)."
+    description = "Serves a fake Docker Engine API on 127.0.0.1 for hot runs (-PfakeEnginePort=<port>, -PfakeEngineData=<file>)."
     val testCompilation =
         kotlin.targets
             .getByName("desktop")
@@ -383,6 +383,8 @@ tasks.register<JavaExec>("fakeDockerEngine") {
     classpath(testCompilation.output.allOutputs, testCompilation.runtimeDependencyFiles)
     mainClass.set("com.containerdashboard.fakeengine.FakeDockerEngineKt")
     args("--port", fakeEnginePort)
+    // -PfakeEngineData=<file>: serve another fake-data.json (a second engine to switch hosts to)
+    providers.gradleProperty("fakeEngineData").orNull?.let { args("--data", it) }
 }
 
 val hotRunDockerHost: String = providers.gradleProperty("hotRunDockerHost").getOrElse("tcp://127.0.0.1:$fakeEnginePort")

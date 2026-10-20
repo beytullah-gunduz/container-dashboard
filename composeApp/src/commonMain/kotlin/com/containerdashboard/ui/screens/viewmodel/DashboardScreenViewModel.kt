@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -23,11 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DashboardScreenViewModel(
-    private val repoProvider: () -> DockerRepository = { AppModule.dockerRepository },
     private val repoFlow: StateFlow<DockerRepository> = AppModule.dockerRepositoryFlow,
 ) : ViewModel() {
-    private val repo: DockerRepository get() = repoProvider()
-
     private val _systemInfo = MutableStateFlow<SystemInfo?>(null)
     val systemInfo: StateFlow<SystemInfo?> = _systemInfo.asStateFlow()
 
@@ -35,13 +33,22 @@ class DashboardScreenViewModel(
     val version: StateFlow<DockerVersion?> = _version.asStateFlow()
 
     // Each card is fed by an independent repo flow. Both the list StateFlow and its "loaded" flag
-    // derive from the SAME raw flow (captured here once) — the flag must come from the raw flow,
-    // not the seeded list StateFlow, which would replay its emptyList seed and flip the flag true
-    // before the first real fetch (see ContainersScreenViewModel for the full rationale).
-    private val containersFlow: Flow<List<Container>> = repo.getContainers(all = true)
-    private val imagesFlow: Flow<List<DockerImage>> = repo.getImages()
-    private val volumesFlow: Flow<List<Volume>> = repo.getVolumes()
-    private val networksFlow: Flow<List<DockerNetwork>> = repo.getNetworks()
+    // derive from the SAME raw flow — the flag must come from the raw flow, not the seeded list
+    // StateFlow, which would replay its emptyList seed and flip the flag true before the first
+    // real fetch (see ContainersScreenViewModel for the full rationale). Each one re-binds to the
+    // current repository whenever `AppModule.reconnect()` swaps it (engine-host switch); bound
+    // once at construction, the cards kept the previous host's lists after a reconnect.
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val containersFlow: Flow<List<Container>> = repoFlow.flatMapLatest { it.getContainers(all = true) }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val imagesFlow: Flow<List<DockerImage>> = repoFlow.flatMapLatest { it.getImages() }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val volumesFlow: Flow<List<Volume>> = repoFlow.flatMapLatest { it.getVolumes() }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val networksFlow: Flow<List<DockerNetwork>> = repoFlow.flatMapLatest { it.getNetworks() }
 
     val containers: StateFlow<List<Container>> =
         containersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -80,28 +87,34 @@ class DashboardScreenViewModel(
 
     init {
         viewModelScope.launch {
-            loadSystemInfo()
-            // If the daemon was down (or still starting) at VM creation, the one-shot load
-            // above leaves systemInfo/version null forever — unlike the per-card flows, which
-            // self-heal. Retry whenever the engine reports CONNECTED until both have loaded
-            // once, then stop, so this VM doesn't keep the availability probe subscribed for
-            // its whole lifetime.
-            while (_systemInfo.value == null || _version.value == null) {
-                connectionState.first { it == EngineConnectionState.CONNECTED }
-                loadSystemInfo()
-                if (_systemInfo.value == null || _version.value == null) {
-                    // CONNECTED but the calls still failed (e.g. daemon mid-startup):
-                    // back off, since the conflated StateFlow won't re-emit CONNECTED.
-                    delay(2_000)
+            // Once per repository: `AppModule.reconnect()` swaps it on an engine-host switch, and
+            // a single load at VM creation kept showing the previous host's version and system
+            // info. Cleared first, so a host that never answers shows "-" rather than old values.
+            repoFlow.collectLatest { repository ->
+                _systemInfo.value = null
+                _version.value = null
+                loadSystemInfo(repository)
+                // If the daemon was down (or still starting), the load above leaves
+                // systemInfo/version null — unlike the per-card flows, which self-heal. Retry
+                // whenever the engine reports CONNECTED until both have loaded, then stop, so this
+                // VM doesn't keep the availability probe subscribed for its whole lifetime.
+                while (_systemInfo.value == null || _version.value == null) {
+                    connectionState.first { it == EngineConnectionState.CONNECTED }
+                    loadSystemInfo(repository)
+                    if (_systemInfo.value == null || _version.value == null) {
+                        // CONNECTED but the calls still failed (e.g. daemon mid-startup):
+                        // back off, since the conflated StateFlow won't re-emit CONNECTED.
+                        delay(2_000)
+                    }
                 }
             }
         }
     }
 
-    private suspend fun loadSystemInfo() {
+    private suspend fun loadSystemInfo(repository: DockerRepository) {
         try {
-            val sysInfoResult = repo.getSystemInfo()
-            val versionResult = repo.getVersion()
+            val sysInfoResult = repository.getSystemInfo()
+            val versionResult = repository.getVersion()
 
             _systemInfo.value = sysInfoResult.getOrNull()
             _version.value = versionResult.getOrNull()
