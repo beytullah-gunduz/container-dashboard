@@ -22,16 +22,19 @@ import com.github.dockerjava.api.model.EventType
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
@@ -39,14 +42,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
@@ -356,6 +360,59 @@ class DesktopDockerRepository(
     private val volumesRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     private val networksRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
 
+    private val listRefreshFailuresSink =
+        MutableSharedFlow<String>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override fun listRefreshFailures(): Flow<String> = listRefreshFailuresSink.asSharedFlow()
+
+    /** Whether a shared list has loaded once in this repository, and whether its refreshes now fail. */
+    private class ListRefreshState(
+        val what: String,
+    ) {
+        @Volatile var loaded = false
+
+        @Volatile var failing = false
+    }
+
+    private val containersListState = ListRefreshState("container")
+    private val imagesListState = ListRefreshState("image")
+    private val volumesListState = ListRefreshState("volume")
+    private val networksListState = ListRefreshState("network")
+
+    /**
+     * One list call for a shared list flow. Success: the list. A failure before the list ever
+     * loaded: an empty list, as there is nothing to keep. A failure after: null, which the flow
+     * drops so subscribers keep the last list — an empty one reads as "everything was deleted"
+     * and closes the detail pane (review-2026-10 B3) — and the first failure of a streak is
+     * reported on [listRefreshFailures].
+     */
+    private inline fun <T> listOrKeepLast(
+        state: ListRefreshState,
+        list: () -> List<T>,
+    ): List<T>? =
+        try {
+            list().also {
+                state.loaded = true
+                state.failing = false
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.warn("Failed to list {}s: {}", state.what, e.message)
+            if (!state.loaded) {
+                emptyList()
+            } else {
+                if (!state.failing) {
+                    state.failing = true
+                    listRefreshFailuresSink.tryEmit(
+                        "Couldn't refresh the ${state.what} list (${e.message ?: e::class.simpleName}); " +
+                            "showing the last one received.",
+                    )
+                }
+                null
+            }
+        }
+
     override suspend fun refreshContainers() {
         containerRefreshTrigger.emit(Unit)
     }
@@ -372,6 +429,15 @@ class DesktopDockerRepository(
         networksRefreshTrigger.emit(Unit)
     }
 
+    private fun listContainersNow(): List<Container> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listContainersCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toContainer() }
+        }
+
     // Containers — hot shared flow. One poll timer + one list call per 15 s,
     // supplemented by dockerEvents-driven refreshes. Replay-1 so new subscribers
     // see the latest list immediately.
@@ -385,38 +451,16 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listContainersCmd()
-                        .withShowAll(true)
-                        .exec()
-                        .map { it.toContainer() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list containers: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listContainersCmd()
-                            .withShowAll(true)
-                            .exec()
-                            .map { it.toContainer() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list containers on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Container flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(containersListState) { listContainersNow() } }
+            .onStart {
+                // A fresh subscription may report a failure again.
+                containersListState.failing = false
+                emit(listOrKeepLast(containersListState) { listContainersNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Container flow error", e)
+                if (!containersListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -724,7 +768,6 @@ class DesktopDockerRepository(
         return if (text.endsWith("\n")) pieces.dropLast(1) else pieces
     }
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followContainerLogs(
         id: String,
         tail: Int,
@@ -780,9 +823,14 @@ class DesktopDockerRepository(
                 } catch (_: Exception) {
                 }
             }
-        }.conflate().sample(100).flowOn(Dispatchers.IO)
+        }.conflate()
+            // At most ~10 snapshots a second, but the last one always arrives: sample() dropped a
+            // snapshot that came after its last tick when the stream ended (review-2026-10 B2).
+            .transform { snapshot ->
+                emit(snapshot)
+                delay(100)
+            }.flowOn(Dispatchers.IO)
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int,
@@ -853,7 +901,12 @@ class DesktopDockerRepository(
                     }
                 }
             }
-        }.conflate().sample(100).flowOn(Dispatchers.IO)
+        }.conflate()
+            // See followContainerLogs.
+            .transform { snapshot ->
+                emit(snapshot)
+                delay(100)
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun startContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
@@ -930,6 +983,15 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listImagesNow(): List<DockerImage> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listImagesCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toDockerImage() }
+        }
+
     // Images — hot shared flow (shared across DashboardScreenViewModel + ImagesScreenViewModel).
     private val imagesShared: SharedFlow<List<DockerImage>> by lazy {
         merge(
@@ -941,38 +1003,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listImagesCmd()
-                        .withShowAll(true)
-                        .exec()
-                        .map { it.toDockerImage() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list images: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listImagesCmd()
-                            .withShowAll(true)
-                            .exec()
-                            .map { it.toDockerImage() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list images on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Image flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(imagesListState) { listImagesNow() } }
+            .onStart {
+                imagesListState.failing = false
+                emit(listOrKeepLast(imagesListState) { listImagesNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Image flow error", e)
+                if (!imagesListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -1039,6 +1078,24 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listVolumesNow(): List<Volume> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listVolumesCmd()
+                .exec()
+                .volumes
+                ?.map { volume ->
+                    Volume(
+                        name = volume.name ?: "",
+                        driver = volume.driver ?: "local",
+                        mountpoint = volume.mountpoint ?: "",
+                        scope = "local",
+                        labels = volume.labels,
+                    )
+                }
+                ?: emptyList()
+        }
+
     // Volumes — hot shared flow.
     private val volumesShared: SharedFlow<List<Volume>> by lazy {
         merge(
@@ -1050,56 +1107,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listVolumesCmd()
-                        .exec()
-                        .volumes
-                        ?.map { volume ->
-                            Volume(
-                                name = volume.name ?: "",
-                                driver = volume.driver ?: "local",
-                                mountpoint = volume.mountpoint ?: "",
-                                scope = "local",
-                                labels = volume.labels,
-                            )
-                        }
-                        ?: emptyList()
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list volumes: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listVolumesCmd()
-                            .exec()
-                            .volumes
-                            ?.map { volume ->
-                                Volume(
-                                    name = volume.name ?: "",
-                                    driver = volume.driver ?: "local",
-                                    mountpoint = volume.mountpoint ?: "",
-                                    scope = "local",
-                                    labels = volume.labels,
-                                )
-                            }
-                            ?: emptyList()
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list volumes on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Volume flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(volumesListState) { listVolumesNow() } }
+            .onStart {
+                volumesListState.failing = false
+                emit(listOrKeepLast(volumesListState) { listVolumesNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Volume flow error", e)
+                if (!volumesListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -1161,6 +1177,14 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listNetworksNow(): List<DockerNetwork> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listNetworksCmd()
+                .exec()
+                .map { it.toDockerNetwork() }
+        }
+
     // Networks — hot shared flow.
     private val networksShared: SharedFlow<List<DockerNetwork>> by lazy {
         merge(
@@ -1172,36 +1196,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listNetworksCmd()
-                        .exec()
-                        .map { it.toDockerNetwork() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list networks: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listNetworksCmd()
-                            .exec()
-                            .map { it.toDockerNetwork() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list networks on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Network flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(networksListState) { listNetworksNow() } }
+            .onStart {
+                networksListState.failing = false
+                emit(listOrKeepLast(networksListState) { listNetworksNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Network flow error", e)
+                if (!networksListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 

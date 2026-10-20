@@ -4,6 +4,7 @@ import com.containerdashboard.data.models.Container
 import com.containerdashboard.ui.screens.viewmodel.AppViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -107,6 +109,25 @@ class AppViewModelErrorTest {
             advanceUntilIdle()
 
             assertNotNull(vm.error.value, "error should be non-null after a failed remove")
+        }
+
+    // -------------------------------------------------------------------------
+    // A list refresh failure reported by the repository → error StateFlow
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `a list refresh failure reaches the app error`() =
+        runTest {
+            val failures = MutableSharedFlow<String>(extraBufferCapacity = 1)
+            val fake = FakeDockerRepository(listRefreshFailuresFlowOverride = failures)
+            val vm = makeVmWithFake(fake)
+            advanceUntilIdle()
+
+            val message = "Couldn't refresh the container list (x); showing the last one received."
+            failures.tryEmit(message)
+            advanceUntilIdle()
+
+            assertEquals(message, vm.error.value)
         }
 
     // -------------------------------------------------------------------------

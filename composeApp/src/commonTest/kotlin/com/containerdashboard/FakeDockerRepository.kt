@@ -16,6 +16,7 @@ import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PruneResult
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.yield
 
@@ -70,6 +71,7 @@ class FakeDockerRepository(
     var availabilityFlowOverride: Flow<Boolean>? = null,
     var containerStatsFlowOverride: Flow<List<ContainerStats>>? = null,
     var imagesFlowOverride: Flow<List<DockerImage>>? = null,
+    var listRefreshFailuresFlowOverride: Flow<String>? = null,
 ) : DockerRepository {
     // --- Recorded interactions (for behavioral assertions) ---
 
@@ -111,6 +113,8 @@ class FakeDockerRepository(
     override suspend fun refreshVolumes() = Unit
 
     override suspend fun refreshNetworks() = Unit
+
+    override fun listRefreshFailures(): Flow<String> = listRefreshFailuresFlowOverride ?: emptyFlow()
 
     override suspend fun getContainer(id: String): Result<Container> =
         containers

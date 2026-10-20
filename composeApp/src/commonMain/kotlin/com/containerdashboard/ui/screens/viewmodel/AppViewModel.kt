@@ -20,6 +20,7 @@ import com.containerdashboard.ui.theme.ThemeMode
 import com.containerdashboard.ui.util.formatBytes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -127,6 +128,15 @@ class AppViewModel(
 
     fun clearError() {
         _error.value = null
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val listRefreshFailures: Flow<String> = repoFlow.flatMapLatest { it.listRefreshFailures() }
+
+    init {
+        // A list refresh that failed after the list had loaded keeps the last list on screen;
+        // say so, once per failure streak (review-2026-10 B3).
+        viewModelScope.launch { listRefreshFailures.collect { _error.value = it } }
     }
 
     val logsPaneLayout: StateFlow<LogsPaneLayout> =
