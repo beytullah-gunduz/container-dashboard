@@ -4,9 +4,9 @@ A container management dashboard built with **Jetpack Compose Multiplatform**. T
 
 The app have been done using Claude Opus 4.5 and 4.6.
 
-![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue)
-![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.11.0--beta01-green)
-![Gradle](https://img.shields.io/badge/Gradle-8.14.4-orange)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.4.21-blue)
+![Compose](https://img.shields.io/badge/Compose%20Multiplatform-1.12.2-green)
+![Gradle](https://img.shields.io/badge/Gradle-9.7.1-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## Features
@@ -70,7 +70,7 @@ composeApp/
 ### Prerequisites
 
 - JDK 17 or higher
-- Gradle 8.14 or higher (included via wrapper)
+- Gradle 9.7.1 (included via wrapper)
 - Container engine installed and running (for full functionality)
 
 ### Build & Run

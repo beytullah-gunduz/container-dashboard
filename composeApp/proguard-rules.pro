@@ -57,12 +57,26 @@
 -dontwarn com.google.apphosting.**
 -dontwarn com.google.j2objc.annotations.**
 
+# Guava 33.x (pulled in by docker-java since 3.5) calls the signature-polymorphic
+# VarHandle / MethodHandle methods (compareAndSet, getAndSet, get, set,
+# invokeExact) with call-site descriptors. The JVM links those at run time, but
+# ProGuard looks for a declared method with that exact descriptor and reports it
+# missing. Scoped to the referencing classes so that a genuinely missing Guava
+# dependency still fails the build.
+-dontwarn com.google.common.util.concurrent.AbstractFutureState$VarHandleAtomicHelper
+-dontwarn com.google.common.hash.ChecksumHashFunction$ChecksumMethodHandles
+-dontwarn com.google.common.hash.Hashing$Crc32cMethodHandles
+-dontwarn com.google.common.hash.LittleEndianByteArray$VarHandleLittleEndianBytes$1
+
 # ---------------------------------------------------------------------------
 # Nullability / static-analysis annotations (JSR305, FindBugs, Immutables)
 # ---------------------------------------------------------------------------
 -dontwarn javax.annotation.**
 -dontwarn edu.umd.cs.findbugs.annotations.**
 -dontwarn org.immutables.value.**
+# docker-java 3.7's model classes carry Lombok's @lombok.Generated; Lombok is a
+# compile-only dependency upstream and is not on our classpath.
+-dontwarn lombok.Generated
 
 # ---------------------------------------------------------------------------
 # Ktor optional blocking-IO bridge + internal atomicfu-generated mismatches
@@ -77,6 +91,11 @@
 -dontwarn jakarta.servlet.**
 -dontwarn org.codehaus.commons.compiler.**
 -dontwarn org.codehaus.janino.**
+
+# logback 1.6 adds ch.qos.logback.core.JansiConsoleAppender, backed by the
+# optional org.jline:jansi-core library, which we don't ship (Main.kt configures
+# a plain ConsoleAppender). Scoped to the one referencing class.
+-dontwarn ch.qos.logback.core.JansiConsoleAppender
 
 # ---------------------------------------------------------------------------
 # JNA — heavy reflection, keep everything

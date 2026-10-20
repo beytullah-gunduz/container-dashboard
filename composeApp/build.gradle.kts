@@ -29,7 +29,7 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        getByName("commonMain") {
             dependencies {
 
                 // Android DataStore
@@ -49,20 +49,17 @@ kotlin {
 
                 // Serialization
                 implementation(libs.kotlinx.serialization.json)
-
-                // DateTime
-                implementation(libs.kotlinx.datetime)
             }
         }
 
-        val commonTest by getting {
+        getByName("commonTest") {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
 
-        val desktopMain by getting {
+        getByName("desktopMain") {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
@@ -101,31 +98,32 @@ val appVersion: String =
 // ---------------------------------------------------------------------------
 val generatedBuildConfigDir = layout.buildDirectory.dir("generated/buildconfig/commonMain/kotlin")
 
-val generateBuildConfig by tasks.registering {
-    val outDir = generatedBuildConfigDir
-    val version = appVersion
-    inputs.property("version", version)
-    outputs.dir(outDir)
-    doLast {
-        val pkgDir =
-            outDir
-                .get()
-                .asFile
-                .resolve("com/containerdashboard")
-                .apply { mkdirs() }
-        pkgDir.resolve("BuildConfig.kt").writeText(
-            """
-            package com.containerdashboard
+val generateBuildConfig =
+    tasks.register("generateBuildConfig") {
+        val outDir = generatedBuildConfigDir
+        val version = appVersion
+        inputs.property("version", version)
+        outputs.dir(outDir)
+        doLast {
+            val pkgDir =
+                outDir
+                    .get()
+                    .asFile
+                    .resolve("com/containerdashboard")
+                    .apply { mkdirs() }
+            pkgDir.resolve("BuildConfig.kt").writeText(
+                """
+                package com.containerdashboard
 
-            /** Generated at build time from `app.version` in `gradle.properties`. */
-            internal object BuildConfig {
-                const val VERSION: String = "$version"
-            }
+                /** Generated at build time from `app.version` in `gradle.properties`. */
+                internal object BuildConfig {
+                    const val VERSION: String = "$version"
+                }
 
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
+        }
     }
-}
 
 kotlin {
     sourceSets {
@@ -149,38 +147,39 @@ kotlin {
 val generatedIconsDir = layout.buildDirectory.dir("generated-icons")
 val generatedIcnsFile = generatedIconsDir.map { it.file("container-dashboard.icns") }
 
-val generateMacIcon by tasks.registering {
-    onlyIf { OperatingSystem.current().isMacOsX }
-    val outDir = generatedIconsDir
-    outputs.dir(outDir)
-    doLast {
-        val iconsetDir = outDir.get().asFile.resolve("container-dashboard.iconset")
-        iconsetDir.deleteRecursively()
-        iconsetDir.mkdirs()
+val generateMacIcon =
+    tasks.register("generateMacIcon") {
+        onlyIf { OperatingSystem.current().isMacOsX }
+        val outDir = generatedIconsDir
+        outputs.dir(outDir)
+        doLast {
+            val iconsetDir = outDir.get().asFile.resolve("container-dashboard.iconset")
+            iconsetDir.deleteRecursively()
+            iconsetDir.mkdirs()
 
-        val sizes = listOf(16, 32, 128, 256, 512)
-        for (size in sizes) {
-            ImageIO.write(renderContainerIcon(size), "png", iconsetDir.resolve("icon_${size}x$size.png"))
-            ImageIO.write(renderContainerIcon(size * 2), "png", iconsetDir.resolve("icon_${size}x$size@2x.png"))
-        }
+            val sizes = listOf(16, 32, 128, 256, 512)
+            for (size in sizes) {
+                ImageIO.write(renderContainerIcon(size), "png", iconsetDir.resolve("icon_${size}x$size.png"))
+                ImageIO.write(renderContainerIcon(size * 2), "png", iconsetDir.resolve("icon_${size}x$size@2x.png"))
+            }
 
-        val icns = outDir.get().asFile.resolve("container-dashboard.icns")
-        val proc =
-            ProcessBuilder(
-                "iconutil",
-                "-c",
-                "icns",
-                "-o",
-                icns.absolutePath,
-                iconsetDir.absolutePath,
-            ).redirectErrorStream(true).start()
-        val output = proc.inputStream.bufferedReader().readText()
-        val exitCode = proc.waitFor()
-        if (exitCode != 0) {
-            throw GradleException("iconutil failed (exit $exitCode): $output")
+            val icns = outDir.get().asFile.resolve("container-dashboard.icns")
+            val proc =
+                ProcessBuilder(
+                    "iconutil",
+                    "-c",
+                    "icns",
+                    "-o",
+                    icns.absolutePath,
+                    iconsetDir.absolutePath,
+                ).redirectErrorStream(true).start()
+            val output = proc.inputStream.bufferedReader().readText()
+            val exitCode = proc.waitFor()
+            if (exitCode != 0) {
+                throw GradleException("iconutil failed (exit $exitCode): $output")
+            }
         }
     }
-}
 
 fun renderContainerIcon(size: Int): BufferedImage {
     val img = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
@@ -332,6 +331,8 @@ compose.desktop {
 
         buildTypes.release.proguard {
             configurationFiles.from(project.file("proguard-rules.pro"))
+            // See the `proguard` entry in gradle/libs.versions.toml for why this is pinned.
+            version.set(libs.versions.proguard)
         }
     }
 }
