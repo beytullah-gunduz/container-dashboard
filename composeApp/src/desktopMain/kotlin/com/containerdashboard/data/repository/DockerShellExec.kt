@@ -23,12 +23,28 @@ internal fun mapShellError(
             .firstOrNull { it.isNotBlank() }
             .orEmpty()
     return when {
-        "executable file not found" in message || result.exitCode == 126 || result.exitCode == 127 ->
+        "executable file not found" in message || result.exitCode == 126 || result.exitCode == 127 -> {
             IllegalStateException("This container has no shell/coreutils, so its filesystem can't be browsed.")
-        "Permission denied" in message -> SecurityException("Permission denied: $path")
-        "No such file or directory" in message -> java.io.FileNotFoundException(path)
-        "is not running" in message -> IllegalStateException("Container is no longer running.")
-        message.isNotEmpty() -> IllegalStateException(message)
-        else -> IllegalStateException("Command failed (exit ${result.exitCode}) for $path")
+        }
+
+        "Permission denied" in message -> {
+            SecurityException("Permission denied: $path")
+        }
+
+        "No such file or directory" in message -> {
+            java.io.FileNotFoundException(path)
+        }
+
+        "is not running" in message -> {
+            IllegalStateException("Container is no longer running.")
+        }
+
+        message.isNotEmpty() -> {
+            IllegalStateException(message)
+        }
+
+        else -> {
+            IllegalStateException("Command failed (exit ${result.exitCode}) for $path")
+        }
     }
 }

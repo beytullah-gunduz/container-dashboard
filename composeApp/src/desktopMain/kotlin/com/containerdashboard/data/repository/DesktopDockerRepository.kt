@@ -207,7 +207,10 @@ class DesktopDockerRepository(
     /** Cheap "is anything listening" probe — no API call, just socket/file reachability. */
     private fun isHostReachable(): Boolean =
         when {
-            dockerHost.startsWith("unix://") -> File(dockerHost.removePrefix("unix://")).exists()
+            dockerHost.startsWith("unix://") -> {
+                File(dockerHost.removePrefix("unix://")).exists()
+            }
+
             dockerHost.startsWith("tcp://") ||
                 dockerHost.startsWith("http://") ||
                 dockerHost.startsWith("https://") -> {
@@ -224,8 +227,11 @@ class DesktopDockerRepository(
                     false
                 }
             }
+
             // Unknown scheme — assume reachable and let the ping decide.
-            else -> true
+            else -> {
+                true
+            }
         }
 
     /** One-shot daemon ping. Returns `false` (and logs at debug) instead of throwing. */
@@ -252,7 +258,17 @@ class DesktopDockerRepository(
 
                                     override fun onError(throwable: Throwable?) {
                                         logger.warn("Docker event stream error", throwable)
-                                        close()
+                                        // Qualified on purpose: inside this object a bare close() is the
+                                        // callback's own Closeable.close(), which leaves the flow suspended
+                                        // in awaitClose forever, so the loop below never re-subscribes.
+                                        this@callbackFlow.close()
+                                    }
+
+                                    // The engine ended the stream (a daemon restart, a replaced HTTP
+                                    // client): end the flow so the loop re-subscribes. The inherited
+                                    // onComplete only closes the callback.
+                                    override fun onComplete() {
+                                        this@callbackFlow.close()
                                     }
                                 }
                             try {
@@ -548,13 +564,19 @@ class DesktopDockerRepository(
                 val normalized = validateContainerPath(path).getOrElse { return@withContext Result.failure(it) }
                 val result = execCapture(id, listOf("ls", "-la", "--", normalized))
                 when {
-                    result.timedOut ->
+                    result.timedOut -> {
                         Result.failure(IllegalStateException("Listing '$normalized' timed out"))
+                    }
+
                     // BusyBox exits 0; some `ls` exit non-zero on partial permission errors but still
                     // print the readable rows — keep whatever we got.
-                    result.exitCode == 0 || result.stdout.isNotEmpty() ->
+                    result.exitCode == 0 || result.stdout.isNotEmpty() -> {
                         Result.success(parseLsOutput(result.stdout.toString(Charsets.UTF_8), normalized))
-                    else -> Result.failure(mapShellError(result, normalized))
+                    }
+
+                    else -> {
+                        Result.failure(mapShellError(result, normalized))
+                    }
                 }
             } catch (e: Exception) {
                 logger.error("Failed to list directory {} in container {}", path, id, e)
@@ -574,10 +596,14 @@ class DesktopDockerRepository(
                 val result =
                     execCapture(id, listOf("head", "-c", (maxBytes.toLong() + 1).toString(), "--", normalized))
                 when {
-                    result.timedOut ->
+                    result.timedOut -> {
                         Result.failure(IllegalStateException("Reading '$normalized' timed out"))
-                    result.exitCode != 0 && result.stdout.isEmpty() ->
+                    }
+
+                    result.exitCode != 0 && result.stdout.isEmpty() -> {
                         Result.failure(mapShellError(result, normalized))
+                    }
+
                     else -> {
                         val rawBytes = result.stdout
                         val truncated = rawBytes.size > maxBytes
@@ -608,10 +634,17 @@ class DesktopDockerRepository(
                 val normalized = validateContainerPath(path).getOrElse { return@withContext Result.failure(it) }
                 val result = execCapture(id, listOf("cat", "--", normalized), timeoutMillis = 300_000)
                 when {
-                    result.timedOut ->
+                    result.timedOut -> {
                         Result.failure(IllegalStateException("Downloading '$normalized' timed out"))
-                    result.exitCode == 0 || result.stdout.isNotEmpty() -> Result.success(result.stdout)
-                    else -> Result.failure(mapShellError(result, normalized))
+                    }
+
+                    result.exitCode == 0 || result.stdout.isNotEmpty() -> {
+                        Result.success(result.stdout)
+                    }
+
+                    else -> {
+                        Result.failure(mapShellError(result, normalized))
+                    }
                 }
             } catch (e: Exception) {
                 logger.error("Failed to download file {} in container {}", path, id, e)
@@ -717,13 +750,14 @@ class DesktopDockerRepository(
                         }
                     }
 
+                    // this@callbackFlow, not a bare close(): see dockerEvents.
                     override fun onError(throwable: Throwable?) {
                         logger.warn("Log follow stream error for {}: {}", id, throwable?.message)
-                        close()
+                        this@callbackFlow.close()
                     }
 
                     override fun onComplete() {
-                        close()
+                        this@callbackFlow.close()
                     }
                 }
 
@@ -773,12 +807,14 @@ class DesktopDockerRepository(
                                         }
                                     }
 
+                                    // this@callbackFlow, not a bare close(): see dockerEvents. The
+                                    // cause reaches the .catch below, which logs it.
                                     override fun onError(throwable: Throwable?) {
-                                        close()
+                                        this@callbackFlow.close(throwable)
                                     }
 
                                     override fun onComplete() {
-                                        close()
+                                        this@callbackFlow.close()
                                     }
                                 }
                             try {
@@ -1305,8 +1341,9 @@ class DesktopDockerRepository(
                         close(throwable)
                     }
 
+                    // this@callbackFlow, not a bare close(): see dockerEvents.
                     override fun onComplete() {
-                        close()
+                        this@callbackFlow.close()
                     }
                 }
             try {

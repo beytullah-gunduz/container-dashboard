@@ -43,11 +43,15 @@ fun ConfirmActionDialog(
                         onDismiss()
                         true
                     }
+
                     Key.Escape -> {
                         onDismiss()
                         true
                     }
-                    else -> false
+
+                    else -> {
+                        false
+                    }
                 }
             },
         icon =

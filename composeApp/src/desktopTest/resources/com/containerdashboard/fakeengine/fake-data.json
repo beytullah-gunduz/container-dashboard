@@ -1,0 +1,344 @@
+{
+  "version": {
+    "Version": "27.0.0-fake",
+    "ApiVersion": "1.47",
+    "MinAPIVersion": "1.24",
+    "Os": "linux",
+    "Arch": "arm64",
+    "KernelVersion": "6.0.0-fake",
+    "GoVersion": "go1.22",
+    "GitCommit": "fake"
+  },
+  "info": {
+    "ID": "FAKE:ENGINE",
+    "Containers": 2,
+    "ContainersRunning": 1,
+    "ContainersPaused": 0,
+    "ContainersStopped": 1,
+    "Images": 2,
+    "Driver": "overlay2",
+    "OperatingSystem": "Fake Engine",
+    "OSType": "linux",
+    "Architecture": "aarch64",
+    "NCPU": 4,
+    "MemTotal": 8589934592,
+    "Name": "fake-engine",
+    "ServerVersion": "27.0.0-fake",
+    "KernelVersion": "6.0.0-fake"
+  },
+  "containers": [
+    {
+      "summary": {
+        "Id": "f00dcafe0001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Names": [
+          "/demo-web"
+        ],
+        "Image": "demo/web:1.0",
+        "ImageID": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "Command": "nginx -g 'daemon off;'",
+        "Created": 1767222000,
+        "State": "running",
+        "Status": "Up 1 hour",
+        "Ports": [
+          {
+            "IP": "0.0.0.0",
+            "PrivatePort": 80,
+            "PublicPort": 8080,
+            "Type": "tcp"
+          }
+        ],
+        "Labels": {
+          "com.docker.compose.project": "demo",
+          "com.docker.compose.service": "web"
+        },
+        "Mounts": [],
+        "NetworkSettings": {
+          "Networks": {
+            "demo_default": {
+              "IPAddress": "172.30.0.2"
+            }
+          }
+        }
+      },
+      "inspect": {
+        "Id": "f00dcafe0001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "Created": "2026-01-01T00:00:00.000000000Z",
+        "Path": "nginx",
+        "Args": [
+          "-g",
+          "'daemon",
+          "off;'"
+        ],
+        "State": {
+          "Status": "running",
+          "Running": true,
+          "Paused": false,
+          "Restarting": false,
+          "OOMKilled": false,
+          "Dead": false,
+          "Pid": 4242,
+          "ExitCode": 0,
+          "Error": "",
+          "StartedAt": "2026-01-01T00:00:01.000000000Z",
+          "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "Name": "/demo-web",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "Config": {
+          "Hostname": "f00dcafe0001",
+          "Image": "demo/web:1.0",
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "DEMO=1"
+          ],
+          "Cmd": [
+            "nginx",
+            "-g",
+            "'daemon",
+            "off;'"
+          ],
+          "Labels": {
+            "com.docker.compose.project": "demo",
+            "com.docker.compose.service": "web"
+          },
+          "Tty": false,
+          "OpenStdin": false,
+          "WorkingDir": "/",
+          "ExposedPorts": {
+            "80/tcp": {}
+          }
+        },
+        "HostConfig": {
+          "NetworkMode": "demo_default",
+          "RestartPolicy": {
+            "Name": "no",
+            "MaximumRetryCount": 0
+          }
+        },
+        "NetworkSettings": {
+          "Networks": {
+            "demo_default": {
+              "NetworkID": "4444444444444444444444444444444444444444444444444444444444444444",
+              "IPAddress": "172.30.0.2",
+              "Gateway": "172.30.0.1",
+              "MacAddress": "02:42:ac:1e:00:02"
+            }
+          },
+          "Ports": {
+            "80/tcp": [
+              {
+                "HostIp": "0.0.0.0",
+                "HostPort": "8080"
+              }
+            ]
+          }
+        },
+        "Mounts": []
+      }
+    },
+    {
+      "summary": {
+        "Id": "f00dcafe0002bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "Names": [
+          "/demo-db"
+        ],
+        "Image": "demo/db:2.3",
+        "ImageID": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "Command": "postgres",
+        "Created": 1767218400,
+        "State": "exited",
+        "Status": "Exited (0) 10 minutes ago",
+        "Ports": [],
+        "Labels": {
+          "com.docker.compose.project": "demo",
+          "com.docker.compose.service": "db"
+        },
+        "Mounts": [],
+        "NetworkSettings": {
+          "Networks": {
+            "demo_default": {
+              "IPAddress": ""
+            }
+          }
+        }
+      },
+      "inspect": {
+        "Id": "f00dcafe0002bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "Created": "2026-01-01T00:00:00.000000000Z",
+        "Path": "postgres",
+        "Args": [],
+        "State": {
+          "Status": "exited",
+          "Running": false,
+          "Paused": false,
+          "Restarting": false,
+          "OOMKilled": false,
+          "Dead": false,
+          "Pid": 0,
+          "ExitCode": 0,
+          "Error": "",
+          "StartedAt": "2026-01-01T00:00:01.000000000Z",
+          "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "Name": "/demo-db",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "Config": {
+          "Hostname": "f00dcafe0002",
+          "Image": "demo/db:2.3",
+          "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "DEMO=1"
+          ],
+          "Cmd": [
+            "postgres"
+          ],
+          "Labels": {
+            "com.docker.compose.project": "demo",
+            "com.docker.compose.service": "db"
+          },
+          "Tty": false,
+          "OpenStdin": false,
+          "WorkingDir": "/",
+          "ExposedPorts": {}
+        },
+        "HostConfig": {
+          "NetworkMode": "demo_default",
+          "RestartPolicy": {
+            "Name": "no",
+            "MaximumRetryCount": 0
+          }
+        },
+        "NetworkSettings": {
+          "Networks": {
+            "demo_default": {
+              "NetworkID": "4444444444444444444444444444444444444444444444444444444444444444",
+              "IPAddress": "",
+              "Gateway": "",
+              "MacAddress": ""
+            }
+          },
+          "Ports": {}
+        },
+        "Mounts": []
+      }
+    }
+  ],
+  "images": [
+    {
+      "Id": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "ParentId": "",
+      "RepoTags": [
+        "demo/web:1.0"
+      ],
+      "RepoDigests": [],
+      "Created": 1767139200,
+      "Size": 50000000,
+      "SharedSize": -1,
+      "Labels": {},
+      "Containers": 1,
+      "Architecture": "arm64",
+      "Os": "linux",
+      "Config": {
+        "Labels": {}
+      },
+      "RootFS": {
+        "Type": "layers"
+      }
+    },
+    {
+      "Id": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "ParentId": "",
+      "RepoTags": [
+        "demo/db:2.3"
+      ],
+      "RepoDigests": [],
+      "Created": 1767139200,
+      "Size": 60000000,
+      "SharedSize": -1,
+      "Labels": {},
+      "Containers": 1,
+      "Architecture": "arm64",
+      "Os": "linux",
+      "Config": {
+        "Labels": {}
+      },
+      "RootFS": {
+        "Type": "layers"
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "Name": "demo_data",
+      "Driver": "local",
+      "Mountpoint": "/var/lib/docker/volumes/demo_data/_data",
+      "CreatedAt": "2026-01-01T00:00:00Z",
+      "Labels": {
+        "com.docker.compose.project": "demo"
+      },
+      "Scope": "local",
+      "Options": {}
+    }
+  ],
+  "networks": [
+    {
+      "Name": "bridge",
+      "Id": "3333333333333333333333333333333333333333333333333333333333333333",
+      "Created": "2026-01-01T00:00:00Z",
+      "Scope": "local",
+      "Driver": "bridge",
+      "EnableIPv6": false,
+      "Internal": false,
+      "Attachable": false,
+      "IPAM": {
+        "Driver": "default",
+        "Config": [
+          {
+            "Subnet": "172.17.0.0/16",
+            "Gateway": "172.17.0.1"
+          }
+        ]
+      },
+      "Containers": {},
+      "Options": {},
+      "Labels": {}
+    },
+    {
+      "Name": "demo_default",
+      "Id": "4444444444444444444444444444444444444444444444444444444444444444",
+      "Created": "2026-01-01T00:00:00Z",
+      "Scope": "local",
+      "Driver": "bridge",
+      "EnableIPv6": false,
+      "Internal": false,
+      "Attachable": false,
+      "IPAM": {
+        "Driver": "default",
+        "Config": [
+          {
+            "Subnet": "172.30.0.0/16",
+            "Gateway": "172.30.0.1"
+          }
+        ]
+      },
+      "Containers": {},
+      "Options": {},
+      "Labels": {}
+    }
+  ],
+  "lsRoot": [
+    "total 12",
+    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .",
+    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+    "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 bin",
+    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 etc",
+    "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 tmp",
+    "-rw-r--r--    1 root     root            42 Jan  1 00:00 hello.txt"
+  ]
+}

@@ -318,32 +318,43 @@ object EngineManager {
                 }
                 cmd
             }
-            EngineType.DOCKER_DESKTOP ->
+
+            EngineType.DOCKER_DESKTOP -> {
                 when {
                     // macOS: launch/quit the .app bundle
                     isMacHost && action == "start" -> listOf("open", "-a", "Docker")
+
                     isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"Docker\"")
+
                     // Windows: Docker Desktop ships a CLI since v4.x
                     isWindowsHost && action == "start" -> listOf("docker", "desktop", "start")
+
                     isWindowsHost && action == "stop" -> listOf("docker", "desktop", "stop")
+
                     // Linux: Docker Desktop for Linux is not widely supported; unsupported.
                     else -> null
                 }
-            EngineType.ORBSTACK ->
+            }
+
+            EngineType.ORBSTACK -> {
                 // OrbStack is macOS-only.
                 when {
                     isMacHost && action == "start" -> listOf("open", "-a", "OrbStack")
                     isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"OrbStack\"")
                     else -> null
                 }
-            EngineType.LIMA ->
+            }
+
+            EngineType.LIMA -> {
                 // limactl works on macOS and Linux; not on Windows.
                 when {
                     !isWindowsHost && action == "start" -> listOf("limactl", "start")
                     !isWindowsHost && action == "stop" -> listOf("limactl", "stop")
                     else -> null
                 }
-            EngineType.RANCHER_DESKTOP ->
+            }
+
+            EngineType.RANCHER_DESKTOP -> {
                 // Rancher Desktop GUI is launched via open -a on macOS; no stable
                 // cross-platform CLI is available for start/stop — unsupported elsewhere.
                 when {
@@ -351,7 +362,11 @@ object EngineManager {
                     isMacHost && action == "stop" -> listOf("osascript", "-e", "quit app \"Rancher Desktop\"")
                     else -> null
                 }
-            EngineType.UNKNOWN -> null
+            }
+
+            EngineType.UNKNOWN -> {
+                null
+            }
         }
 
     private fun runProcess(

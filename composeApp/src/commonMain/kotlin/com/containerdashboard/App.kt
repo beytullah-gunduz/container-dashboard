@@ -342,11 +342,13 @@ fun App(
                                             label = "DetailPaneScreenTransition",
                                         ) { route ->
                                             when (route) {
-                                                Screen.Dashboard.route ->
+                                                Screen.Dashboard.route -> {
                                                     DashboardScreen(
                                                         onNavigate = { screen -> viewModel.navigate(screen.route) },
                                                     )
-                                                Screen.Containers.route ->
+                                                }
+
+                                                Screen.Containers.route -> {
                                                     ContainersScreen(
                                                         onShowLogs = { container ->
                                                             viewModel.showContainerLogs(container)
@@ -364,12 +366,31 @@ fun App(
                                                         logsPaneLayout = logsPaneLayout,
                                                         onLogsPaneLayoutChange = { viewModel.setLogsPaneLayout(it) },
                                                     )
-                                                Screen.Images.route -> ImagesScreen()
-                                                Screen.Volumes.route -> VolumesScreen()
-                                                Screen.Networks.route -> NetworksScreen()
-                                                Screen.Monitoring.route -> MonitoringScreen()
-                                                Screen.AppLogs.route -> AppLogsScreen()
-                                                Screen.Settings.route -> SettingsScreen()
+                                                }
+
+                                                Screen.Images.route -> {
+                                                    ImagesScreen()
+                                                }
+
+                                                Screen.Volumes.route -> {
+                                                    VolumesScreen()
+                                                }
+
+                                                Screen.Networks.route -> {
+                                                    NetworksScreen()
+                                                }
+
+                                                Screen.Monitoring.route -> {
+                                                    MonitoringScreen()
+                                                }
+
+                                                Screen.AppLogs.route -> {
+                                                    AppLogsScreen()
+                                                }
+
+                                                Screen.Settings.route -> {
+                                                    SettingsScreen()
+                                                }
                                             }
                                         }
                                     }

@@ -8,8 +8,16 @@ import java.nio.file.StandardCopyOption
 
 private val logger = LoggerFactory.getLogger("com.containerdashboard.util.SystemDirectories")
 
+/**
+ * Dev/test override for [SystemDirectories.applicationDirectory]. The hotRun tasks set it to a
+ * throwaway directory under `build/`, so a hot-reload session never reads or writes the
+ * developer's real settings.
+ */
+const val DATA_DIR_PROPERTY = "containerdashboard.dataDir"
+
 object SystemDirectories {
     val applicationDirectory: Path by lazy {
+        System.getProperty(DATA_DIR_PROPERTY)?.takeIf { it.isNotBlank() }?.let { return@lazy Path(it) }
         val dir = resolveApplicationDirectory()
         maybeMigrate(dir)
         dir

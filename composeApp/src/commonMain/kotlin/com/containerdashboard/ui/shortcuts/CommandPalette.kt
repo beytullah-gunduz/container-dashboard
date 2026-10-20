@@ -151,6 +151,7 @@ fun CommandPalette(
                                     onClose()
                                     true
                                 }
+
                                 Key.Enter -> {
                                     flatActions.getOrNull(selectedIndex)?.let {
                                         it.onRun()
@@ -158,12 +159,14 @@ fun CommandPalette(
                                     }
                                     true
                                 }
+
                                 Key.DirectionDown -> {
                                     if (flatActions.isNotEmpty()) {
                                         selectedIndex = (selectedIndex + 1) % flatActions.size
                                     }
                                     true
                                 }
+
                                 Key.DirectionUp -> {
                                     if (flatActions.isNotEmpty()) {
                                         selectedIndex =
@@ -171,7 +174,10 @@ fun CommandPalette(
                                     }
                                     true
                                 }
-                                else -> false
+
+                                else -> {
+                                    false
+                                }
                             }
                         },
                 shape = RoundedCornerShape(Radius.lg),

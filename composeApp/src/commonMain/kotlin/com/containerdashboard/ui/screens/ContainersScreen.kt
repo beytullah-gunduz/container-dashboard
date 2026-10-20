@@ -1010,6 +1010,7 @@ fun ContainersScreen(
                                                 onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
                                             )
                                         }
+
                                         is ContainerListItem.ContainerItem -> {
                                             ContainerRowByMode(
                                                 isCompactMode = isCompactMode,
@@ -1185,6 +1186,7 @@ fun ContainersScreen(
                                                 onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
                                             )
                                         }
+
                                         is ContainerListItem.ContainerItem -> {
                                             ContainerRowByMode(
                                                 isCompactMode = isCompactMode,

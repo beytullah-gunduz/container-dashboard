@@ -125,24 +125,29 @@ fun NetworksScreen(
             }.let { list ->
                 val ascending = sortDirection == SortDirection.ASC
                 when (sortColumn) {
-                    NetworkSortColumn.NAME ->
+                    NetworkSortColumn.NAME -> {
                         if (ascending) {
                             list.sortedBy { it.name.lowercase() }
                         } else {
                             list.sortedByDescending { it.name.lowercase() }
                         }
-                    NetworkSortColumn.DRIVER ->
+                    }
+
+                    NetworkSortColumn.DRIVER -> {
                         if (ascending) {
                             list.sortedBy { it.driver.lowercase() }
                         } else {
                             list.sortedByDescending { it.driver.lowercase() }
                         }
-                    NetworkSortColumn.SCOPE ->
+                    }
+
+                    NetworkSortColumn.SCOPE -> {
                         if (ascending) {
                             list.sortedBy { it.scope.lowercase() }
                         } else {
                             list.sortedByDescending { it.scope.lowercase() }
                         }
+                    }
                 }
             }
 
@@ -606,11 +611,17 @@ private fun NetworkRow(
                     .then(if (isCompactMode) Modifier else Modifier.height(30.dp))
                     .background(
                         when {
-                            isChecked ->
+                            isChecked -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                            isSelected ->
+                            }
+
+                            isSelected -> {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
-                            else -> MaterialTheme.colorScheme.surface
+                            }
+
+                            else -> {
+                                MaterialTheme.colorScheme.surface
+                            }
                         },
                     ).hoverHighlight()
                     .clickable(onClick = onClick)
