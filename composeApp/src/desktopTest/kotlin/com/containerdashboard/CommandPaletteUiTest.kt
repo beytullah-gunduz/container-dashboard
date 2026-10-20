@@ -3,15 +3,21 @@ package com.containerdashboard
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.v2.runComposeUiTest
 import com.containerdashboard.ui.shortcuts.CommandPalette
 import com.containerdashboard.ui.shortcuts.PaletteAction
 import com.containerdashboard.util.DATA_DIR_PROPERTY
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
@@ -31,7 +37,8 @@ class CommandPaletteUiTest {
     private fun action(
         id: String,
         label: String,
-    ) = PaletteAction(id = id, label = label, section = "Containers", onRun = {})
+        onRun: () -> Unit = {},
+    ) = PaletteAction(id = id, label = label, section = "Containers", onRun = onRun)
 
     @Test
     fun `the palette follows its action list while open`() =
@@ -47,5 +54,30 @@ class CommandPaletteUiTest {
 
             onAllNodesWithText("Start: alpha").assertCountEquals(1)
             onAllNodesWithText("Stop: alpha").assertCountEquals(0)
+        }
+
+    @Test
+    fun `Enter runs the selected action even after rows were added above it`() =
+        runComposeUiTest {
+            // A container above the selection changing state adds or removes its rows; the
+            // selection must stay on the action, not on its old index.
+            val ran = mutableListOf<String>()
+            val one = action("stop-one", "Stop: one") { ran += "stop-one" }
+            val two = action("stop-two", "Stop: two") { ran += "stop-two" }
+            var actions by mutableStateOf(listOf(one, two))
+
+            setContent { CommandPalette(actions = actions, onClose = {}) }
+            waitForIdle()
+            val search = onNode(hasSetTextAction())
+            search.requestFocus()
+            search.performKeyInput { pressKey(Key.DirectionDown) } // select "Stop: two"
+            waitForIdle()
+
+            actions = listOf(action("start-zero", "Start: zero") { ran += "start-zero" }, one, two)
+            waitForIdle()
+            search.performKeyInput { pressKey(Key.Enter) }
+            waitForIdle()
+
+            assertEquals(listOf("stop-two"), ran)
         }
 }

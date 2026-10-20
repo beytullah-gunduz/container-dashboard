@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -121,6 +123,8 @@ class AppViewModelErrorTest {
             val failures = MutableSharedFlow<String>(extraBufferCapacity = 1)
             val fake = FakeDockerRepository(listRefreshFailuresFlowOverride = failures)
             val vm = makeVmWithFake(fake)
+            // The app always observes the connection state (App.kt); without a collector it stays CHECKING.
+            val connection = launch { vm.connectionState.collect {} }
             advanceUntilIdle()
 
             val message = "Couldn't refresh the container list (x); showing the last one received."
@@ -128,6 +132,27 @@ class AppViewModelErrorTest {
             advanceUntilIdle()
 
             assertEquals(message, vm.error.value)
+            connection.cancel()
+        }
+
+    @Test
+    fun `a list refresh failure while disconnected is not kept for after the reconnect`() =
+        runTest {
+            val failures = MutableSharedFlow<String>(extraBufferCapacity = 1)
+            val fake =
+                FakeDockerRepository(
+                    listRefreshFailuresFlowOverride = failures,
+                    availabilityFlowOverride = flowOf(false),
+                )
+            val vm = makeVmWithFake(fake)
+            val connection = launch { vm.connectionState.collect {} }
+            advanceUntilIdle()
+
+            failures.tryEmit("Couldn't refresh the container list (x); showing the last one received.")
+            advanceUntilIdle()
+
+            assertNull(vm.error.value, "the snackbar only exists while connected; a pending message would show up stale")
+            connection.cancel()
         }
 
     // -------------------------------------------------------------------------

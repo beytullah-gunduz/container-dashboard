@@ -135,8 +135,14 @@ class AppViewModel(
 
     init {
         // A list refresh that failed after the list had loaded keeps the last list on screen;
-        // say so, once per failure streak (review-2026-10 B3).
-        viewModelScope.launch { listRefreshFailures.collect { _error.value = it } }
+        // say so, once per failure streak (review-2026-10 B3). Only while connected: the error
+        // snackbar lives in the connected UI, so a message posted during an outage would pop up,
+        // stale, after the reconnect.
+        viewModelScope.launch {
+            listRefreshFailures.collect {
+                if (connectionState.value == EngineConnectionState.CONNECTED) _error.value = it
+            }
+        }
     }
 
     val logsPaneLayout: StateFlow<LogsPaneLayout> =
