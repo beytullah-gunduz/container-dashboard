@@ -65,6 +65,8 @@ class FakeDockerRepository(
     var readFileResult: Result<ContainerFileContent> =
         Result.success(ContainerFileContent(text = "", isBinary = false, truncated = false, totalBytesShown = 0)),
     var downloadFileResult: Result<ByteArray> = Result.success(ByteArray(0)),
+    // Text returned by [getContainerLogs] (one-shot fetches), for log-pane line handling tests.
+    var containerLogs: String = "",
     // Flow overrides for driving loading/availability transitions in tests. When null, the simple
     // single-value defaults are used (matching prior behavior).
     var containersFlowOverride: Flow<List<Container>>? = null,
@@ -159,7 +161,7 @@ class FakeDockerRepository(
         id: String,
         tail: Int,
         timestamps: Boolean,
-    ): Result<String> = Result.success("")
+    ): Result<String> = Result.success(containerLogs)
 
     override fun followContainerLogs(
         id: String,

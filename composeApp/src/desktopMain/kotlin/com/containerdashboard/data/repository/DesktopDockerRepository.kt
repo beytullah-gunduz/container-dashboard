@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -112,6 +113,8 @@ class DesktopDockerRepository(
 
     private val clientRebuildLock = Any()
 
+    @Volatile private var closed = false
+
     private val dockerClient: DockerClient get() = clients.dockerClient
 
     val client: DockerClient get() = clients.dockerClient
@@ -125,6 +128,7 @@ class DesktopDockerRepository(
      */
     private fun rebuildClient(stale: ClientPair = clients) {
         synchronized(clientRebuildLock) {
+            if (closed) return // closed by a host switch: a new client here would never be closed (review-2026-10 R1)
             val old = clients
             if (old !== stale) return // a concurrent caller already rebuilt; reuse its client
             clients = createClientPair()
@@ -158,7 +162,7 @@ class DesktopDockerRepository(
         }
     }
 
-    @Volatile private var lastAvailable = false
+    @Volatile private var lastAvailable: Boolean? = null // null until the first poll
 
     private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T {
         // Capture the pair in use so a failure only rebuilds THIS pair — if a concurrent caller
@@ -198,9 +202,11 @@ class DesktopDockerRepository(
             lastAvailable = false
             return false
         }
-        // Reachable: rebuild a stale client once when coming from a disconnected state, then ping
-        // with a short retry budget to ride out daemon warm-up and transient blips.
-        if (!lastAvailable) {
+        // Reachable again after a poll that found it unreachable: rebuild the (likely stale) client
+        // once. Not on the first poll — the client was just created, and closing it killed the
+        // streams the app had already opened on it (review-2026-10 B4). Then ping with a short
+        // retry budget to ride out daemon warm-up and transient blips.
+        if (lastAvailable == false) {
             rebuildClient()
         }
         val available = probeWithRetry(STARTUP_PING_RETRIES, STARTUP_PING_RETRY_MS) { pingOnce() }
@@ -622,6 +628,8 @@ class DesktopDockerRepository(
                         Result.failure(mapShellError(result, normalized))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to list directory {} in container {}", path, id, e)
                 Result.failure(e)
@@ -663,6 +671,8 @@ class DesktopDockerRepository(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to read file {} in container {}", path, id, e)
                 Result.failure(e)
@@ -690,6 +700,8 @@ class DesktopDockerRepository(
                         Result.failure(mapShellError(result, normalized))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to download file {} in container {}", path, id, e)
                 Result.failure(e)
@@ -733,12 +745,18 @@ class DesktopDockerRepository(
                         }
                     }
 
+                // Cancellable (review-2026-10 B6): awaitCompletion blocks this IO thread until the
+                // exec ends or times out, and cancelling the calling coroutine used to leave it
+                // blocked. runInterruptible turns cancellation into an interrupt, and an interrupted
+                // awaitCompletion closes the callback in its own finally.
                 val completed =
-                    dockerClient
-                        .execStartCmd(execId)
-                        .withDetach(false)
-                        .exec(callback)
-                        .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    runInterruptible {
+                        dockerClient
+                            .execStartCmd(execId)
+                            .withDetach(false)
+                            .exec(callback)
+                            .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    }
 
                 if (!completed) {
                     try {
@@ -1447,7 +1465,11 @@ class DesktopDockerRepository(
     override fun close() {
         try {
             scope.cancel()
-            val current = clients
+            val current =
+                synchronized(clientRebuildLock) {
+                    closed = true
+                    clients
+                }
             current.dockerClient.close()
             current.httpClient.close()
         } catch (e: Exception) {

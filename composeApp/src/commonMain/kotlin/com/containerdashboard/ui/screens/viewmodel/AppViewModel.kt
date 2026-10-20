@@ -248,7 +248,7 @@ class AppViewModel(
                 val result = repo.getContainerLogs(c.id)
                 result
                     .onSuccess { logs ->
-                        logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
+                        logTextLines(logs).forEach { line ->
                             merged.add("[$label] $line")
                         }
                     }.onFailure { fetchErrors.add("[$label] ${it.message ?: "Failed to fetch logs"}") }
@@ -586,7 +586,7 @@ class AppViewModel(
                         repo
                             .getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
                             .onSuccess { logs ->
-                                logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
+                                logTextLines(logs).forEach { line ->
                                     merged.append("[$label] $line\n")
                                 }
                             }
@@ -625,7 +625,7 @@ class AppViewModel(
             val result = repo.getContainerLogs(containerId)
             result.fold(
                 onSuccess = { logs ->
-                    val lines = logs.lineSequence().filter { it.isNotEmpty() }.toList()
+                    val lines = logTextLines(logs)
                     _logsPaneState.update { it.copy(logs = lines, isLoading = false) }
                 },
                 onFailure = { e ->
@@ -636,4 +636,14 @@ class AppViewModel(
             _logsPaneState.update { it.copy(error = e.message, isLoading = false) }
         }
     }
+}
+
+/**
+ * Lines of a fetched log text. Keeps blank lines, as the follow view does, and drops only the
+ * empty piece after a final newline (review-2026-10 B7).
+ */
+internal fun logTextLines(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    val lines = text.lines()
+    return if (text.endsWith("\n")) lines.dropLast(1) else lines
 }
