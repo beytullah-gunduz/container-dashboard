@@ -32,6 +32,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -72,7 +73,8 @@ fun main(args: Array<String>) {
  *
  * Coverage: ping/version/info, container list/inspect/stats/logs, events, images, volumes,
  * networks, and exec (a TTY session answers with a tiny echoing shell; a non-TTY exec answers
- * `ls -la` with a per-directory listing). Anything else returns 404 with a message saying so.
+ * `ls -la` with a per-directory listing; exec resize is recorded in [execResizes]). Anything else
+ * returns 404 with a message saying so.
  *
  * Plain sockets rather than the JDK's HttpServer: `exec start` has to switch the connection to a
  * raw two-way stream (`101 UPGRADED`), which HttpServer cannot do.
@@ -94,6 +96,9 @@ class FakeDockerEngine(
     private val data = dataJson?.let { FakeData.parse(it) } ?: FakeData.load()
     private val execs = ConcurrentHashMap<String, FakeExec>()
     private val execCounter = AtomicInteger()
+
+    /** Every exec resize the engine received, as "<exec id> <rows> <columns>". */
+    val execResizes: MutableList<String> = CopyOnWriteArrayList()
 
     /** Accepts connections on a background thread; [daemon] = false keeps the JVM alive for it. */
     fun start(daemon: Boolean = true) {
@@ -186,6 +191,15 @@ class FakeDockerEngine(
                     conn.notFound("No such exec instance: $id")
                 } else {
                     startExec(conn, exec, hijack = req.headers["upgrade"].equals("tcp", ignoreCase = true))
+                }
+            },
+            Route("POST", "/exec/([^/]+)/resize") { conn, req, (id) ->
+                if (execs[id] == null) {
+                    conn.notFound("No such exec instance: $id")
+                } else {
+                    execResizes.add("$id ${req.query["h"]} ${req.query["w"]}")
+                    log("exec resize $id h=${req.query["h"]} w=${req.query["w"]}")
+                    conn.respond(200, contentType = null)
                 }
             },
             // Lifecycle actions are accepted and ignored: the fake containers never change state.
