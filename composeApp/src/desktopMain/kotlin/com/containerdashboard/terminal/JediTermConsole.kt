@@ -70,9 +70,11 @@ fun JediTermConsole(
                     // withContext discards its result, and the catch below must still close the
                     // exec session start() opened (review-2026-10 R2).
                     withContext(Dispatchers.IO) {
+                        val repository = AppModule.dockerRepository as DesktopDockerRepository
                         DockerExecTtyConnector(
-                            dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
+                            dockerClient = repository.client,
                             containerId = containerId,
+                            commandClient = repository.commandClient,
                         ).also {
                             conn = it
                             it.start()

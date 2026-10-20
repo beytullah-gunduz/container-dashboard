@@ -71,8 +71,16 @@ import java.util.concurrent.atomic.AtomicInteger
 private const val STARTUP_PING_RETRIES = 4
 private const val STARTUP_PING_RETRY_MS = 350L
 
+// One-shot calls and long-lived streams use separate HTTP clients (review-2026-10 B8). A stream holds
+// its connection for as long as it runs — one per running container for stats — and on a shared
+// pool one-shot calls, the availability ping included, waited minutes for a free connection.
+private const val COMMAND_POOL_SIZE = 100
+private const val STREAM_POOL_SIZE = 1000
+
 class DesktopDockerRepository(
     private val dockerHost: String,
+    // Read timeout of one-shot calls; tests shorten it.
+    private val commandResponseTimeout: Duration = Duration.ofSeconds(45),
 ) : DockerRepository {
     private val logger = LoggerFactory.getLogger(DesktopDockerRepository::class.java)
 
@@ -82,63 +90,92 @@ class DesktopDockerRepository(
             .withDockerHost(dockerHost)
             .build()
 
-    private fun createHttpClient(): ApacheDockerHttpClient =
+    private fun createHttpClient(
+        maxConnections: Int,
+        responseTimeout: Duration?,
+    ): ApacheDockerHttpClient =
         ApacheDockerHttpClient
             .Builder()
             .dockerHost(config.dockerHost)
-            .maxConnections(100)
+            .maxConnections(maxConnections)
             .connectionTimeout(Duration.ofSeconds(10))
-            // responseTimeout guards one-shot commands (ping, list, inspect, etc.) against
-            // half-open TCP connections. The builder explicitly zeroes the socket SO_TIMEOUT
-            // so that long-lived chunked streams (logs/stats/events) are not interrupted —
-            // we must not set a socket-level read timeout here or those streams will time out.
-            .responseTimeout(Duration.ofSeconds(45))
+            // httpclient5 keeps the response timeout as the socket read timeout for the whole
+            // exchange, not only until the headers, so a response silent for that long is cut. It
+            // guards one-shot calls against a dead connection; streams get none (null), or an idle
+            // Console, a quiet log follow and a quiet engine's event stream were cut after 45 s.
+            .responseTimeout(responseTimeout)
             .build()
 
     /**
-     * Immutable holder pairing the HTTP transport with the [DockerClient] built on top of it, so
-     * the two are swapped with a single volatile write. Two separate volatile fields would let a
-     * concurrent reader observe a fresh httpClient paired with the stale dockerClient (or vice
-     * versa) mid-rebuild.
+     * Immutable holder of both HTTP transports and the [DockerClient] built on each, so all four are
+     * swapped with a single volatile write: separate volatile fields would let a concurrent reader
+     * pair a fresh transport with a stale client mid-rebuild.
+     *
+     * [commands] runs one-shot calls, with a read timeout. [streams] runs the long-lived streams
+     * (events, stats, log follows, the Console's exec session), with none, in its own pool so
+     * streams never leave one-shot calls waiting for a connection (review-2026-10 B8).
      */
-    private class ClientPair(
-        val httpClient: ApacheDockerHttpClient,
-        val dockerClient: DockerClient,
+    private class Clients(
+        val commandsHttp: ApacheDockerHttpClient,
+        val commands: DockerClient,
+        val streamsHttp: ApacheDockerHttpClient,
+        val streams: DockerClient,
     )
 
-    private fun createClientPair(): ClientPair {
-        val http = createHttpClient()
-        return ClientPair(http, DockerClientImpl.getInstance(config, http))
+    private fun createClients(): Clients {
+        val commandsHttp = createHttpClient(COMMAND_POOL_SIZE, commandResponseTimeout)
+        val streamsHttp = createHttpClient(STREAM_POOL_SIZE, responseTimeout = null)
+        return Clients(
+            commandsHttp = commandsHttp,
+            commands = DockerClientImpl.getInstance(config, commandsHttp),
+            streamsHttp = streamsHttp,
+            streams = DockerClientImpl.getInstance(config, streamsHttp),
+        )
     }
 
-    @Volatile private var clients = createClientPair()
+    @Volatile private var clients = createClients()
 
     private val clientRebuildLock = Any()
 
     @Volatile private var closed = false
 
-    private val dockerClient: DockerClient get() = clients.dockerClient
+    private val dockerClient: DockerClient get() = clients.commands
 
-    val client: DockerClient get() = clients.dockerClient
+    private val streamClient: DockerClient get() = clients.streams
+
+    /** For the Console: its exec session is a long-lived stream, so it runs on the stream client. */
+    val client: DockerClient get() = clients.streams
+
+    /** For the Console's one-shots (exec create, resize): they keep the command read timeout. */
+    val commandClient: DockerClient get() = clients.commands
 
     /**
-     * Atomically replace the client pair, then close the old HTTP client (after the swap, so no
-     * reader can pick it up from [clients] anymore). [stale] is the pair the caller observed
-     * failing: if a concurrent caller already swapped it out, the rebuild is skipped so we never
-     * close a client a sibling just installed. Both call paths (`withRetryOnPoolShutdown` and
-     * `determineAvailability`) serialize on [clientRebuildLock].
+     * Atomically replace both clients, then close the old transports (after the swap, so no reader
+     * can pick them up from [clients] anymore). [stale] is the holder the caller observed failing:
+     * if a concurrent caller already swapped it out, the rebuild is skipped so we never close a
+     * client a sibling just installed. Both call paths (`withRetryOnPoolShutdown` and
+     * `determineAvailability`) serialize on [clientRebuildLock]. The stream client is replaced too:
+     * it has no read timeout, so a dead stream connection is only closed here.
      */
-    private fun rebuildClient(stale: ClientPair = clients) {
+    private fun rebuildClient(stale: Clients = clients) {
         synchronized(clientRebuildLock) {
             if (closed) return // closed by a host switch: a new client here would never be closed (review-2026-10 R1)
             val old = clients
             if (old !== stale) return // a concurrent caller already rebuilt; reuse its client
-            clients = createClientPair()
-            try {
-                old.httpClient.close()
-            } catch (e: Exception) {
-                logger.debug("Error closing replaced HTTP client: {}", e.message)
-            }
+            clients = createClients()
+            closeQuietly(old.commandsHttp, "replaced command HTTP client")
+            closeQuietly(old.streamsHttp, "replaced stream HTTP client")
+        }
+    }
+
+    private fun closeQuietly(
+        closeable: java.io.Closeable,
+        what: String,
+    ) {
+        try {
+            closeable.close()
+        } catch (e: Exception) {
+            logger.debug("Error closing {}: {}", what, e.message)
         }
     }
 
@@ -167,8 +204,8 @@ class DesktopDockerRepository(
     @Volatile private var lastAvailable: Boolean? = null // null until the first poll
 
     private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T {
-        // Capture the pair in use so a failure only rebuilds THIS pair — if a concurrent caller
-        // already rebuilt it, rebuildClient is a no-op and the retry uses the sibling's client.
+        // Capture the clients in use so a failure only rebuilds THESE clients — if a concurrent caller
+        // already rebuilt them, rebuildClient is a no-op and the retry uses the sibling's clients.
         val used = clients
         return try {
             block()
@@ -284,7 +321,7 @@ class DesktopDockerRepository(
                                     }
                                 }
                             try {
-                                dockerClient.eventsCmd().exec(callback)
+                                streamClient.eventsCmd().exec(callback)
                             } catch (e: Exception) {
                                 logger.error("Failed to start Docker event stream", e)
                                 close()
@@ -713,8 +750,8 @@ class DesktopDockerRepository(
     /**
      * Run [argv] in a container via a one-shot, non-TTY `docker exec`, capturing stdout and stderr
      * separately. Must be non-TTY so the daemon demultiplexes the two streams by [com.github.dockerjava.api.model.Frame]
-     * type. Bounded by [timeoutMillis] via the callback's built-in awaitCompletion — the HTTP client
-     * deliberately has no socket read timeout for streaming endpoints, so this is the only ceiling.
+     * type. Bounded by [timeoutMillis] via the callback's built-in awaitCompletion, and by the
+     * command client's read timeout when the exec prints nothing for that long.
      */
     private suspend fun execCapture(
         containerId: String,
@@ -846,7 +883,7 @@ class DesktopDockerRepository(
                 }
 
             try {
-                dockerClient
+                streamClient
                     .logContainerCmd(id)
                     .withStdOut(true)
                     .withStdErr(true)
@@ -910,7 +947,7 @@ class DesktopDockerRepository(
                                     }
                                 }
                             try {
-                                dockerClient
+                                streamClient
                                     .logContainerCmd(containerId)
                                     .withStdOut(true)
                                     .withStdErr(true)
@@ -1392,7 +1429,7 @@ class DesktopDockerRepository(
                     }
                 }
             try {
-                dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
+                streamClient.statsCmd(containerId).withNoStream(false).exec(callback)
             } catch (e: Exception) {
                 close(e)
             }
@@ -1494,8 +1531,11 @@ class DesktopDockerRepository(
                     closed = true
                     clients
                 }
-            current.dockerClient.close()
-            current.httpClient.close()
+            // One by one: a failure closing the command pair must not leave the stream pair open.
+            closeQuietly(current.commands, "command client")
+            closeQuietly(current.commandsHttp, "command HTTP client")
+            closeQuietly(current.streams, "stream client")
+            closeQuietly(current.streamsHttp, "stream HTTP client")
         } catch (e: Exception) {
             logger.warn("Error during DockerRepository shutdown", e)
         }

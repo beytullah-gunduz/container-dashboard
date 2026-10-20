@@ -17,6 +17,9 @@ class DockerExecTtyConnector(
     private val dockerClient: DockerClient,
     private val containerId: String,
     private val cmd: List<String> = listOf("/bin/sh"),
+    // Exec create and resize are one-shots: they run on the command client, with its read timeout.
+    // Only the exec session itself streams on [dockerClient] (review-2026-10 B8).
+    private val commandClient: DockerClient = dockerClient,
 ) : TtyConnector {
     private val logger = LoggerFactory.getLogger(DockerExecTtyConnector::class.java)
 
@@ -51,7 +54,7 @@ class DockerExecTtyConnector(
     fun start() {
         try {
             val execCreate =
-                dockerClient
+                commandClient
                     .execCreateCmd(containerId)
                     .withCmd(*cmd.toTypedArray())
                     .withAttachStdin(true)
@@ -89,10 +92,8 @@ class DockerExecTtyConnector(
 
             val stdinStream = PipedInputStream(stdinPipe, 65536)
 
-            // NOTE: execStartCmd has no built-in read/connection timeout exposed by docker-java's
-            // fluent API. Adding a socket-level timeout here would require configuring the
-            // DockerClient itself (e.g. DockerClientConfig.withReadTimeout). That lives in
-            // DockerRepository, which is owned by another agent — left as a cross-lane concern.
+            // No read timeout, on purpose: the repository hands the Console its stream client, so
+            // an idle session stays open (review-2026-10 B8).
             dockerClient
                 .execStartCmd(execCreate.id)
                 .withDetach(false)
@@ -143,7 +144,7 @@ class DockerExecTtyConnector(
         val id = execId ?: return
         if (!isConnected()) return
         try {
-            dockerClient.resizeExecCmd(id).withSize(termSize.rows, termSize.columns).exec()
+            commandClient.resizeExecCmd(id).withSize(termSize.rows, termSize.columns).exec()
         } catch (e: Exception) {
             logger.debug("Failed to resize exec session {}: {}", id, e.message)
         }
