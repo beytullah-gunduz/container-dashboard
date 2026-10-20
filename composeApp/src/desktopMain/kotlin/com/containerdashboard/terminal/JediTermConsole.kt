@@ -66,13 +66,18 @@ fun JediTermConsole(
                 error = null
                 var conn: DockerExecTtyConnector? = null
                 try {
-                    conn =
-                        withContext(Dispatchers.IO) {
-                            DockerExecTtyConnector(
-                                dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
-                                containerId = containerId,
-                            ).also { it.start() }
+                    // Assigned before start(): if the coroutine is cancelled while start() runs,
+                    // withContext discards its result, and the catch below must still close the
+                    // exec session start() opened (review-2026-10 R2).
+                    withContext(Dispatchers.IO) {
+                        DockerExecTtyConnector(
+                            dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
+                            containerId = containerId,
+                        ).also {
+                            conn = it
+                            it.start()
                         }
+                    }
                     connector = conn
                     ConsoleSessionRegistry.register(containerId)
                 } catch (e: CancellationException) {

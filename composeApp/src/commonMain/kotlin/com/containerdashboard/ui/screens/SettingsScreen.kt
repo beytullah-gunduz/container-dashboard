@@ -509,7 +509,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun EngineManagementSection(
+internal fun EngineManagementSection(
     engineType: EngineType,
     colimaProfile: String?,
     colimaConfig: ColimaConfig?,
@@ -523,9 +523,20 @@ private fun EngineManagementSection(
     val isColima = engineType == EngineType.COLIMA
     val isRunning = actionStatus !is EngineActionStatus.Running
 
-    var cpu by remember(colimaConfig) { mutableStateOf(colimaConfig?.cpu?.toString() ?: "4") }
-    var memory by remember(colimaConfig) { mutableStateOf(colimaConfig?.memoryGB?.toString() ?: "8") }
-    var disk by remember(colimaConfig) { mutableStateOf(colimaConfig?.diskGB?.toString() ?: "60") }
+    // Seeded once; when the Colima probe lands it fills only the fields the user has not typed in
+    // (review-2026-10 G13). A remember keyed on the config used to reset them all.
+    var cpu by remember { mutableStateOf(colimaConfig?.cpu?.toString() ?: "4") }
+    var memory by remember { mutableStateOf(colimaConfig?.memoryGB?.toString() ?: "8") }
+    var disk by remember { mutableStateOf(colimaConfig?.diskGB?.toString() ?: "60") }
+    var cpuEdited by remember { mutableStateOf(false) }
+    var memoryEdited by remember { mutableStateOf(false) }
+    var diskEdited by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(colimaConfig) {
+        val config = colimaConfig ?: return@LaunchedEffect
+        if (!cpuEdited) cpu = config.cpu.toString()
+        if (!memoryEdited) memory = config.memoryGB.toString()
+        if (!diskEdited) disk = config.diskGB.toString()
+    }
 
     // Range validation for Colima quotas. Blank = "use default", not an error.
     val cpuError = cpu.isNotBlank() && (cpu.toIntOrNull()?.let { it !in 1..256 } ?: true)
@@ -610,7 +621,10 @@ private fun EngineManagementSection(
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = cpu,
-                        onValueChange = { cpu = it.filter { c -> c.isDigit() } },
+                        onValueChange = {
+                            cpu = it.filter { c -> c.isDigit() }
+                            cpuEdited = true
+                        },
                         singleLine = true,
                         isError = cpuError,
                         supportingText =
@@ -628,7 +642,10 @@ private fun EngineManagementSection(
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = memory,
-                        onValueChange = { memory = it.filter { c -> c.isDigit() } },
+                        onValueChange = {
+                            memory = it.filter { c -> c.isDigit() }
+                            memoryEdited = true
+                        },
                         singleLine = true,
                         isError = memoryError,
                         supportingText =
@@ -646,7 +663,10 @@ private fun EngineManagementSection(
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     OutlinedTextField(
                         value = disk,
-                        onValueChange = { disk = it.filter { c -> c.isDigit() } },
+                        onValueChange = {
+                            disk = it.filter { c -> c.isDigit() }
+                            diskEdited = true
+                        },
                         singleLine = true,
                         isError = diskError,
                         supportingText =

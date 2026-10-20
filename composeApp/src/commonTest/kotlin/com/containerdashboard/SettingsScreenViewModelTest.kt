@@ -1,13 +1,17 @@
 package com.containerdashboard
 
+import androidx.lifecycle.viewModelScope
+import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.DockerVersion
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
+import com.containerdashboard.util.DATA_DIR_PROPERTY
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -22,6 +26,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -35,6 +40,9 @@ class SettingsScreenViewModelTest {
 
     @BeforeTest
     fun setUp() {
+        // startEngine reads PreferenceRepository's DataStore; tests must never touch the developer's
+        // real settings. The desktopTest task points this property at build/.
+        assertNotNull(System.getProperty(DATA_DIR_PROPERTY), "$DATA_DIR_PROPERTY must be set for tests")
         Dispatchers.setMain(dispatcher)
     }
 
@@ -45,11 +53,15 @@ class SettingsScreenViewModelTest {
 
     private fun makeVm(
         fake: FakeDockerRepository,
+        startEngineOp: suspend (EngineType, String?, Int?, Int?, Int?) -> Boolean = { _, _, _, _, _ -> true },
+        reconnect: (String) -> Unit = {},
         testRepoFactory: (String) -> DockerRepository = { fake },
     ): SettingsScreenViewModel =
         SettingsScreenViewModel(
             repoProvider = { fake },
             testRepoFactory = testRepoFactory,
+            startEngineOp = startEngineOp,
+            reconnect = reconnect,
         )
 
     private fun makeContainer(
@@ -291,5 +303,57 @@ class SettingsScreenViewModelTest {
 
             vm.dismissTestResult()
             assertEquals(ConnectionTestState.Idle, vm.connectionTestResult.value)
+        }
+
+    // -------------------------------------------------------------------------
+    // startEngine (review-2026-10 B5)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Calls `startEngine` and runs the coroutine it launches to completion. `advanceUntilIdle`
+     * alone is not enough: the start path reads the DataStore on a real IO thread before it
+     * reconnects. Only the new child is joined: the `stateIn` sharing jobs never complete.
+     */
+    private suspend fun TestScope.startEngineAndJoin(vm: SettingsScreenViewModel) {
+        val job = vm.viewModelScope.coroutineContext[Job]!!
+        val before = job.children.toSet()
+        vm.startEngine()
+        advanceUntilIdle()
+        job.children
+            .filter { it !in before }
+            .toList()
+            .forEach { it.join() }
+    }
+
+    @Test
+    fun `startEngine does not reconnect when the start fails`() =
+        runTest {
+            val reconnected = mutableListOf<String>()
+            val vm =
+                makeVm(
+                    FakeDockerRepository(),
+                    startEngineOp = { _, _, _, _, _ -> false },
+                    reconnect = { reconnected.add(it) },
+                )
+
+            startEngineAndJoin(vm)
+
+            assertTrue(reconnected.isEmpty(), "a failed start must not swap the repository")
+        }
+
+    @Test
+    fun `startEngine reconnects once when the start succeeds`() =
+        runTest {
+            val reconnected = mutableListOf<String>()
+            val vm =
+                makeVm(
+                    FakeDockerRepository(),
+                    startEngineOp = { _, _, _, _, _ -> true },
+                    reconnect = { reconnected.add(it) },
+                )
+
+            startEngineAndJoin(vm)
+
+            assertEquals(1, reconnected.size)
         }
 }
