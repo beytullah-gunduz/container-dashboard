@@ -312,7 +312,7 @@ internal fun ComposeProjectCard(
     pendingDeleteIds: Set<String>,
     columnWidths: ContainerColumnWidths,
     currentLogsContainerId: String?,
-    actionInProgress: String?,
+    actionInProgress: Set<String>,
     // Precomputed at the call site (stable primitives) so the card can skip
     // recomposition on stats ticks that don't change this group's totals.
     groupCpuPercent: Double?,
@@ -404,7 +404,7 @@ internal fun ComposeProjectCard(
                         isChecked = container.id in selectedContainerIds,
                         isViewingLogs = currentLogsContainerId == container.id,
                         onCheckedChange = { checked -> onCheckedChange(container.id, checked) },
-                        isActionInProgress = actionInProgress == container.id,
+                        isActionInProgress = container.id in actionInProgress,
                         isPendingDelete = container.id in pendingDeleteIds,
                         columnWidths = columnWidths,
                         onStart = { onStart(container.id) },
@@ -444,8 +444,10 @@ internal fun ContainerRowByMode(
     val density = LocalDensity.current
 
     Box(
+        // density in the key: the block converts px to dp with it, and it changes on a move to a
+        // display with another scale (review-2026-10 G8).
         modifier =
-            Modifier.pointerInput(container.id) {
+            Modifier.pointerInput(container.id, density) {
                 awaitEachGesture {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull()
@@ -935,7 +937,7 @@ internal fun ColumnResizeHandle(
                 .height(24.dp)
                 .hoverable(interactionSource)
                 .pointerHoverIcon(PointerIcon.Crosshair)
-                .pointerInput(Unit) {
+                .pointerInput(density) {
                     detectHorizontalDragGestures(
                         onDragEnd = { currentOnFinished() },
                         onDragCancel = { currentOnFinished() },

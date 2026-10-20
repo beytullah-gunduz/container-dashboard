@@ -48,6 +48,7 @@ import com.containerdashboard.ui.chrome.WindowChromeTrailing
 import com.containerdashboard.ui.components.AppSnackbarHost
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
+import com.containerdashboard.ui.components.ErrorSnackbarBridges
 import com.containerdashboard.ui.components.FilesTabContent
 import com.containerdashboard.ui.components.Sidebar
 import com.containerdashboard.ui.components.ThreePaneScaffold
@@ -236,19 +237,14 @@ fun App(
                     // one; ContainersScreenViewModel errors have an inline card only while
                     // the Containers screen is showing.
                     val appError by viewModel.error.collectAsState()
-                    LaunchedEffect(appError) {
-                        val message = appError ?: return@LaunchedEffect
-                        UiMessages.error(message)
-                        viewModel.clearError()
-                    }
                     val containersError by containersVm.error.collectAsState()
-                    LaunchedEffect(containersError, currentRoute) {
-                        val message = containersError ?: return@LaunchedEffect
-                        if (currentRoute != Screen.Containers.route) {
-                            UiMessages.error(message)
-                            containersVm.clearError()
-                        }
-                    }
+                    ErrorSnackbarBridges(
+                        appError = appError,
+                        onAppErrorShown = { viewModel.clearError() },
+                        containersError = containersError,
+                        onContainersErrorHandled = { containersVm.clearError() },
+                        onContainersScreen = currentRoute == Screen.Containers.route,
+                    )
 
                     // All lambda captures are stable across compositions (view models,
                     // the remembered navigator, and snapshot-state setters), so the

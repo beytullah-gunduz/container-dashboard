@@ -83,6 +83,13 @@ abstract class ListScreenViewModel<T>(
         _checkedKeys.value = emptySet()
     }
 
+    /** Drops checked keys whose item is gone (removed elsewhere) (review-2026-10 G9). */
+    fun retainChecked(liveKeys: Set<String>) {
+        _checkedKeys.update { checked ->
+            if (liveKeys.containsAll(checked)) checked else checked.filterTo(HashSet()) { it in liveKeys }
+        }
+    }
+
     private val _selectedKey = MutableStateFlow<String?>(null)
     val selectedKey: StateFlow<String?> = _selectedKey.asStateFlow()
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,6 +90,13 @@ fun NetworksScreen(
     viewModel: NetworksScreenViewModel = viewModel { NetworksScreenViewModel() },
 ) {
     val networks by viewModel.networks.collectAsState(listOf())
+    // Keeps the checked networks to ones that exist: the toolbar counts and Delete Selected use it.
+    // Driven by list emissions, not by the composed list, whose first frame is the empty
+    // collectAsState() placeholder — that would wipe the checks on every return to this screen
+    // (review-2026-10 G9).
+    LaunchedEffect(viewModel) {
+        viewModel.networks.collect { list -> viewModel.retainChecked(list.mapTo(HashSet()) { it.id }) }
+    }
     val hasLoaded by viewModel.hasLoaded.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedNetwork by viewModel.selectedNetworkId.collectAsState()
@@ -588,8 +596,10 @@ private fun NetworkRow(
     val density = LocalDensity.current
 
     Column(
+        // density in the key: the block converts px to dp with it, and it changes on a move to a
+        // display with another scale (review-2026-10 G8).
         modifier =
-            Modifier.pointerInput(network.id) {
+            Modifier.pointerInput(network.id, density) {
                 awaitEachGesture {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull()

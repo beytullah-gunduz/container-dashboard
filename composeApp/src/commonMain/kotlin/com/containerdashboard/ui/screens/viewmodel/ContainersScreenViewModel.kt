@@ -60,8 +60,10 @@ class ContainersScreenViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _actionInProgress = MutableStateFlow<String?>(null)
-    val actionInProgress: StateFlow<String?> = _actionInProgress.asStateFlow()
+    // One entry per container with an action running: a group action runs one per container
+    // (review-2026-10 B10/G12).
+    private val _actionInProgress = MutableStateFlow(emptySet<String>())
+    val actionInProgress: StateFlow<Set<String>> = _actionInProgress.asStateFlow()
 
     private val _selectedContainerIds = MutableStateFlow(setOf<String>())
     val selectedContainerIds: StateFlow<Set<String>> = _selectedContainerIds.asStateFlow()
@@ -124,19 +126,22 @@ class ContainersScreenViewModel(
         action: suspend DockerRepository.(String) -> Result<Unit>,
     ) {
         viewModelScope.launch {
-            _actionInProgress.value = id
-            val result = repo.action(id).onFailure { _error.value = it.message }
-            if (result.isSuccess && awaitAfter != null) {
-                repo.refreshContainers()
-                withTimeoutOrNull(5000) {
-                    containers.first { list ->
-                        val c = list.find { it.id == id }
-                        c == null || awaitAfter(c)
+            _actionInProgress.update { it + id }
+            try {
+                val result = repo.action(id).onFailure { _error.value = it.message }
+                if (result.isSuccess && awaitAfter != null) {
+                    repo.refreshContainers()
+                    withTimeoutOrNull(5000) {
+                        containers.first { list ->
+                            val c = list.find { it.id == id }
+                            c == null || awaitAfter(c)
+                        }
                     }
+                    delay(400)
                 }
-                delay(400)
+            } finally {
+                _actionInProgress.update { it - id }
             }
-            _actionInProgress.value = null
         }
     }
 
@@ -151,11 +156,41 @@ class ContainersScreenViewModel(
     fun unpauseContainer(id: String) = containerAction(id, awaitAfter = { it.isRunning }) { unpauseContainer(it) }
 
     fun removeContainer(id: String) {
+        // Rejected while this id's removal is in flight: a second press used to force-remove a
+        // container already going away and report its "No such container" (review-2026-10 B10).
+        if (id in _pendingDeleteIds.value) return
+        _pendingDeleteIds.update { it + id }
         viewModelScope.launch {
-            _pendingDeleteIds.update { it + id }
-            repo.removeContainer(id, force = true).onFailure { _error.value = it.message }
-            repo.refreshContainers()
-            _pendingDeleteIds.update { it - id }
+            try {
+                repo.removeContainer(id, force = true).onFailure { _error.value = it.message }
+                repo.refreshContainers()
+            } finally {
+                _pendingDeleteIds.update { it - id }
+            }
+        }
+    }
+
+    /** A compose group's "Delete all": one message for all failures, like Delete Selected. */
+    fun removeContainers(ids: List<String>) {
+        val toRemove = ids.filterNot { it in _pendingDeleteIds.value }
+        if (toRemove.isEmpty()) return
+        _pendingDeleteIds.update { it + toRemove }
+        viewModelScope.launch {
+            val errors = mutableListOf<String>()
+            try {
+                for (id in toRemove) {
+                    repo.removeContainer(id, force = true).onFailure {
+                        errors.add(it.message ?: "Failed to delete container")
+                    }
+                }
+                repo.refreshContainers()
+            } finally {
+                _pendingDeleteIds.update { it - toRemove.toSet() }
+            }
+            when {
+                errors.size == 1 -> _error.value = errors.single()
+                errors.size > 1 -> _error.value = "Failed to delete ${errors.size} container(s)"
+            }
         }
     }
 
@@ -268,6 +303,13 @@ class ContainersScreenViewModel(
 
     fun clearSelection() {
         _selectedContainerIds.value = emptySet()
+    }
+
+    /** Drops selected ids whose container is gone (removed elsewhere) (review-2026-10 G9). */
+    fun retainSelection(liveIds: Set<String>) {
+        _selectedContainerIds.update { selected ->
+            if (liveIds.containsAll(selected)) selected else selected.filterTo(HashSet()) { it in liveIds }
+        }
     }
 
     fun clearError() {
