@@ -65,7 +65,7 @@ fun main(args: Array<String>) {
  *
  * Coverage: ping/version/info, container list/inspect/stats/logs, events, images, volumes,
  * networks, and exec (a TTY session answers with a tiny echoing shell; a non-TTY exec answers
- * `ls -la` with a fixed listing). Anything else returns 404 with a message saying so.
+ * `ls -la` with a per-directory listing). Anything else returns 404 with a message saying so.
  *
  * Plain sockets rather than the JDK's HttpServer: `exec start` has to switch the connection to a
  * raw two-way stream (`101 UPGRADED`), which HttpServer cannot do.
@@ -284,7 +284,9 @@ class FakeDockerEngine(
             if (exec.tty) {
                 fakeShell(conn)
             } else {
-                val output = if (exec.cmd.firstOrNull() == "ls") data.lsRoot else "fake engine: ${exec.cmd.joinToString(" ")}\n"
+                // The Files tab runs `ls -la -- <path>`: answer that directory's listing.
+                val output =
+                    if (exec.cmd.firstOrNull() == "ls") data.lsFor(exec.cmd.last()) else "fake engine: ${exec.cmd.joinToString(" ")}\n"
                 val payload = frame(output)
                 if (hijack) {
                     conn.output.write(payload)
@@ -327,7 +329,7 @@ class FakeDockerEngine(
                             }
 
                             command == "ls" -> {
-                                out.write("bin  etc  hello.txt  tmp\r\n".encodeToByteArray())
+                                out.write("bin  etc  hello.txt  lib  tmp  usr\r\n".encodeToByteArray())
                             }
 
                             command.isNotEmpty() -> {
@@ -635,7 +637,15 @@ private class FakeData(
     val images = root.objects("images")
     val volumes = root.objects("volumes")
     val networks = root.objects("networks")
-    val lsRoot = root.getValue("lsRoot").jsonArray.joinToString("\n", postfix = "\n") { it.jsonPrimitive.content }
+
+    /** `ls -la` output per directory: a merged-/usr layout, so `/bin` and `/lib` are symlinks into `/usr`. */
+    private val ls: Map<String, String> =
+        root.getValue("ls").jsonObject.mapValues { (_, lines) ->
+            lines.jsonArray.joinToString("\n", postfix = "\n") { it.jsonPrimitive.content }
+        }
+
+    /** A directory the data does not describe lists as empty. */
+    fun lsFor(path: String): String = ls[path] ?: "total 0\n"
 
     companion object {
         fun load(): FakeData {

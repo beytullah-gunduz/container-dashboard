@@ -85,6 +85,13 @@ kotlin {
                 implementation(libs.kotlinx.io.core)
             }
         }
+
+        getByName("desktopTest") {
+            dependencies {
+                // Headless Compose UI tests (runComposeUiTest)
+                implementation(libs.compose.ui.test)
+            }
+        }
     }
 }
 

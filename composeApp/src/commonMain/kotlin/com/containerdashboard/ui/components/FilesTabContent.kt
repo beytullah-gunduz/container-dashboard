@@ -52,7 +52,7 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 internal fun FilesTabContent(
     state: FilesPaneState,
-    onToggleNode: (ContainerFileEntry) -> Unit,
+    onToggleNode: (FileTreeNode) -> Unit,
     onFileClick: (ContainerFileEntry) -> Unit,
     onRefresh: () -> Unit,
     onCloseViewer: () -> Unit,
@@ -138,7 +138,7 @@ private fun FilesHeader(
 @Composable
 private fun FileTree(
     state: FilesPaneState,
-    onToggleNode: (ContainerFileEntry) -> Unit,
+    onToggleNode: (FileTreeNode) -> Unit,
     onFileClick: (ContainerFileEntry) -> Unit,
     onDownload: (ContainerFileEntry) -> Unit,
     onRefresh: () -> Unit,
@@ -183,12 +183,13 @@ private fun FileTree(
 
         else -> {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(state.nodes, key = { it.entry.path }) { node ->
+                // treePath, not entry.path: below an expanded symlink the same path shows twice.
+                items(state.nodes, key = { it.treePath }) { node ->
                     TreeRow(
                         node = node,
                         onClick = {
                             if (node.isExpandable) {
-                                onToggleNode(node.entry)
+                                onToggleNode(node)
                             } else if (node.entry.type == FileType.FILE) {
                                 onFileClick(node.entry)
                             }
