@@ -614,13 +614,40 @@ counterpart here and is skipped.
 - Add `import androidx.compose.foundation.BorderStroke` to `TruncatingText.kt`, `AppTooltip.kt` and
   `CommandPalette.kt`. `ResourceDetailsDialog.kt` already has it.
 
+**3.6 Button shapes** (added 2026-10-23 after the WS2 live smoke).
+
+In Retro, the M3 buttons and the segmented buttons in Settings stayed pill-shaped. Their default
+shape is the `CornerFull` token. In material3 `1.12.0-alpha03`, `ShapesKt.fromToken` maps that token
+straight to `CircleShape`, not through `MaterialTheme.shapes`, so `RetroShapes` never reaches them.
+kkdd handles this by giving every M3 button an explicit `shape`.
+
+1. Pass `shape = appRoundShape` on every call of `Button(`, `OutlinedButton(`, `TextButton(` and
+   `IconButton(` in `C/` and `D/`. Today that is 19, 10, 4 and 42 calls.
+   - In Default, `appRoundShape` is `CircleShape`, the same value as the `CornerFull` default, so
+     rendering does not change.
+   - If a call already passes `shape =`, keep its value and wrap it as
+     `if (ThemeStyleState.isRetro) RoundedCornerShape(0.dp) else <value>`.
+2. Every `SegmentedButtonDefaults.itemShape(index = …, count = …)` call (`C/ui/screens/SettingsScreen.kt`,
+   three calls) gains `baseShape = appRoundShape`.
+3. Extend `T/ui/ThemeTokenGuardTest.kt` with kkdd's three rules:
+   - "button-shape": an M3 button call without `shape =`;
+   - "m3-default-shape": `ButtonDefaults`/`IconButtonDefaults` `*Shape(s)` references;
+   - `SegmentedButtonDefaults.itemShape` without `baseShape =`.
+
+   Port the matching regexes, the `closeParen` argument-span logic and their canaries from
+   `KT/ui/RetroShapeGuardTest.kt` (rules around `:420-470`, `closeParen` after `lineStarts`,
+   canaries `:230-310`, `:361-370`), with the `kd*` token names replaced by the `app*` ones. Do not
+   port the TabRow or `LinearProgressIndicator` rules: neither is used here.
+
 **WS3 gate (orchestrator):**
 
 - Compile, `desktopTest` (XML totals) and `spotlessCheck` pass.
 - **Live smoke, REQUIRED.** In Retro: the spinner steps in square cells (Settings engine actions, or
   a loading list), the gauges are segmented (Dashboard/Monitoring), the skeleton steps, the headers
   are pixel caps, and the tooltip and command palette have a hairline border.
-- Switch to Default: identical to the WS1 screenshots (negative control).
+- In Retro, the Settings buttons and the segmented buttons are square.
+- Switch to Default: Dashboard and Containers are identical to the WS1 screenshots, and Settings is
+  identical to the WS2 Default screenshot (negative control).
 
 ## Risks for the reviewer
 
@@ -675,3 +702,11 @@ Each MAJOR was re-verified against its cited source before applying.
 - **m7 (applied).** Keep the unused `darkTheme` parameter with a comment and accept the warning.
 - **m8 (not applied).** Optional style change. The `roundToInt` conversion is exact for these
   literals.
+
+Orchestrator amendment, 2026-10-23, after the WS2 live smoke:
+
+- **Added WS3 step 3.6 (button shapes).** In Retro, the M3 buttons and segmented buttons were still
+  pills, which breaks the WS2 gate's "no round corners" check.
+- **Cause:** `ShapesKt.fromToken(CornerFull)` returns `CircleShape` directly in material3
+  `1.12.0-alpha03`, verified with javap on the jar.
+- **Why WS3:** the fix is component chrome, so it went into WS3 rather than reopening WS2.
