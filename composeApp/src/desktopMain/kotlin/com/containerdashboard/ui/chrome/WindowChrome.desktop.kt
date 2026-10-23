@@ -22,6 +22,7 @@ import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement
@@ -30,6 +31,8 @@ import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close_filled
 import com.dockerdashboard.composeapp.generated.resources.minimize_filled
 import org.jetbrains.compose.resources.painterResource
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 
 private const val DOUBLE_CLICK_MS = 350L
 
@@ -168,6 +171,9 @@ actual fun TopBarDragArea(content: @Composable () -> Unit) {
  * maximize and restores the bounds it saved, on the display the window was maximized on, even
  * after the user moved it to another one.
  *
+ * Once the window is shown it also gets an empty toolbar ([MacTitleBarToolbar]), which makes the
+ * system title bar as tall as the app's, so the traffic lights sit in its middle.
+ *
  * The window must be created with `undecorated = false` on macOS. No-op elsewhere.
  */
 @Composable
@@ -178,9 +184,29 @@ fun TransparentTitleBarOnMac(window: ComposeWindow) {
         window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
         window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
         window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
-        onDispose { }
+        val listener =
+            object : WindowAdapter() {
+                override fun windowOpened(e: WindowEvent?) = MacTitleBarToolbar.refresh()
+            }
+        window.addWindowListener(listener)
+        // Already on screen when this effect runs: windowOpened has fired.
+        if (window.isShowing) MacTitleBarToolbar.refresh()
+        onDispose { window.removeWindowListener(listener) }
     }
 }
+
+/**
+ * Height of the app's title bar. On macOS it is twice the traffic lights' measured center, so the
+ * bar's content lines up with them; 38 until the measurement lands (the value on macOS 26), so the
+ * bar does not jump at launch.
+ */
+@Composable
+actual fun windowChromeBarHeight(): Dp =
+    when {
+        LocalDesktopWindowChrome.current == null -> 32.dp
+        currentDesktopOs != DesktopOs.MAC -> 32.dp
+        else -> MacTrafficLights.centerFromTopPt?.let { (it * 2).dp } ?: 38.dp
+    }
 
 @Composable
 private fun WindowControls(

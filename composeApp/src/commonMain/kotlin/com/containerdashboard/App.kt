@@ -45,6 +45,7 @@ import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.chrome.TopBarDragArea
 import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
+import com.containerdashboard.ui.chrome.windowChromeBarHeight
 import com.containerdashboard.ui.components.AppSnackbarHost
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
@@ -507,17 +508,18 @@ private fun WindowChromeBar() {
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
     ) {
+        val barHeight = windowChromeBarHeight()
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(32.dp),
+                    .height(barHeight),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             WindowChromeLeading()
             Box(modifier = Modifier.weight(1f)) {
                 TopBarDragArea {
-                    Spacer(modifier = Modifier.fillMaxWidth().height(32.dp))
+                    Spacer(modifier = Modifier.fillMaxWidth().height(barHeight))
                 }
             }
             WindowChromeTrailing()
