@@ -102,6 +102,27 @@ class ContainersSelectionTest {
     }
 
     // -------------------------------------------------------------------------
+    // retainSelection (review-2026-10 G9)
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `retainSelection drops ids that are gone`() {
+        val vm = makeVm()
+        vm.toggleContainerSelection("aaa", selected = true)
+        vm.toggleContainerSelection("bbb", selected = true)
+        vm.retainSelection(setOf("aaa"))
+        assertEquals(setOf("aaa"), vm.selectedContainerIds.value)
+    }
+
+    @Test
+    fun `retainSelection keeps a selection that is all still live`() {
+        val vm = makeVm()
+        vm.selectAllContainers(listOf("aaa", "bbb"))
+        vm.retainSelection(setOf("aaa", "bbb", "ccc"))
+        assertEquals(setOf("aaa", "bbb"), vm.selectedContainerIds.value)
+    }
+
+    // -------------------------------------------------------------------------
     // toggleContainerSelection is idempotent for deselect on absent id
     // -------------------------------------------------------------------------
 

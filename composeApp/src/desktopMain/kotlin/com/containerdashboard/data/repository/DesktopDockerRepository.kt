@@ -22,16 +22,19 @@ import com.github.dockerjava.api.model.EventType
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
@@ -39,16 +42,20 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -64,8 +71,16 @@ import java.util.concurrent.atomic.AtomicInteger
 private const val STARTUP_PING_RETRIES = 4
 private const val STARTUP_PING_RETRY_MS = 350L
 
+// One-shot calls and long-lived streams use separate HTTP clients (review-2026-10 B8). A stream holds
+// its connection for as long as it runs — one per running container for stats — and on a shared
+// pool one-shot calls, the availability ping included, waited minutes for a free connection.
+private const val COMMAND_POOL_SIZE = 100
+private const val STREAM_POOL_SIZE = 1000
+
 class DesktopDockerRepository(
     private val dockerHost: String,
+    // Read timeout of one-shot calls; tests shorten it.
+    private val commandResponseTimeout: Duration = Duration.ofSeconds(45),
 ) : DockerRepository {
     private val logger = LoggerFactory.getLogger(DesktopDockerRepository::class.java)
 
@@ -75,60 +90,92 @@ class DesktopDockerRepository(
             .withDockerHost(dockerHost)
             .build()
 
-    private fun createHttpClient(): ApacheDockerHttpClient =
+    private fun createHttpClient(
+        maxConnections: Int,
+        responseTimeout: Duration?,
+    ): ApacheDockerHttpClient =
         ApacheDockerHttpClient
             .Builder()
             .dockerHost(config.dockerHost)
-            .maxConnections(100)
+            .maxConnections(maxConnections)
             .connectionTimeout(Duration.ofSeconds(10))
-            // responseTimeout guards one-shot commands (ping, list, inspect, etc.) against
-            // half-open TCP connections. The builder explicitly zeroes the socket SO_TIMEOUT
-            // so that long-lived chunked streams (logs/stats/events) are not interrupted —
-            // we must not set a socket-level read timeout here or those streams will time out.
-            .responseTimeout(Duration.ofSeconds(45))
+            // httpclient5 keeps the response timeout as the socket read timeout for the whole
+            // exchange, not only until the headers, so a response silent for that long is cut. It
+            // guards one-shot calls against a dead connection; streams get none (null), or an idle
+            // Console, a quiet log follow and a quiet engine's event stream were cut after 45 s.
+            .responseTimeout(responseTimeout)
             .build()
 
     /**
-     * Immutable holder pairing the HTTP transport with the [DockerClient] built on top of it, so
-     * the two are swapped with a single volatile write. Two separate volatile fields would let a
-     * concurrent reader observe a fresh httpClient paired with the stale dockerClient (or vice
-     * versa) mid-rebuild.
+     * Immutable holder of both HTTP transports and the [DockerClient] built on each, so all four are
+     * swapped with a single volatile write: separate volatile fields would let a concurrent reader
+     * pair a fresh transport with a stale client mid-rebuild.
+     *
+     * [commands] runs one-shot calls, with a read timeout. [streams] runs the long-lived streams
+     * (events, stats, log follows, the Console's exec session), with none, in its own pool so
+     * streams never leave one-shot calls waiting for a connection (review-2026-10 B8).
      */
-    private class ClientPair(
-        val httpClient: ApacheDockerHttpClient,
-        val dockerClient: DockerClient,
+    private class Clients(
+        val commandsHttp: ApacheDockerHttpClient,
+        val commands: DockerClient,
+        val streamsHttp: ApacheDockerHttpClient,
+        val streams: DockerClient,
     )
 
-    private fun createClientPair(): ClientPair {
-        val http = createHttpClient()
-        return ClientPair(http, DockerClientImpl.getInstance(config, http))
+    private fun createClients(): Clients {
+        val commandsHttp = createHttpClient(COMMAND_POOL_SIZE, commandResponseTimeout)
+        val streamsHttp = createHttpClient(STREAM_POOL_SIZE, responseTimeout = null)
+        return Clients(
+            commandsHttp = commandsHttp,
+            commands = DockerClientImpl.getInstance(config, commandsHttp),
+            streamsHttp = streamsHttp,
+            streams = DockerClientImpl.getInstance(config, streamsHttp),
+        )
     }
 
-    @Volatile private var clients = createClientPair()
+    @Volatile private var clients = createClients()
 
     private val clientRebuildLock = Any()
 
-    private val dockerClient: DockerClient get() = clients.dockerClient
+    @Volatile private var closed = false
 
-    val client: DockerClient get() = clients.dockerClient
+    private val dockerClient: DockerClient get() = clients.commands
+
+    private val streamClient: DockerClient get() = clients.streams
+
+    /** For the Console: its exec session is a long-lived stream, so it runs on the stream client. */
+    val client: DockerClient get() = clients.streams
+
+    /** For the Console's one-shots (exec create, resize): they keep the command read timeout. */
+    val commandClient: DockerClient get() = clients.commands
 
     /**
-     * Atomically replace the client pair, then close the old HTTP client (after the swap, so no
-     * reader can pick it up from [clients] anymore). [stale] is the pair the caller observed
-     * failing: if a concurrent caller already swapped it out, the rebuild is skipped so we never
-     * close a client a sibling just installed. Both call paths (`withRetryOnPoolShutdown` and
-     * `determineAvailability`) serialize on [clientRebuildLock].
+     * Atomically replace both clients, then close the old transports (after the swap, so no reader
+     * can pick them up from [clients] anymore). [stale] is the holder the caller observed failing:
+     * if a concurrent caller already swapped it out, the rebuild is skipped so we never close a
+     * client a sibling just installed. Both call paths (`withRetryOnPoolShutdown` and
+     * `determineAvailability`) serialize on [clientRebuildLock]. The stream client is replaced too:
+     * it has no read timeout, so a dead stream connection is only closed here.
      */
-    private fun rebuildClient(stale: ClientPair = clients) {
+    private fun rebuildClient(stale: Clients = clients) {
         synchronized(clientRebuildLock) {
+            if (closed) return // closed by a host switch: a new client here would never be closed (review-2026-10 R1)
             val old = clients
             if (old !== stale) return // a concurrent caller already rebuilt; reuse its client
-            clients = createClientPair()
-            try {
-                old.httpClient.close()
-            } catch (e: Exception) {
-                logger.debug("Error closing replaced HTTP client: {}", e.message)
-            }
+            clients = createClients()
+            closeQuietly(old.commandsHttp, "replaced command HTTP client")
+            closeQuietly(old.streamsHttp, "replaced stream HTTP client")
+        }
+    }
+
+    private fun closeQuietly(
+        closeable: java.io.Closeable,
+        what: String,
+    ) {
+        try {
+            closeable.close()
+        } catch (e: Exception) {
+            logger.debug("Error closing {}: {}", what, e.message)
         }
     }
 
@@ -154,11 +201,11 @@ class DesktopDockerRepository(
         }
     }
 
-    @Volatile private var lastAvailable = false
+    @Volatile private var lastAvailable: Boolean? = null // null until the first poll
 
     private inline fun <T> withRetryOnPoolShutdown(block: () -> T): T {
-        // Capture the pair in use so a failure only rebuilds THIS pair — if a concurrent caller
-        // already rebuilt it, rebuildClient is a no-op and the retry uses the sibling's client.
+        // Capture the clients in use so a failure only rebuilds THESE clients — if a concurrent caller
+        // already rebuilt them, rebuildClient is a no-op and the retry uses the sibling's clients.
         val used = clients
         return try {
             block()
@@ -194,9 +241,11 @@ class DesktopDockerRepository(
             lastAvailable = false
             return false
         }
-        // Reachable: rebuild a stale client once when coming from a disconnected state, then ping
-        // with a short retry budget to ride out daemon warm-up and transient blips.
-        if (!lastAvailable) {
+        // Reachable again after a poll that found it unreachable: rebuild the (likely stale) client
+        // once. Not on the first poll — the client was just created, and closing it killed the
+        // streams the app had already opened on it (review-2026-10 B4). Then ping with a short
+        // retry budget to ride out daemon warm-up and transient blips.
+        if (lastAvailable == false) {
             rebuildClient()
         }
         val available = probeWithRetry(STARTUP_PING_RETRIES, STARTUP_PING_RETRY_MS) { pingOnce() }
@@ -251,7 +300,7 @@ class DesktopDockerRepository(
                     val events =
                         callbackFlow {
                             val callback =
-                                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Event>() {
+                                object : StreamCallback<Event>() {
                                     override fun onNext(event: Event?) {
                                         event?.let { trySend(it) }
                                     }
@@ -272,7 +321,7 @@ class DesktopDockerRepository(
                                     }
                                 }
                             try {
-                                dockerClient.eventsCmd().exec(callback)
+                                streamClient.eventsCmd().exec(callback)
                             } catch (e: Exception) {
                                 logger.error("Failed to start Docker event stream", e)
                                 close()
@@ -356,6 +405,59 @@ class DesktopDockerRepository(
     private val volumesRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     private val networksRefreshTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
 
+    private val listRefreshFailuresSink =
+        MutableSharedFlow<String>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    override fun listRefreshFailures(): Flow<String> = listRefreshFailuresSink.asSharedFlow()
+
+    /** Whether a shared list has loaded once in this repository, and whether its refreshes now fail. */
+    private class ListRefreshState(
+        val what: String,
+    ) {
+        @Volatile var loaded = false
+
+        @Volatile var failing = false
+    }
+
+    private val containersListState = ListRefreshState("container")
+    private val imagesListState = ListRefreshState("image")
+    private val volumesListState = ListRefreshState("volume")
+    private val networksListState = ListRefreshState("network")
+
+    /**
+     * One list call for a shared list flow. Success: the list. A failure before the list ever
+     * loaded: an empty list, as there is nothing to keep. A failure after: null, which the flow
+     * drops so subscribers keep the last list — an empty one reads as "everything was deleted"
+     * and closes the detail pane (review-2026-10 B3) — and the first failure of a streak is
+     * reported on [listRefreshFailures].
+     */
+    private inline fun <T> listOrKeepLast(
+        state: ListRefreshState,
+        list: () -> List<T>,
+    ): List<T>? =
+        try {
+            list().also {
+                state.loaded = true
+                state.failing = false
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.warn("Failed to list {}s: {}", state.what, e.message)
+            if (!state.loaded) {
+                emptyList()
+            } else {
+                if (!state.failing) {
+                    state.failing = true
+                    listRefreshFailuresSink.tryEmit(
+                        "Couldn't refresh the ${state.what} list (${e.message ?: e::class.simpleName}); " +
+                            "showing the last one received.",
+                    )
+                }
+                null
+            }
+        }
+
     override suspend fun refreshContainers() {
         containerRefreshTrigger.emit(Unit)
     }
@@ -372,6 +474,15 @@ class DesktopDockerRepository(
         networksRefreshTrigger.emit(Unit)
     }
 
+    private fun listContainersNow(): List<Container> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listContainersCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toContainer() }
+        }
+
     // Containers — hot shared flow. One poll timer + one list call per 15 s,
     // supplemented by dockerEvents-driven refreshes. Replay-1 so new subscribers
     // see the latest list immediately.
@@ -385,38 +496,16 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listContainersCmd()
-                        .withShowAll(true)
-                        .exec()
-                        .map { it.toContainer() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list containers: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listContainersCmd()
-                            .withShowAll(true)
-                            .exec()
-                            .map { it.toContainer() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list containers on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Container flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(containersListState) { listContainersNow() } }
+            .onStart {
+                // A fresh subscription may report a failure again.
+                containersListState.failing = false
+                emit(listOrKeepLast(containersListState) { listContainersNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Container flow error", e)
+                if (!containersListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -578,6 +667,8 @@ class DesktopDockerRepository(
                         Result.failure(mapShellError(result, normalized))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to list directory {} in container {}", path, id, e)
                 Result.failure(e)
@@ -619,6 +710,8 @@ class DesktopDockerRepository(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to read file {} in container {}", path, id, e)
                 Result.failure(e)
@@ -646,6 +739,8 @@ class DesktopDockerRepository(
                         Result.failure(mapShellError(result, normalized))
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to download file {} in container {}", path, id, e)
                 Result.failure(e)
@@ -655,8 +750,8 @@ class DesktopDockerRepository(
     /**
      * Run [argv] in a container via a one-shot, non-TTY `docker exec`, capturing stdout and stderr
      * separately. Must be non-TTY so the daemon demultiplexes the two streams by [com.github.dockerjava.api.model.Frame]
-     * type. Bounded by [timeoutMillis] via the callback's built-in awaitCompletion — the HTTP client
-     * deliberately has no socket read timeout for streaming endpoints, so this is the only ceiling.
+     * type. Bounded by [timeoutMillis] via the callback's built-in awaitCompletion, and by the
+     * command client's read timeout when the exec prints nothing for that long.
      */
     private suspend fun execCapture(
         containerId: String,
@@ -678,7 +773,7 @@ class DesktopDockerRepository(
                 val out = java.io.ByteArrayOutputStream()
                 val err = java.io.ByteArrayOutputStream()
                 val callback =
-                    object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                    object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                         override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                             val payload = frame?.payload ?: return
                             if (frame.streamType == com.github.dockerjava.api.model.StreamType.STDERR) {
@@ -689,12 +784,19 @@ class DesktopDockerRepository(
                         }
                     }
 
+                // Cancellable (review-2026-10 B6): awaitCompletion blocks this IO thread until the
+                // exec ends or times out, and cancelling the calling coroutine used to leave it
+                // blocked. runInterruptible turns cancellation into an interrupt, and awaitCompletion
+                // then closes the callback; a StreamCallback keeps that close even if docker-java has
+                // not handed over the stream yet.
                 val completed =
-                    dockerClient
-                        .execStartCmd(execId)
-                        .withDetach(false)
-                        .exec(callback)
-                        .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    runInterruptible {
+                        dockerClient
+                            .execStartCmd(execId)
+                            .withDetach(false)
+                            .exec(callback)
+                            .awaitCompletion(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    }
 
                 if (!completed) {
                     try {
@@ -724,7 +826,6 @@ class DesktopDockerRepository(
         return if (text.endsWith("\n")) pieces.dropLast(1) else pieces
     }
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followContainerLogs(
         id: String,
         tail: Int,
@@ -732,7 +833,7 @@ class DesktopDockerRepository(
         callbackFlow {
             val lines = mutableListOf<String>()
             val callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                     override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                         frame?.let {
                             val text = String(it.payload ?: ByteArray(0))
@@ -762,7 +863,7 @@ class DesktopDockerRepository(
                 }
 
             try {
-                dockerClient
+                streamClient
                     .logContainerCmd(id)
                     .withStdOut(true)
                     .withStdErr(true)
@@ -780,16 +881,24 @@ class DesktopDockerRepository(
                 } catch (_: Exception) {
                 }
             }
-        }.conflate().sample(100).flowOn(Dispatchers.IO)
+        }.conflate()
+            // At most ~10 snapshots a second, but the last one always arrives: sample() dropped a
+            // snapshot that came after its last tick when the stream ended (review-2026-10 B2).
+            .transform { snapshot ->
+                emit(snapshot)
+                delay(100)
+            }.flowOn(Dispatchers.IO)
 
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
     override fun followMultipleContainerLogs(
         containers: List<Pair<String, String>>,
         tail: Int,
     ): Flow<List<String>> =
         channelFlow {
             val lines = mutableListOf<String>()
-            val lock = Any()
+            // Each snapshot is built and sent under one lock. Built under a lock but sent after it,
+            // two streams could send out of order: the older, shorter snapshot then replaced the
+            // newer one, and the last lines of a stream that had just ended never showed.
+            val mutex = Mutex()
 
             // supervisorScope so one container's stream failing (e.g. it gets killed mid-follow)
             // doesn't cancel the sibling streams via structured concurrency. It also suspends
@@ -799,7 +908,7 @@ class DesktopDockerRepository(
                     launch {
                         callbackFlow {
                             val callback =
-                                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
+                                object : StreamCallback<com.github.dockerjava.api.model.Frame>() {
                                     override fun onNext(frame: com.github.dockerjava.api.model.Frame?) {
                                         frame?.let {
                                             val text = String(it.payload ?: ByteArray(0))
@@ -818,7 +927,7 @@ class DesktopDockerRepository(
                                     }
                                 }
                             try {
-                                dockerClient
+                                streamClient
                                     .logContainerCmd(containerId)
                                     .withStdOut(true)
                                     .withStdErr(true)
@@ -837,23 +946,26 @@ class DesktopDockerRepository(
                         }.collect { text ->
                             val newLines = splitLogLines(text).map { "[$label] $it" }
                             if (newLines.isNotEmpty()) {
-                                val snapshot =
-                                    synchronized(lock) {
-                                        lines.addAll(newLines)
-                                        val cap = cachedMaxLogLines.get()
-                                        if (lines.size > cap) {
-                                            val excess = lines.size - cap
-                                            repeat(excess) { lines.removeFirst() }
-                                        }
-                                        lines.toList()
+                                mutex.withLock {
+                                    lines.addAll(newLines)
+                                    val cap = cachedMaxLogLines.get()
+                                    if (lines.size > cap) {
+                                        val excess = lines.size - cap
+                                        repeat(excess) { lines.removeFirst() }
                                     }
-                                send(snapshot)
+                                    send(lines.toList())
+                                }
                             }
                         }
                     }
                 }
             }
-        }.conflate().sample(100).flowOn(Dispatchers.IO)
+        }.conflate()
+            // See followContainerLogs.
+            .transform { snapshot ->
+                emit(snapshot)
+                delay(100)
+            }.flowOn(Dispatchers.IO)
 
     override suspend fun startContainer(id: String): Result<Unit> =
         withContext(Dispatchers.IO) {
@@ -930,6 +1042,15 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listImagesNow(): List<DockerImage> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listImagesCmd()
+                .withShowAll(true)
+                .exec()
+                .map { it.toDockerImage() }
+        }
+
     // Images — hot shared flow (shared across DashboardScreenViewModel + ImagesScreenViewModel).
     private val imagesShared: SharedFlow<List<DockerImage>> by lazy {
         merge(
@@ -941,38 +1062,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listImagesCmd()
-                        .withShowAll(true)
-                        .exec()
-                        .map { it.toDockerImage() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list images: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listImagesCmd()
-                            .withShowAll(true)
-                            .exec()
-                            .map { it.toDockerImage() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list images on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Image flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(imagesListState) { listImagesNow() } }
+            .onStart {
+                imagesListState.failing = false
+                emit(listOrKeepLast(imagesListState) { listImagesNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Image flow error", e)
+                if (!imagesListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -1039,6 +1137,24 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listVolumesNow(): List<Volume> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listVolumesCmd()
+                .exec()
+                .volumes
+                ?.map { volume ->
+                    Volume(
+                        name = volume.name ?: "",
+                        driver = volume.driver ?: "local",
+                        mountpoint = volume.mountpoint ?: "",
+                        scope = "local",
+                        labels = volume.labels,
+                    )
+                }
+                ?: emptyList()
+        }
+
     // Volumes — hot shared flow.
     private val volumesShared: SharedFlow<List<Volume>> by lazy {
         merge(
@@ -1050,56 +1166,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listVolumesCmd()
-                        .exec()
-                        .volumes
-                        ?.map { volume ->
-                            Volume(
-                                name = volume.name ?: "",
-                                driver = volume.driver ?: "local",
-                                mountpoint = volume.mountpoint ?: "",
-                                scope = "local",
-                                labels = volume.labels,
-                            )
-                        }
-                        ?: emptyList()
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list volumes: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listVolumesCmd()
-                            .exec()
-                            .volumes
-                            ?.map { volume ->
-                                Volume(
-                                    name = volume.name ?: "",
-                                    driver = volume.driver ?: "local",
-                                    mountpoint = volume.mountpoint ?: "",
-                                    scope = "local",
-                                    labels = volume.labels,
-                                )
-                            }
-                            ?: emptyList()
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list volumes on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Volume flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(volumesListState) { listVolumesNow() } }
+            .onStart {
+                volumesListState.failing = false
+                emit(listOrKeepLast(volumesListState) { listVolumesNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Volume flow error", e)
+                if (!volumesListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -1161,6 +1236,14 @@ class DesktopDockerRepository(
             }
         }
 
+    private fun listNetworksNow(): List<DockerNetwork> =
+        withRetryOnPoolShutdown {
+            dockerClient
+                .listNetworksCmd()
+                .exec()
+                .map { it.toDockerNetwork() }
+        }
+
     // Networks — hot shared flow.
     private val networksShared: SharedFlow<List<DockerNetwork>> by lazy {
         merge(
@@ -1172,36 +1255,15 @@ class DesktopDockerRepository(
                     emit(Unit)
                 }
             },
-        ).map {
-            try {
-                withRetryOnPoolShutdown {
-                    dockerClient
-                        .listNetworksCmd()
-                        .exec()
-                        .map { it.toDockerNetwork() }
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to list networks: {}", e.message)
-                emptyList()
-            }
-        }.onStart {
-            emit(
-                try {
-                    withRetryOnPoolShutdown {
-                        dockerClient
-                            .listNetworksCmd()
-                            .exec()
-                            .map { it.toDockerNetwork() }
-                    }
-                } catch (e: Exception) {
-                    logger.warn("Failed to list networks on start: {}", e.message)
-                    emptyList()
-                },
-            )
-        }.catch { e ->
-            logger.error("Network flow error", e)
-            emit(emptyList())
-        }.flowOn(Dispatchers.IO)
+        ).map { listOrKeepLast(networksListState) { listNetworksNow() } }
+            .onStart {
+                networksListState.failing = false
+                emit(listOrKeepLast(networksListState) { listNetworksNow() })
+            }.filterNotNull()
+            .catch { e ->
+                logger.error("Network flow error", e)
+                if (!networksListState.loaded) emit(emptyList())
+            }.flowOn(Dispatchers.IO)
             .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
     }
 
@@ -1316,7 +1378,7 @@ class DesktopDockerRepository(
     ): Flow<ContainerStats> =
         callbackFlow<ContainerStats> {
             val callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Statistics>() {
+                object : StreamCallback<com.github.dockerjava.api.model.Statistics>() {
                     override fun onNext(s: com.github.dockerjava.api.model.Statistics?) {
                         s?.let {
                             val (diskR, diskW) = extractDiskIo(it)
@@ -1347,7 +1409,7 @@ class DesktopDockerRepository(
                     }
                 }
             try {
-                dockerClient.statsCmd(containerId).withNoStream(false).exec(callback)
+                streamClient.statsCmd(containerId).withNoStream(false).exec(callback)
             } catch (e: Exception) {
                 close(e)
             }
@@ -1444,9 +1506,16 @@ class DesktopDockerRepository(
     override fun close() {
         try {
             scope.cancel()
-            val current = clients
-            current.dockerClient.close()
-            current.httpClient.close()
+            val current =
+                synchronized(clientRebuildLock) {
+                    closed = true
+                    clients
+                }
+            // One by one: a failure closing the command pair must not leave the stream pair open.
+            closeQuietly(current.commands, "command client")
+            closeQuietly(current.commandsHttp, "command HTTP client")
+            closeQuietly(current.streams, "stream client")
+            closeQuietly(current.streamsHttp, "stream HTTP client")
         } catch (e: Exception) {
             logger.warn("Error during DockerRepository shutdown", e)
         }

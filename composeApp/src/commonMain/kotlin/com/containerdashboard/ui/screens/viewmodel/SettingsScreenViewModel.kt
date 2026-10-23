@@ -28,6 +28,10 @@ class SettingsScreenViewModel(
     // Factory seam for testConnection: production builds a real repository for the
     // candidate host; tests inject a fake. Defaults keep runtime behavior identical.
     private val testRepoFactory: (String) -> DockerRepository = { host -> createDockerRepository(host) },
+    // Seams for the engine start (review-2026-10 B5); production uses the singletons.
+    private val startEngineOp: suspend (EngineType, String?, Int?, Int?, Int?) -> Boolean =
+        { type, profile, cpu, memory, disk -> EngineOperations.startEngine(type, profile, cpu, memory, disk) },
+    private val reconnect: (String) -> Unit = { host -> AppModule.reconnect(host) },
 ) : ViewModel() {
     private val repo: DockerRepository get() = repoProvider()
 
@@ -108,9 +112,11 @@ class SettingsScreenViewModel(
         viewModelScope.launch {
             val type = engineType.value
             val profile = colimaProfile.value
-            EngineOperations.startEngine(type, profile, cpu, memory, disk)
+            // A rejected or failed start used to reconnect anyway, swapping the repository while
+            // the engine was down (review-2026-10 B5).
+            if (!startEngineOp(type, profile, cpu, memory, disk)) return@launch
             val host = PreferenceRepository.engineHost().first()
-            AppModule.reconnect(host)
+            reconnect(host)
         }
     }
 
@@ -137,7 +143,7 @@ class SettingsScreenViewModel(
             val profile = colimaProfile.value
             if (!EngineOperations.restartEngine(type, profile, cpu, memory, disk)) return@launch
             val host = PreferenceRepository.engineHost().first()
-            AppModule.reconnect(host)
+            reconnect(host)
         }
     }
 
@@ -182,7 +188,7 @@ class SettingsScreenViewModel(
     fun saveAndReconnect(host: String) {
         viewModelScope.launch {
             PreferenceRepository.setEngineHost(host)
-            AppModule.reconnect(host)
+            reconnect(host)
         }
     }
 

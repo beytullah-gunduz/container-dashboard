@@ -45,6 +45,8 @@ round-trip through preferences.
 
 ## S5.3 — Container env vars (often secrets) rendered unmasked
 
+> **Partially reopened 2026-10-20 (since fixed):** the Environment tab masks secret-looking keys, but the Raw JSON tab still renders every env value in plaintext — see [review-2026-10.md](review-2026-10.md) S5.3 (Prior-audit corrections).
+
 - **Severity:** Low · **Effort:** M
 - **File:** `composeApp/src/commonMain/kotlin/com/containerdashboard/ui/components/ResourceDetailsDialog.kt:715-726`
 

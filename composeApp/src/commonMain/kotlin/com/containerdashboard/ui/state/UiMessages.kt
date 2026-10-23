@@ -4,6 +4,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 
 /** A transient, app-wide message shown as a snackbar (UX audit U1.2). */
 data class UiMessage(
@@ -34,5 +35,13 @@ object UiMessages {
 
     fun error(text: String) {
         _events.tryEmit(UiMessage(text = text, isError = true))
+    }
+
+    /**
+     * Suspends until the snackbar host collects. A message posted before that is dropped (no
+     * replay), and the host subscribes one frame after the effects that post (review-2026-10 G10).
+     */
+    suspend fun awaitCollector() {
+        _events.subscriptionCount.first { it > 0 }
     }
 }

@@ -103,6 +103,9 @@
 -dontwarn com.sun.jna.**
 -keep class com.sun.jna.** { *; }
 -keep class * implements com.sun.jna.** { *; }
+# Spelled out for the title-bar NSRect (fields read by name) and its ObjC callbacks.
+-keep class * extends com.sun.jna.Structure { *; }
+-keep class * implements com.sun.jna.Callback { *; }
 
 # ---------------------------------------------------------------------------
 # SLF4J / Logback reflective loading

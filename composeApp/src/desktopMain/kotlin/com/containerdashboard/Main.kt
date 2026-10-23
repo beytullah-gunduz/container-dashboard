@@ -41,11 +41,13 @@ import com.containerdashboard.BuildConfig
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
+import com.containerdashboard.data.repository.forPersistence
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
 import com.containerdashboard.ui.chrome.DesktopOs
 import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
 import com.containerdashboard.ui.chrome.NativeMacApp
+import com.containerdashboard.ui.chrome.TransparentTitleBarOnMac
 import com.containerdashboard.ui.chrome.currentDesktopOs
 import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
@@ -235,6 +237,7 @@ fun main() {
 
         @OptIn(kotlinx.coroutines.FlowPreview::class)
         LaunchedEffect(windowState) {
+            var lastFloating = persistedBounds?.takeUnless { it.maximized }
             snapshotFlow {
                 val pos = windowState.position
                 val size = windowState.size
@@ -248,7 +251,8 @@ fun main() {
             }.debounce(300L).collect { bounds ->
                 // Skip spurious zero-size emissions during startup
                 if (bounds.width > 100 && bounds.height > 100) {
-                    PreferenceRepository.setWindowBounds(bounds)
+                    PreferenceRepository.setWindowBounds(bounds.forPersistence(lastFloating))
+                    if (!bounds.maximized) lastFloating = bounds
                 }
             }
         }
@@ -335,13 +339,15 @@ fun main() {
             state = windowState,
             icon = appIcon,
             visible = isWindowVisible,
-            undecorated = true,
+            // macOS keeps its own title bar buttons, under a transparent title bar.
+            undecorated = currentDesktopOs != DesktopOs.MAC,
         ) {
             val desktopChrome =
                 rememberDesktopWindowChrome(
                     windowState = windowState,
                     onClose = { hideWindow() },
                 )
+            TransparentTitleBarOnMac(window)
             CompositionLocalProvider(LocalDesktopWindowChrome provides desktopChrome) {
                 App(
                     navigateToRoute = pendingRoute,

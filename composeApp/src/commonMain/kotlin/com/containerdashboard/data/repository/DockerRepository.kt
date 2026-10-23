@@ -14,6 +14,7 @@ import com.containerdashboard.data.models.SystemInfo
 import com.containerdashboard.data.models.Volume
 import com.containerdashboard.data.models.VolumeInspect
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Platform-agnostic Docker repository interface.
@@ -38,6 +39,13 @@ interface DockerRepository {
     suspend fun refreshVolumes()
 
     suspend fun refreshNetworks()
+
+    /**
+     * One message per failure streak of a list refresh (containers, images, volumes, networks)
+     * that failed after that list had loaded: the list flows then keep their last list instead of
+     * emitting an empty one, and this says so (review-2026-10 B3).
+     */
+    fun listRefreshFailures(): Flow<String> = emptyFlow()
 
     suspend fun getContainer(id: String): Result<Container>
 

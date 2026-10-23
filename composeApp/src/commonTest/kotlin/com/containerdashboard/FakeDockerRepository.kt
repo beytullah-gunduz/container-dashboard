@@ -16,6 +16,7 @@ import com.containerdashboard.data.models.VolumeInspect
 import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.data.repository.PruneResult
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.yield
 
@@ -64,12 +65,15 @@ class FakeDockerRepository(
     var readFileResult: Result<ContainerFileContent> =
         Result.success(ContainerFileContent(text = "", isBinary = false, truncated = false, totalBytesShown = 0)),
     var downloadFileResult: Result<ByteArray> = Result.success(ByteArray(0)),
+    // Text returned by [getContainerLogs] (one-shot fetches), for log-pane line handling tests.
+    var containerLogs: String = "",
     // Flow overrides for driving loading/availability transitions in tests. When null, the simple
     // single-value defaults are used (matching prior behavior).
     var containersFlowOverride: Flow<List<Container>>? = null,
     var availabilityFlowOverride: Flow<Boolean>? = null,
     var containerStatsFlowOverride: Flow<List<ContainerStats>>? = null,
     var imagesFlowOverride: Flow<List<DockerImage>>? = null,
+    var listRefreshFailuresFlowOverride: Flow<String>? = null,
 ) : DockerRepository {
     // --- Recorded interactions (for behavioral assertions) ---
 
@@ -87,6 +91,10 @@ class FakeDockerRepository(
 
     /** Number of times [close] was invoked. */
     var closeCount = 0
+        private set
+
+    /** Number of times [inspectContainer] was invoked. */
+    var inspectContainerCalls = 0
         private set
 
     // --- Availability ---
@@ -112,14 +120,17 @@ class FakeDockerRepository(
 
     override suspend fun refreshNetworks() = Unit
 
+    override fun listRefreshFailures(): Flow<String> = listRefreshFailuresFlowOverride ?: emptyFlow()
+
     override suspend fun getContainer(id: String): Result<Container> =
         containers
             .find { it.id == id }
             ?.let { Result.success(it) }
             ?: Result.failure(NoSuchElementException("Container $id not found"))
 
-    override suspend fun inspectContainer(id: String): Result<ContainerInspect> =
-        Result.success(
+    override suspend fun inspectContainer(id: String): Result<ContainerInspect> {
+        inspectContainerCalls++
+        return Result.success(
             ContainerInspect(
                 id = id,
                 name = "fake-container",
@@ -144,12 +155,13 @@ class FakeDockerRepository(
                 rawJson = "{}",
             ),
         )
+    }
 
     override suspend fun getContainerLogs(
         id: String,
         tail: Int,
         timestamps: Boolean,
-    ): Result<String> = Result.success("")
+    ): Result<String> = Result.success(containerLogs)
 
     override fun followContainerLogs(
         id: String,

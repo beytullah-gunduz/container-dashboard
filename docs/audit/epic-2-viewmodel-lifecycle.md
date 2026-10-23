@@ -7,6 +7,8 @@ S2.1 + S2.2 are the same root cause across five ViewModels — fix them together
 
 ## S2.1 — Images/Networks/Volumes VMs capture the initial repository; dead after host reconnect
 
+> **Partially reopened 2026-10-20 (since fixed):** the list VMs are fixed, but the claim below that `DashboardScreenViewModel` already re-binds via `repoFlow.flatMapLatest` was wrong when written and the Dashboard still binds to the initial repository — see [review-2026-10.md](review-2026-10.md) B1.
+
 - **Severity:** High · **Effort:** M
 - **Files:** `ui/screens/viewmodel/ImagesScreenViewModel.kt:22` (and the equivalent constructor lines in `NetworksScreenViewModel.kt`, `VolumesScreenViewModel.kt`)
 
@@ -26,6 +28,8 @@ from the new host without app restart. Update/extend the existing VM tests.
 ---
 
 ## S2.2 — Containers/Monitoring VMs bind live flows to the initial repository
+
+> **Partially reopened 2026-10-20 (since fixed):** Containers and Monitoring re-bind correctly, but the Dashboard VM, which has the same root cause, was never converted — see [review-2026-10.md](review-2026-10.md) B1.
 
 - **Severity:** High · **Effort:** M
 - **Files:** `ui/screens/viewmodel/ContainersScreenViewModel.kt:37` (`containersFlow`), `ui/screens/viewmodel/MonitoringScreenViewModel.kt:110-113` (`rawStats`)

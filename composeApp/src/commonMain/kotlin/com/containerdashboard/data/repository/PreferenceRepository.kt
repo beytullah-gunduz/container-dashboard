@@ -52,6 +52,15 @@ data class WindowBounds(
     val maximized: Boolean,
 )
 
+/**
+ * The bounds to persist for [this] window state. While maximized, the window keeps the position
+ * and size it last had when it was not ([lastFloating]): saving the maximized rectangle made it
+ * the size a restore returns to after a relaunch, so maximize and restore both landed on the same
+ * rectangle and the window seemed not to respond.
+ */
+fun WindowBounds.forPersistence(lastFloating: WindowBounds?): WindowBounds =
+    if (maximized && lastFloating != null) lastFloating.copy(maximized = true) else this
+
 object PreferenceRepository {
     private val dataStore: DataStore<Preferences> by lazy { dataStorePreferencesInstance }
 
@@ -127,16 +136,21 @@ object PreferenceRepository {
     val initialEngineHost: String
         get() = syncSnapshot()?.get(ENGINE_HOST) ?: DEFAULT_ENGINE_HOST
 
-    fun engineHost(): Flow<String> =
+    // One flow per preference, built once: collectAsState() restarts its collection whenever it is
+    // handed a new flow instance, and every call used to build one (review-2026-10 G11).
+    private val engineHostFlow: Flow<String> by lazy {
         dataStore.data.map {
             it[ENGINE_HOST] ?: DEFAULT_ENGINE_HOST
         }
+    }
+
+    fun engineHost(): Flow<String> = engineHostFlow
 
     suspend fun setEngineHost(value: String) {
         dataStore.edit { it[ENGINE_HOST] = value }
     }
 
-    fun themeMode(): Flow<ThemeMode> =
+    private val themeModeFlow: Flow<ThemeMode> by lazy {
         dataStore.data.map { prefs ->
             val stored = prefs[THEME_MODE]
             if (stored != null) {
@@ -151,70 +165,94 @@ object PreferenceRepository {
                 }
             }
         }
+    }
+
+    fun themeMode(): Flow<ThemeMode> = themeModeFlow
 
     suspend fun setThemeMode(value: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = value.name }
     }
 
-    fun monitoringAggregation(): Flow<MonitoringAggregation> =
+    private val monitoringAggregationFlow: Flow<MonitoringAggregation> by lazy {
         dataStore.data.map { prefs ->
             val stored = prefs[MONITORING_AGGREGATION]
             MonitoringAggregation.entries.firstOrNull { it.name == stored } ?: MonitoringAggregation.ENGINE
         }
+    }
+
+    fun monitoringAggregation(): Flow<MonitoringAggregation> = monitoringAggregationFlow
 
     suspend fun setMonitoringAggregation(value: MonitoringAggregation) {
         dataStore.edit { it[MONITORING_AGGREGATION] = value.name }
     }
 
-    fun showSystemContainers(): Flow<Boolean> =
+    private val showSystemContainersFlow: Flow<Boolean> by lazy {
         dataStore.data.map {
             it[SHOW_SYSTEM_CONTAINERS] ?: false
         }
+    }
+
+    fun showSystemContainers(): Flow<Boolean> = showSystemContainersFlow
 
     suspend fun setShowSystemContainers(value: Boolean) {
         dataStore.edit { it[SHOW_SYSTEM_CONTAINERS] = value }
     }
 
-    fun confirmBeforeDelete(): Flow<Boolean> =
+    private val confirmBeforeDeleteFlow: Flow<Boolean> by lazy {
         dataStore.data.map {
             it[CONFIRM_BEFORE_DELETE] ?: true
         }
+    }
+
+    fun confirmBeforeDelete(): Flow<Boolean> = confirmBeforeDeleteFlow
 
     suspend fun setConfirmBeforeDelete(value: Boolean) {
         dataStore.edit { it[CONFIRM_BEFORE_DELETE] = value }
     }
 
-    fun logsPaneLayout(): Flow<String> =
+    private val logsPaneLayoutFlow: Flow<String> by lazy {
         dataStore.data.map {
             it[LOGS_PANE_LAYOUT] ?: "AUTO"
         }
+    }
+
+    fun logsPaneLayout(): Flow<String> = logsPaneLayoutFlow
 
     suspend fun setLogsPaneLayout(value: String) {
         dataStore.edit { it[LOGS_PANE_LAYOUT] = value }
     }
 
-    fun trayRefreshRateSeconds(): Flow<Int> =
+    private val trayRefreshRateSecondsFlow: Flow<Int> by lazy {
         dataStore.data.map {
             it[TRAY_REFRESH_RATE] ?: 5
         }
+    }
+
+    fun trayRefreshRateSeconds(): Flow<Int> = trayRefreshRateSecondsFlow
 
     suspend fun setTrayRefreshRateSeconds(value: Int) {
         dataStore.edit { it[TRAY_REFRESH_RATE] = value }
     }
 
-    fun logsWordWrap(): Flow<Boolean> =
+    private val logsWordWrapFlow: Flow<Boolean> by lazy {
         dataStore.data.map {
             it[LOGS_WORD_WRAP] ?: true
         }
+    }
+
+    fun logsWordWrap(): Flow<Boolean> = logsWordWrapFlow
 
     suspend fun setLogsWordWrap(value: Boolean) {
         dataStore.edit { it[LOGS_WORD_WRAP] = value }
     }
 
-    fun logsMaxLines(): Flow<Int> =
+    private val logsMaxLinesFlow: Flow<Int> by lazy {
         dataStore.data.map {
             it[LOGS_MAX_LINES] ?: 1000
         }
+    }
+
+    fun logsMaxLines(): Flow<Int> = logsMaxLinesFlow
 
     suspend fun setLogsMaxLines(value: Int) {
         dataStore.edit { it[LOGS_MAX_LINES] = value }
@@ -235,7 +273,7 @@ object PreferenceRepository {
     val logsMaxLinesSync: Int
         get() = logsMaxLinesState.value
 
-    fun containerColumnWidths(): Flow<ContainerColumnWidths> =
+    private val containerColumnWidthsFlow: Flow<ContainerColumnWidths> by lazy {
         dataStore.data.map { prefs ->
             ContainerColumnWidths(
                 name = prefs[COL_WIDTH_NAME] ?: ContainerColumnWidths.Default.name,
@@ -244,6 +282,9 @@ object PreferenceRepository {
                 ports = prefs[COL_WIDTH_PORTS] ?: ContainerColumnWidths.Default.ports,
             )
         }
+    }
+
+    fun containerColumnWidths(): Flow<ContainerColumnWidths> = containerColumnWidthsFlow
 
     suspend fun setContainerColumnWidths(widths: ContainerColumnWidths) {
         dataStore.edit { prefs ->
@@ -254,7 +295,7 @@ object PreferenceRepository {
         }
     }
 
-    fun volumeColumnWeights(): Flow<VolumeColumnWeights> =
+    private val volumeColumnWeightsFlow: Flow<VolumeColumnWeights> by lazy {
         dataStore.data.map { prefs ->
             VolumeColumnWeights(
                 name = prefs[VOL_COL_WEIGHT_NAME] ?: VolumeColumnWeights.Default.name,
@@ -262,6 +303,9 @@ object PreferenceRepository {
                 mountpoint = prefs[VOL_COL_WEIGHT_MOUNT] ?: VolumeColumnWeights.Default.mountpoint,
             )
         }
+    }
+
+    fun volumeColumnWeights(): Flow<VolumeColumnWeights> = volumeColumnWeightsFlow
 
     suspend fun setVolumeColumnWeights(weights: VolumeColumnWeights) {
         dataStore.edit { prefs ->
@@ -307,7 +351,9 @@ object PreferenceRepository {
         dataStore.edit { it[LAST_ROUTE] = route }
     }
 
-    fun logsPaneRightWidth(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_RIGHT_W] }
+    private val logsPaneRightWidthFlow: Flow<Int?> by lazy { dataStore.data.map { it[LOGS_PANE_RIGHT_W] } }
+
+    fun logsPaneRightWidth(): Flow<Int?> = logsPaneRightWidthFlow
 
     val logsPaneRightWidthSync: Int?
         get() = syncSnapshot()?.get(LOGS_PANE_RIGHT_W)
@@ -316,7 +362,9 @@ object PreferenceRepository {
         dataStore.edit { it[LOGS_PANE_RIGHT_W] = dp }
     }
 
-    fun logsPaneBottomHeight(): Flow<Int?> = dataStore.data.map { it[LOGS_PANE_BOTTOM_H] }
+    private val logsPaneBottomHeightFlow: Flow<Int?> by lazy { dataStore.data.map { it[LOGS_PANE_BOTTOM_H] } }
+
+    fun logsPaneBottomHeight(): Flow<Int?> = logsPaneBottomHeightFlow
 
     val logsPaneBottomHeightSync: Int?
         get() = syncSnapshot()?.get(LOGS_PANE_BOTTOM_H)

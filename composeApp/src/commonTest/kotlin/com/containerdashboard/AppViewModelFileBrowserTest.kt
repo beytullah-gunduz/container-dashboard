@@ -87,6 +87,13 @@ class AppViewModelFileBrowserTest {
         symlinkTarget = target,
     )
 
+    /** Toggles the one visible row showing [entry] (rows are addressed by tree position). */
+    private fun AppViewModel.toggle(entry: ContainerFileEntry) =
+        toggleNode(
+            filesPaneState.value.nodes
+                .single { it.entry == entry },
+        )
+
     // -------------------------------------------------------------------------
     // openFilesTab / root loading
     // -------------------------------------------------------------------------
@@ -206,7 +213,7 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             // loadChildren flags the node as loading synchronously.
             assertTrue(
                 vm.filesPaneState.value.nodes
@@ -223,7 +230,7 @@ class AppViewModelFileBrowserTest {
             assertFalse(etcNode.isLoading)
 
             // Collapse: children disappear, expansion flag clears.
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             advanceUntilIdle()
             nodes = vm.filesPaneState.value.nodes
             assertEquals(listOf("/etc", "/readme"), nodes.map { it.entry.path })
@@ -246,11 +253,11 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             advanceUntilIdle()
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             advanceUntilIdle()
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             advanceUntilIdle()
 
             assertEquals(
@@ -277,7 +284,7 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(readme)
+            vm.toggle(readme)
             advanceUntilIdle()
 
             assertEquals(listOf("/"), fake.listedDirectoryPaths)
@@ -304,7 +311,7 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(secret)
+            vm.toggle(secret)
             advanceUntilIdle()
 
             val node =
@@ -335,7 +342,7 @@ class AppViewModelFileBrowserTest {
             val vm = makeVm(fake)
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
-            vm.toggleNode(etc)
+            vm.toggle(etc)
             advanceUntilIdle()
             assertEquals(2, vm.filesPaneState.value.nodes.size)
 
@@ -369,7 +376,7 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(bin)
+            vm.toggle(bin)
             advanceUntilIdle()
 
             assertEquals(listOf("/", "/usr/bin"), fake.listedDirectoryPaths)
@@ -400,11 +407,11 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(lib)
+            vm.toggle(lib)
             advanceUntilIdle()
-            vm.toggleNode(varDir)
+            vm.toggle(varDir)
             advanceUntilIdle()
-            vm.toggleNode(varRun)
+            vm.toggle(varRun)
             advanceUntilIdle()
 
             assertEquals(listOf("/", "/usr/lib", "/var", "/run"), fake.listedDirectoryPaths)
@@ -432,9 +439,52 @@ class AppViewModelFileBrowserTest {
             vm.openFilesTab(makeContainer())
             advanceUntilIdle()
 
-            vm.toggleNode(link)
+            vm.toggle(link)
             advanceUntilIdle()
 
             assertEquals(listOf("/", "/data"), fake.listedDirectoryPaths)
+        }
+
+    @Test
+    fun `a symlinked directory and its target are separate rows with their own expanded state`() =
+        runTest {
+            // Merged /usr: /bin -> usr/bin, so both subtrees list the same files.
+            val usr = dir("/usr")
+            val bin = symlink("/bin", target = "usr/bin")
+            val usrBin = dir("/usr/bin")
+            val sub = dir("/usr/bin/sub")
+            val fake =
+                FakeDockerRepository(
+                    directoryListings =
+                        mapOf(
+                            "/" to Result.success(listOf(usr, bin)),
+                            "/usr" to Result.success(listOf(usrBin)),
+                            "/usr/bin" to Result.success(listOf(sub, file("/usr/bin/ls"))),
+                            "/usr/bin/sub" to Result.success(listOf(file("/usr/bin/sub/x"))),
+                        ),
+                )
+            val vm = makeVm(fake)
+            vm.openFilesTab(makeContainer())
+            advanceUntilIdle()
+
+            vm.toggle(usr)
+            advanceUntilIdle()
+            vm.toggle(usrBin)
+            advanceUntilIdle()
+            vm.toggle(sub)
+            advanceUntilIdle()
+            vm.toggle(bin)
+            advanceUntilIdle()
+
+            val nodes = vm.filesPaneState.value.nodes
+            assertEquals(
+                listOf("/usr", "/usr/bin", "/usr/bin/sub", "/usr/bin/sub/x", "/usr/bin/ls", "/bin", "/bin/sub", "/bin/ls"),
+                nodes.map { it.treePath },
+            )
+            // Rows below the symlink still carry the real paths, which is what read/download use.
+            assertEquals("/usr/bin/ls", nodes.single { it.treePath == "/bin/ls" }.entry.path)
+            // Expanding /usr/bin/sub did not expand the same directory below /bin.
+            assertTrue(nodes.single { it.treePath == "/usr/bin/sub" }.isExpanded)
+            assertFalse(nodes.single { it.treePath == "/bin/sub" }.isExpanded)
         }
 }

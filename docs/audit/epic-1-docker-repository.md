@@ -127,6 +127,8 @@ jobs on the repo scope.
 
 ## S1.7 — Log-follow drops blank lines; one failing stream cancels all siblings
 
+> **Partially reopened 2026-10-20:** the follow paths keep blank lines and use `supervisorScope`, but the one-shot fetch and export paths still drop blank lines — see [review-2026-10.md](review-2026-10.md) B7.
+
 - **Severity:** Medium · **Effort:** S
 - **Files:** `DesktopDockerRepository.kt:695, 784` (blank-line filter), `:805` area (multi-follow structure)
 

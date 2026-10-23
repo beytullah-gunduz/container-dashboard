@@ -93,7 +93,11 @@ object EngineManager {
                 val textHolder = arrayOfNulls<String>(1)
                 val drainThread =
                     thread(name = "colima-status-drain") {
-                        textHolder[0] = proc.inputStream.bufferedReader().readText()
+                        try {
+                            textHolder[0] = proc.inputStream.bufferedReader().readText()
+                        } catch (_: Exception) {
+                            // Stream closed when the timeout destroys the process (review-2026-10 B9).
+                        }
                     }
                 val finished = proc.waitFor(TIMEOUT_STATUS_SECONDS, TimeUnit.SECONDS)
                 if (!finished) {

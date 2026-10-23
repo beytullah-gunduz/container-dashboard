@@ -1,7 +1,9 @@
 package com.containerdashboard.terminal
 
+import com.containerdashboard.data.repository.StreamCallback
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.model.Frame
+import com.jediterm.core.util.TermSize
 import com.jediterm.terminal.TtyConnector
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -16,6 +18,9 @@ class DockerExecTtyConnector(
     private val dockerClient: DockerClient,
     private val containerId: String,
     private val cmd: List<String> = listOf("/bin/sh"),
+    // Exec create and resize are one-shots: they run on the command client, with its read timeout.
+    // Only the exec session itself streams on [dockerClient] (review-2026-10 B8).
+    private val commandClient: DockerClient = dockerClient,
 ) : TtyConnector {
     private val logger = LoggerFactory.getLogger(DockerExecTtyConnector::class.java)
 
@@ -34,6 +39,10 @@ class DockerExecTtyConnector(
     private var started = false
     private val closed = AtomicBoolean(false)
 
+    // JediTermWidget.close() closes the connector again through TerminalStarter.close(); the
+    // streams are released once (review-2026-10 G3).
+    private val released = AtomicBoolean(false)
+
     @Volatile
     private var execId: String? = null
 
@@ -46,7 +55,7 @@ class DockerExecTtyConnector(
     fun start() {
         try {
             val execCreate =
-                dockerClient
+                commandClient
                     .execCreateCmd(containerId)
                     .withCmd(*cmd.toTypedArray())
                     .withAttachStdin(true)
@@ -58,7 +67,7 @@ class DockerExecTtyConnector(
             execId = execCreate.id
 
             callback =
-                object : com.github.dockerjava.api.async.ResultCallback.Adapter<Frame>() {
+                object : StreamCallback<Frame>() {
                     override fun onNext(frame: Frame?) {
                         frame?.payload?.let { data ->
                             try {
@@ -84,10 +93,8 @@ class DockerExecTtyConnector(
 
             val stdinStream = PipedInputStream(stdinPipe, 65536)
 
-            // NOTE: execStartCmd has no built-in read/connection timeout exposed by docker-java's
-            // fluent API. Adding a socket-level timeout here would require configuring the
-            // DockerClient itself (e.g. DockerClientConfig.withReadTimeout). That lives in
-            // DockerRepository, which is owned by another agent — left as a cross-lane concern.
+            // No read timeout, on purpose: the repository hands the Console its stream client, so
+            // an idle session stays open (review-2026-10 B8).
             dockerClient
                 .execStartCmd(execCreate.id)
                 .withDetach(false)
@@ -131,6 +138,19 @@ class DockerExecTtyConnector(
 
     override fun isConnected(): Boolean = started && !closed.get()
 
+    // JediTerm calls this with the panel's size in characters when the session starts and on
+    // every resize. Not overriding it left the default, which throws (swallowed by JediTerm), so
+    // the shell never learned its size: `stty size` said 0 0 (review-2026-10 G4).
+    override fun resize(termSize: TermSize) {
+        val id = execId ?: return
+        if (!isConnected()) return
+        try {
+            commandClient.resizeExecCmd(id).withSize(termSize.rows, termSize.columns).exec()
+        } catch (e: Exception) {
+            logger.debug("Failed to resize exec session {}: {}", id, e.message)
+        }
+    }
+
     override fun waitFor(): Int {
         // Blocks until onComplete/onError fires OR close() is called — no busy-wait.
         doneLatch.await()
@@ -150,6 +170,7 @@ class DockerExecTtyConnector(
         closed.set(true)
         // Release any thread blocked in waitFor() even if docker-java callbacks never fire.
         doneLatch.countDown()
+        if (!released.compareAndSet(false, true)) return
         try {
             callback?.close()
         } catch (_: Exception) {

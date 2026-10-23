@@ -9,6 +9,14 @@ import com.containerdashboard.data.models.ContainerFileEntry
  */
 data class FileTreeNode(
     val entry: ContainerFileEntry,
+    /**
+     * Where this row sits in the displayed tree: the parent row's [treePath] plus the entry's
+     * name. Unique across the tree, unlike [ContainerFileEntry.path], which is where the file
+     * really lives: below an expanded symlink (`/bin -> usr/bin`) the rows carry the target's
+     * paths, so the same path can show up twice. Use this to identify a row, and the entry's
+     * path to read or download it.
+     */
+    val treePath: String,
     val depth: Int,
     val isExpandable: Boolean,
     val isExpanded: Boolean,

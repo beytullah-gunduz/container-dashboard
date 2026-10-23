@@ -78,20 +78,23 @@ fun CommandPalette(
     ) {
         var rawQuery by remember { mutableStateOf("") }
         var query by remember { mutableStateOf("") }
-        var selectedIndex by remember { mutableStateOf(0) }
+        // The selection follows an action, not a row index: the list can change while the palette
+        // is open, and an index would silently move Enter to a neighbouring action (review-2026-10 G6).
+        var selectedId by remember { mutableStateOf<String?>(null) }
         val focusRequester = remember { FocusRequester() }
 
         LaunchedEffect(rawQuery) {
             delay(50)
             query = rawQuery
-            selectedIndex = 0
+            selectedId = null
         }
 
         LaunchedEffect(Unit) {
             runCatching { focusRequester.requestFocus() }
         }
 
-        val filtered by remember {
+        // Keyed on actions: unkeyed, the palette kept the list it opened with (review-2026-10 G6).
+        val filtered by remember(actions) {
             derivedStateOf {
                 if (query.isBlank()) {
                     actions
@@ -104,13 +107,13 @@ fun CommandPalette(
             }
         }
 
-        val sectioned by remember {
+        val sectioned by remember(actions) {
             derivedStateOf {
                 filtered.groupBy { it.section }.toList()
             }
         }
 
-        val flatActions by remember {
+        val flatActions by remember(actions) {
             derivedStateOf {
                 sectioned.flatMap { it.second }
             }
@@ -118,7 +121,7 @@ fun CommandPalette(
 
         // Selection highlighting looks rows up by id instead of relying on the
         // order in which lazy item blocks happen to compose.
-        val actionIndexById by remember {
+        val actionIndexById by remember(actions) {
             derivedStateOf {
                 buildMap {
                     flatActions.forEachIndexed { index, action -> put(action.id, index) }
@@ -126,13 +129,12 @@ fun CommandPalette(
             }
         }
 
-        val listState = rememberLazyListState()
+        // The selected action's row; the first row when nothing is selected or it is gone.
+        fun currentIndex(): Int = selectedId?.let { actionIndexById[it] } ?: 0
 
-        LaunchedEffect(selectedIndex, flatActions.size) {
-            if (flatActions.isEmpty()) return@LaunchedEffect
-            val safe = selectedIndex.coerceIn(0, flatActions.lastIndex)
-            if (safe != selectedIndex) selectedIndex = safe
-        }
+        val selectedIndex = currentIndex()
+
+        val listState = rememberLazyListState()
 
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -153,7 +155,7 @@ fun CommandPalette(
                                 }
 
                                 Key.Enter -> {
-                                    flatActions.getOrNull(selectedIndex)?.let {
+                                    flatActions.getOrNull(currentIndex())?.let {
                                         it.onRun()
                                         onClose()
                                     }
@@ -162,15 +164,15 @@ fun CommandPalette(
 
                                 Key.DirectionDown -> {
                                     if (flatActions.isNotEmpty()) {
-                                        selectedIndex = (selectedIndex + 1) % flatActions.size
+                                        selectedId = flatActions[(currentIndex() + 1) % flatActions.size].id
                                     }
                                     true
                                 }
 
                                 Key.DirectionUp -> {
                                     if (flatActions.isNotEmpty()) {
-                                        selectedIndex =
-                                            if (selectedIndex <= 0) flatActions.lastIndex else selectedIndex - 1
+                                        val index = currentIndex()
+                                        selectedId = flatActions[if (index <= 0) flatActions.lastIndex else index - 1].id
                                     }
                                     true
                                 }

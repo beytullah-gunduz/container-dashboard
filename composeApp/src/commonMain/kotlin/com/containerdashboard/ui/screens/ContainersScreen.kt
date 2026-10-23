@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -171,7 +172,15 @@ fun ContainersScreen(
     val hasLoaded by viewModel.hasLoaded.collectAsState()
     val error by viewModel.error.collectAsState()
     val actionInProgress by viewModel.actionInProgress.collectAsState()
-    val effectiveActionInProgress = actionInProgress ?: paneActionContainerId
+    val effectiveActionInProgress =
+        if (paneActionContainerId != null) actionInProgress + paneActionContainerId else actionInProgress
+    // Keeps the selection to containers that exist: the toolbar counts and Delete Selected use it.
+    // Driven by list emissions, not by the composed list, whose first frame is the empty
+    // collectAsState() placeholder — that would wipe the selection on every return to this screen
+    // (review-2026-10 G9).
+    LaunchedEffect(viewModel) {
+        viewModel.containers.collect { list -> viewModel.retainSelection(list.mapTo(HashSet()) { it.id }) }
+    }
     val selectedContainerIds by viewModel.selectedContainerIds.collectAsState()
     val pendingDeleteIds by viewModel.pendingDeleteIds.collectAsState()
     val persistedColumnWidths by viewModel.columnWidths.collectAsState(initial = ContainerColumnWidths.Default)
@@ -1007,7 +1016,7 @@ fun ContainersScreen(
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
                                                 onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
                                                 onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },
-                                                onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
+                                                onRemoveAll = { ids -> viewModel.removeContainers(ids) },
                                             )
                                         }
 
@@ -1020,7 +1029,7 @@ fun ContainersScreen(
                                                 onCheckedChange = { checked ->
                                                     viewModel.toggleContainerSelection(item.container.id, checked)
                                                 },
-                                                isActionInProgress = effectiveActionInProgress == item.container.id,
+                                                isActionInProgress = item.container.id in effectiveActionInProgress,
                                                 isPendingDelete = item.container.id in pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },
@@ -1183,7 +1192,7 @@ fun ContainersScreen(
                                                 onStopAll = { ids -> ids.forEach { viewModel.stopContainer(it) } },
                                                 onPauseAll = { ids -> ids.forEach { viewModel.pauseContainer(it) } },
                                                 onUnpauseAll = { ids -> ids.forEach { viewModel.unpauseContainer(it) } },
-                                                onRemoveAll = { ids -> ids.forEach { viewModel.removeContainer(it) } },
+                                                onRemoveAll = { ids -> viewModel.removeContainers(ids) },
                                             )
                                         }
 
@@ -1196,7 +1205,7 @@ fun ContainersScreen(
                                                 onCheckedChange = { checked ->
                                                     viewModel.toggleContainerSelection(item.container.id, checked)
                                                 },
-                                                isActionInProgress = effectiveActionInProgress == item.container.id,
+                                                isActionInProgress = item.container.id in effectiveActionInProgress,
                                                 isPendingDelete = item.container.id in pendingDeleteIds,
                                                 columnWidths = columnWidths,
                                                 onStart = { viewModel.startContainer(item.container.id) },

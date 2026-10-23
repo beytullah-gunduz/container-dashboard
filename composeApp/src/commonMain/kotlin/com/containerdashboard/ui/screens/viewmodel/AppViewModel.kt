@@ -20,6 +20,7 @@ import com.containerdashboard.ui.theme.ThemeMode
 import com.containerdashboard.ui.util.formatBytes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -129,6 +130,21 @@ class AppViewModel(
         _error.value = null
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val listRefreshFailures: Flow<String> = repoFlow.flatMapLatest { it.listRefreshFailures() }
+
+    init {
+        // A list refresh that failed after the list had loaded keeps the last list on screen;
+        // say so, once per failure streak (review-2026-10 B3). Only while connected: the error
+        // snackbar lives in the connected UI, so a message posted during an outage would pop up,
+        // stale, after the reconnect.
+        viewModelScope.launch {
+            listRefreshFailures.collect {
+                if (connectionState.value == EngineConnectionState.CONNECTED) _error.value = it
+            }
+        }
+    }
+
     val logsPaneLayout: StateFlow<LogsPaneLayout> =
         PreferenceRepository
             .logsPaneLayout()
@@ -232,7 +248,7 @@ class AppViewModel(
                 val result = repo.getContainerLogs(c.id)
                 result
                     .onSuccess { logs ->
-                        logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
+                        logTextLines(logs).forEach { line ->
                             merged.add("[$label] $line")
                         }
                     }.onFailure { fetchErrors.add("[$label] ${it.message ?: "Failed to fetch logs"}") }
@@ -255,8 +271,10 @@ class AppViewModel(
     // --- Container file browsing (read-only) ---
 
     /**
-     * Lazily-loaded tree state, keyed by node path. A symlink's children are listed from its
-     * resolved target but stored under the symlink's own path, so flattening stays uniform.
+     * Lazily-loaded tree state, keyed by [FileTreeNode.treePath] (the row's position in the
+     * tree), not by the entry's path. A symlink's children are listed from its resolved target
+     * and so carry the target's paths: keyed by entry path, an expanded `/bin -> usr/bin` and an
+     * expanded `/usr/bin` would share their children's keys and expanded flags.
      *
      * Immutable snapshot held in a single [MutableStateFlow] and mutated only via
      * `update`/`updateAndGet`: the loaders run in separate [viewModelScope] coroutines, so a
@@ -292,21 +310,23 @@ class AppViewModel(
     }
 
     /** Expand or collapse a directory (or symlink) node, lazily loading its children on first expand. */
-    fun toggleNode(entry: ContainerFileEntry) {
+    fun toggleNode(node: FileTreeNode) {
+        val entry = node.entry
         if (entry.type != FileType.DIRECTORY && entry.type != FileType.SYMLINK) return
+        val key = node.treePath
         var needsLoad = false
         val tree =
             treeState.updateAndGet { tree ->
                 needsLoad = false
-                if (entry.path in tree.expandedPaths) {
-                    tree.copy(expandedPaths = tree.expandedPaths - entry.path)
+                if (key in tree.expandedPaths) {
+                    tree.copy(expandedPaths = tree.expandedPaths - key)
                 } else {
-                    needsLoad = tree.childrenByPath[entry.path] == null
-                    tree.copy(expandedPaths = tree.expandedPaths + entry.path)
+                    needsLoad = tree.childrenByPath[key] == null
+                    tree.copy(expandedPaths = tree.expandedPaths + key)
                 }
             }
         if (needsLoad) {
-            loadChildren(entry)
+            loadChildren(node)
         } else {
             _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
         }
@@ -398,24 +418,25 @@ class AppViewModel(
         }
     }
 
-    private fun loadChildren(entry: ContainerFileEntry) {
+    private fun loadChildren(node: FileTreeNode) {
         val containerId = _filesPaneState.value.containerId ?: return
+        val key = node.treePath
         val loadingTree =
             treeState.updateAndGet {
                 it.copy(
-                    loadingPaths = it.loadingPaths + entry.path,
-                    nodeErrors = it.nodeErrors - entry.path,
+                    loadingPaths = it.loadingPaths + key,
+                    nodeErrors = it.nodeErrors - key,
                 )
             }
         _filesPaneState.update { it.copy(nodes = flattenTree(loadingTree)) }
         viewModelScope.launch {
-            repo.listContainerDirectory(containerId, resolveListPath(entry)).fold(
+            repo.listContainerDirectory(containerId, resolveListPath(node.entry)).fold(
                 onSuccess = { entries ->
                     val tree =
                         treeState.updateAndGet {
                             it.copy(
-                                childrenByPath = it.childrenByPath + (entry.path to sortEntries(entries)),
-                                loadingPaths = it.loadingPaths - entry.path,
+                                childrenByPath = it.childrenByPath + (key to sortEntries(entries)),
+                                loadingPaths = it.loadingPaths - key,
                             )
                         }
                     _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
@@ -424,9 +445,9 @@ class AppViewModel(
                     val tree =
                         treeState.updateAndGet {
                             it.copy(
-                                loadingPaths = it.loadingPaths - entry.path,
-                                expandedPaths = it.expandedPaths - entry.path, // collapse again on failure
-                                nodeErrors = it.nodeErrors + (entry.path to (e.message ?: "Failed to list directory")),
+                                loadingPaths = it.loadingPaths - key,
+                                expandedPaths = it.expandedPaths - key, // collapse again on failure
+                                nodeErrors = it.nodeErrors + (key to (e.message ?: "Failed to list directory")),
                             )
                         }
                     _filesPaneState.update { it.copy(nodes = flattenTree(tree)) }
@@ -458,24 +479,26 @@ class AppViewModel(
         val nodes = mutableListOf<FileTreeNode>()
 
         fun appendChildren(
-            parentPath: String,
+            parentTreePath: String,
             depth: Int,
         ) {
-            val children = tree.childrenByPath[parentPath] ?: return
+            val children = tree.childrenByPath[parentTreePath] ?: return
             for (entry in children) {
+                val treePath = joinPath(parentTreePath, entry.name)
                 val expandable = entry.type == FileType.DIRECTORY || entry.type == FileType.SYMLINK
-                val expanded = expandable && entry.path in tree.expandedPaths
+                val expanded = expandable && treePath in tree.expandedPaths
                 nodes.add(
                     FileTreeNode(
                         entry = entry,
+                        treePath = treePath,
                         depth = depth,
                         isExpandable = expandable,
                         isExpanded = expanded,
-                        isLoading = entry.path in tree.loadingPaths,
-                        error = tree.nodeErrors[entry.path],
+                        isLoading = treePath in tree.loadingPaths,
+                        error = tree.nodeErrors[treePath],
                     ),
                 )
-                if (expanded) appendChildren(entry.path, depth + 1)
+                if (expanded) appendChildren(treePath, depth + 1)
             }
         }
         appendChildren(ROOT_PATH, 0)
@@ -563,7 +586,7 @@ class AppViewModel(
                         repo
                             .getContainerLogs(c.id, tail = Int.MAX_VALUE, timestamps = false)
                             .onSuccess { logs ->
-                                logs.lineSequence().filter { it.isNotEmpty() }.forEach { line ->
+                                logTextLines(logs).forEach { line ->
                                     merged.append("[$label] $line\n")
                                 }
                             }
@@ -602,7 +625,7 @@ class AppViewModel(
             val result = repo.getContainerLogs(containerId)
             result.fold(
                 onSuccess = { logs ->
-                    val lines = logs.lineSequence().filter { it.isNotEmpty() }.toList()
+                    val lines = logTextLines(logs)
                     _logsPaneState.update { it.copy(logs = lines, isLoading = false) }
                 },
                 onFailure = { e ->
@@ -613,4 +636,14 @@ class AppViewModel(
             _logsPaneState.update { it.copy(error = e.message, isLoading = false) }
         }
     }
+}
+
+/**
+ * Lines of a fetched log text. Keeps blank lines, as the follow view does, and drops only the
+ * empty piece after a final newline (review-2026-10 B7).
+ */
+internal fun logTextLines(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    val lines = text.lines()
+    return if (text.endsWith("\n")) lines.dropLast(1) else lines
 }

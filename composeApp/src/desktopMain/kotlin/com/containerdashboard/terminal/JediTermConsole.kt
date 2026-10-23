@@ -29,6 +29,7 @@ import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.theme.AppColors
+import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import kotlinx.coroutines.CancellationException
@@ -37,8 +38,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
 import javax.swing.JTextArea
+import javax.swing.SwingUtilities
 
 private val logger = LoggerFactory.getLogger("com.containerdashboard.terminal.JediTermConsole")
 
@@ -63,13 +66,20 @@ fun JediTermConsole(
                 error = null
                 var conn: DockerExecTtyConnector? = null
                 try {
-                    conn =
-                        withContext(Dispatchers.IO) {
-                            DockerExecTtyConnector(
-                                dockerClient = (AppModule.dockerRepository as DesktopDockerRepository).client,
-                                containerId = containerId,
-                            ).also { it.start() }
+                    // Assigned before start(): if the coroutine is cancelled while start() runs,
+                    // withContext discards its result, and the catch below must still close the
+                    // exec session start() opened (review-2026-10 R2).
+                    withContext(Dispatchers.IO) {
+                        val repository = AppModule.dockerRepository as DesktopDockerRepository
+                        DockerExecTtyConnector(
+                            dockerClient = repository.client,
+                            containerId = containerId,
+                            commandClient = repository.commandClient,
+                        ).also {
+                            conn = it
+                            it.start()
                         }
+                    }
                     connector = conn
                     ConsoleSessionRegistry.register(containerId)
                 } catch (e: CancellationException) {
@@ -110,6 +120,11 @@ fun JediTermConsole(
         Box(modifier = modifier.fillMaxSize()) {
             if (connector != null) {
                 val conn = connector!!
+                // The widget the factory builds for this connector, closed when it leaves.
+                val widgetRef = remember(conn) { AtomicReference<JediTermWidget?>(null) }
+                DisposableEffect(conn) {
+                    onDispose { widgetRef.getAndSet(null)?.let(::closeTerminalWidget) }
+                }
                 SwingPanel(
                     modifier = Modifier.fillMaxSize(),
                     factory = {
@@ -119,7 +134,7 @@ fun JediTermConsole(
                         // and degrade to an inline message so a terminal failure stays contained
                         // to the Console tab.
                         try {
-                            createTerminalWidget(conn, darkTheme)
+                            createTerminalWidget(conn, darkTheme).also { widgetRef.set(it) }.component
                         } catch (throwable: Throwable) {
                             logger.error("Failed to create terminal widget for container {}", containerId, throwable)
                             terminalErrorComponent(throwable)
@@ -162,10 +177,10 @@ fun JediTermConsole(
     }
 }
 
-private fun createTerminalWidget(
-    connector: DockerExecTtyConnector,
+internal fun createTerminalWidget(
+    connector: TtyConnector,
     darkTheme: Boolean,
-): JComponent {
+): JediTermWidget {
     val settings =
         object : DefaultSettingsProvider() {
             @Suppress("OVERRIDE_DEPRECATION")
@@ -194,7 +209,23 @@ private fun createTerminalWidget(
     // Black backdrop behind the terminal until JediTerm paints its own default-style
     // background (and for any area it leaves unpainted). Compose 1.12 deprecated
     // `SwingPanel(background = ...)` in favour of setting this on the component itself.
-    return widget.component.apply { background = java.awt.Color.BLACK }
+    widget.component.background = java.awt.Color.BLACK
+    return widget
+}
+
+/**
+ * Stops [widget]'s session, its executors (a single-thread scheduler and a cached pool per
+ * widget) and its repaint timer; Compose disposing the SwingPanel does none of that
+ * (review-2026-10 G3). Runs on the EDT.
+ */
+internal fun closeTerminalWidget(widget: JediTermWidget) {
+    SwingUtilities.invokeLater {
+        try {
+            widget.close()
+        } catch (e: Exception) {
+            logger.warn("Failed to close the terminal widget", e)
+        }
+    }
 }
 
 /**

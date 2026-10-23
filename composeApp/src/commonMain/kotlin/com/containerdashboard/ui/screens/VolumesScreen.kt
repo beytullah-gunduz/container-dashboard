@@ -100,6 +100,13 @@ fun VolumesScreen(
     viewModel: VolumesScreenViewModel = viewModel { VolumesScreenViewModel() },
 ) {
     val volumes by viewModel.volumes.collectAsState(listOf())
+    // Keeps the checked volumes to ones that exist: the toolbar counts and Delete Selected use it.
+    // Driven by list emissions, not by the composed list, whose first frame is the empty
+    // collectAsState() placeholder — that would wipe the checks on every return to this screen
+    // (review-2026-10 G9).
+    LaunchedEffect(viewModel) {
+        viewModel.volumes.collect { list -> viewModel.retainChecked(list.mapTo(HashSet()) { it.name }) }
+    }
     val hasLoaded by viewModel.hasLoaded.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedVolume by viewModel.selectedVolumeName.collectAsState()
@@ -644,8 +651,10 @@ private fun VolumeRow(
     val density = LocalDensity.current
 
     Column(
+        // density in the key: the block converts px to dp with it, and it changes on a move to a
+        // display with another scale (review-2026-10 G8).
         modifier =
-            Modifier.pointerInput(volume.name) {
+            Modifier.pointerInput(volume.name, density) {
                 awaitEachGesture {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull()

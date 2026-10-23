@@ -193,7 +193,8 @@
           "Image": "demo/db:2.3",
           "Env": [
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "DEMO=1"
+            "DEMO=1",
+            "POSTGRES_PASSWORD=fake-password-for-tests"
           ],
           "Cmd": [
             "postgres"
@@ -332,13 +333,50 @@
       "Labels": {}
     }
   ],
-  "lsRoot": [
-    "total 12",
-    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .",
-    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
-    "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 bin",
-    "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 etc",
-    "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 tmp",
-    "-rw-r--r--    1 root     root            42 Jan  1 00:00 hello.txt"
-  ]
+  "ls": {
+    "/": [
+      "total 24",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+      "lrwxrwxrwx    1 root     root             7 Jan  1 00:00 bin -> usr/bin",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 etc",
+      "-rw-r--r--    1 root     root            42 Jan  1 00:00 hello.txt",
+      "lrwxrwxrwx    1 root     root             7 Jan  1 00:00 lib -> usr/lib",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 tmp",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 usr"
+    ],
+    "/etc": [
+      "total 8",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+      "-rw-r--r--    1 root     root            13 Jan  1 00:00 hostname",
+      "-rw-r--r--    1 root     root           120 Jan  1 00:00 os-release"
+    ],
+    "/tmp": [
+      "total 0",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .."
+    ],
+    "/usr": [
+      "total 8",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 bin",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 lib"
+    ],
+    "/usr/bin": [
+      "total 16",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+      "-rwxr-xr-x    1 root     root        142312 Jan  1 00:00 ls",
+      "-rwxr-xr-x    1 root     root        125688 Jan  1 00:00 sh",
+      "lrwxrwxrwx    1 root     root             1 Jan  1 00:00 X11 -> ."
+    ],
+    "/usr/lib": [
+      "total 8",
+      "drwxr-xr-x    2 root     root          4096 Jan  1 00:00 .",
+      "drwxr-xr-x    1 root     root          4096 Jan  1 00:00 ..",
+      "-rwxr-xr-x    1 root     root       1922136 Jan  1 00:00 libc.so.6"
+    ]
+  }
 }

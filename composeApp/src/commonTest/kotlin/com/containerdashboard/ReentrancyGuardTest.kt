@@ -85,6 +85,33 @@ class ReentrancyGuardTest {
         }
 
     @Test
+    fun `removeContainer twice while the first is in flight removes once`() =
+        runTest {
+            val fake = FakeDockerRepository()
+            val vm = ContainersScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+
+            vm.removeContainer("a")
+            vm.removeContainer("a")
+            advanceUntilIdle()
+
+            assertEquals(listOf("a"), fake.removedContainerIds)
+            assertTrue(vm.pendingDeleteIds.value.isEmpty())
+        }
+
+    @Test
+    fun `removeContainers skips an id whose removal is already in flight`() =
+        runTest {
+            val fake = FakeDockerRepository()
+            val vm = ContainersScreenViewModel(repoProvider = { fake }, repoFlow = MutableStateFlow(fake))
+
+            vm.removeContainer("a")
+            vm.removeContainers(listOf("a", "b"))
+            advanceUntilIdle()
+
+            assertEquals(listOf("a", "b"), fake.removedContainerIds)
+        }
+
+    @Test
     fun `stopSelectedContainers ignores a re-entrant call`() =
         runTest {
             val fake = FakeDockerRepository()

@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
@@ -109,15 +111,19 @@ class DesktopDockerRepositoryStreamsTest {
     @Test
     fun `followContainerLogs ends when the engine ends the stream`() =
         runBlocking {
-            withTimeout(15_000) { repo.followContainerLogs("c1", tail = 10).collect {} }
+            // The last snapshot must survive the end of the stream (review-2026-10 B2).
+            val snapshots = withTimeout(15_000) { repo.followContainerLogs("c1", tail = 10).toList() }
+            assertEquals(listOf("line from c1"), snapshots.last())
         }
 
     @Test
     fun `followMultipleContainerLogs ends when every stream has ended`() =
         runBlocking {
-            withTimeout(15_000) {
-                repo.followMultipleContainerLogs(listOf("c1" to "one", "c2" to "two"), tail = 10).collect {}
-            }
+            val snapshots =
+                withTimeout(15_000) {
+                    repo.followMultipleContainerLogs(listOf("c1" to "one", "c2" to "two"), tail = 10).toList()
+                }
+            assertEquals(setOf("[one] line from c1", "[two] line from c2"), snapshots.last().toSet())
         }
 
     @Test
