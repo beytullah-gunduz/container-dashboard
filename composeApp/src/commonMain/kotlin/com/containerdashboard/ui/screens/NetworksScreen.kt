@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,7 +46,6 @@ import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -71,6 +69,8 @@ import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -547,7 +547,7 @@ private fun NetworkSortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -671,7 +671,7 @@ private fun NetworkRow(
                         )
                         if (isSystem) {
                             Surface(
-                                shape = RoundedCornerShape(Radius.xs),
+                                shape = Radius.xs.appCorner,
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                             ) {
                                 Text(
@@ -684,7 +684,7 @@ private fun NetworkRow(
                         }
                         if (network.containerCount > 0) {
                             Surface(
-                                shape = RoundedCornerShape(Radius.xs),
+                                shape = Radius.xs.appCorner,
                                 color = MaterialTheme.colorScheme.primaryContainer,
                             ) {
                                 Text(
@@ -705,7 +705,7 @@ private fun NetworkRow(
                         Text(
                             text = network.subnet,
                             style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = appMonoFamily(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -740,7 +740,7 @@ private fun NetworkRow(
                     )
                     if (isSystem) {
                         Surface(
-                            shape = RoundedCornerShape(Radius.xs),
+                            shape = Radius.xs.appCorner,
                             color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Text(
@@ -757,7 +757,7 @@ private fun NetworkRow(
                 Text(
                     text = network.shortId,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(0.8f),
@@ -784,7 +784,7 @@ private fun NetworkRow(
                 Text(
                     text = network.subnet,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -795,7 +795,7 @@ private fun NetworkRow(
                 Box(modifier = Modifier.weight(0.6f)) {
                     if (network.containerCount > 0) {
                         Surface(
-                            shape = RoundedCornerShape(Radius.xs),
+                            shape = Radius.xs.appCorner,
                             color = MaterialTheme.colorScheme.primaryContainer,
                         ) {
                             Text(

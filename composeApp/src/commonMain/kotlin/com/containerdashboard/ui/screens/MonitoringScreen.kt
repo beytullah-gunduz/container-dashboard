@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,9 +59,13 @@ import com.containerdashboard.ui.screens.viewmodel.MonitoringScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.MonitoringSort
 import com.containerdashboard.ui.screens.viewmodel.MonitoringSortDirection
 import com.containerdashboard.ui.screens.viewmodel.UsageHistory
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
+import com.containerdashboard.ui.theme.ExtendedColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
 import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
@@ -101,6 +104,7 @@ fun MonitoringScreen(
     val sortColumn by viewModel.sortColumn.collectAsState()
     val sortDirection by viewModel.sortDirection.collectAsState()
     val onSortChange: (MonitoringSort) -> Unit = { column -> viewModel.toggleSort(column) }
+    val ext = AppTheme.extended
 
     val filteredStats =
         remember(stats, searchQuery, sortColumn, sortDirection) {
@@ -169,10 +173,10 @@ fun MonitoringScreen(
                     // and keep the text label — not just color alone.
                     Surface(
                         modifier = Modifier.size(8.dp),
-                        shape = RoundedCornerShape(Radius.sm),
+                        shape = Radius.sm.appCorner,
                         color =
                             if (stats.isNotEmpty()) {
-                                AppColors.Running
+                                AppTheme.extended.running
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                     alpha = 0.4f,
@@ -184,7 +188,7 @@ fun MonitoringScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color =
                             if (stats.isNotEmpty()) {
-                                AppColors.Running
+                                AppTheme.extended.running
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -203,7 +207,7 @@ fun MonitoringScreen(
                             value = refreshRate,
                             onValueChange = { viewModel.setRefreshRate(it) },
                             valueRange = 1f..5f,
-                            activeColor = AppColors.AccentBlue,
+                            activeColor = AppTheme.extended.accent,
                             modifier =
                                 Modifier.semantics {
                                     contentDescription = "Refresh rate: ${refreshRate.toInt()} seconds"
@@ -219,10 +223,10 @@ fun MonitoringScreen(
                     UsageHistoryGraph(
                         title = "CPU Usage",
                         icon = Res.drawable.memory,
-                        iconTint = AppColors.AccentBlue,
+                        iconTint = AppTheme.extended.accent,
                         history = history.cpuHistory,
                         maxHistorySize = 60,
-                        barColor = { getCpuColor(it) },
+                        barColor = { getCpuColor(it, ext) },
                         modifier = m,
                     )
                 }
@@ -230,10 +234,10 @@ fun MonitoringScreen(
                     UsageHistoryGraph(
                         title = "Memory Usage",
                         icon = Res.drawable.storage,
-                        iconTint = AppColors.AccentBlueDark,
+                        iconTint = AppTheme.extended.accentSecondary,
                         history = history.memoryHistory,
                         maxHistorySize = 60,
-                        barColor = { getMemoryColor(it) },
+                        barColor = { getMemoryColor(it, ext) },
                         modifier = m,
                     )
                 }
@@ -241,13 +245,13 @@ fun MonitoringScreen(
                     IoHistoryGraph(
                         title = "Disk IO",
                         icon = Res.drawable.storage,
-                        iconTint = AppColors.AccentBlue,
+                        iconTint = AppTheme.extended.accent,
                         seriesA = history.diskReadHistory,
                         seriesB = history.diskWriteHistory,
                         seriesALabel = "Read",
                         seriesBLabel = "Write",
-                        seriesAColor = AppColors.AccentBlue,
-                        seriesBColor = AppColors.Running,
+                        seriesAColor = AppTheme.extended.accent,
+                        seriesBColor = AppTheme.extended.running,
                         maxHistorySize = 60,
                         currentA = stats.sumOf { it.diskReadBytesPerSec },
                         currentB = stats.sumOf { it.diskWriteBytesPerSec },
@@ -258,13 +262,13 @@ fun MonitoringScreen(
                     IoHistoryGraph(
                         title = "Network IO",
                         icon = Res.drawable.network_check,
-                        iconTint = AppColors.AccentBlueLight,
+                        iconTint = AppTheme.extended.accentTertiary,
                         seriesA = history.networkRxHistory,
                         seriesB = history.networkTxHistory,
                         seriesALabel = "Rx",
                         seriesBLabel = "Tx",
-                        seriesAColor = AppColors.AccentBlueLight,
-                        seriesBColor = AppColors.Warning,
+                        seriesAColor = AppTheme.extended.accentTertiary,
+                        seriesBColor = AppTheme.extended.warning,
                         maxHistorySize = 60,
                         currentA = stats.sumOf { it.networkRxBytesPerSec },
                         currentB = stats.sumOf { it.networkTxBytesPerSec },
@@ -325,7 +329,7 @@ fun MonitoringScreen(
             if (isLoading) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -352,7 +356,7 @@ fun MonitoringScreen(
             } else if (stats.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -368,7 +372,7 @@ fun MonitoringScreen(
                 // CPU Usage Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -386,7 +390,7 @@ fun MonitoringScreen(
                                 painterResource(Res.drawable.memory),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = AppColors.AccentBlue,
+                                tint = AppTheme.extended.accent,
                             )
                             Text(
                                 text = "CPU Usage",
@@ -405,7 +409,7 @@ fun MonitoringScreen(
                                     value = stat.cpuPercent,
                                     maxValue = 100.0,
                                     label = "%.1f%%".format(stat.cpuPercent),
-                                    barColor = getCpuColor(stat.cpuPercent),
+                                    barColor = getCpuColor(stat.cpuPercent, AppTheme.extended),
                                 )
                             }
                         }
@@ -415,7 +419,7 @@ fun MonitoringScreen(
                 // Memory Usage Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -433,7 +437,7 @@ fun MonitoringScreen(
                                 painterResource(Res.drawable.memory),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = AppColors.AccentBlueDark,
+                                tint = AppTheme.extended.accentSecondary,
                             )
                             Text(
                                 text = "Memory Usage",
@@ -451,7 +455,7 @@ fun MonitoringScreen(
                                     label =
                                         "${ContainerStats.formatBytes(stat.memoryUsage)} / " +
                                             ContainerStats.formatBytes(stat.memoryLimit),
-                                    barColor = getMemoryColor(stat.memoryPercent),
+                                    barColor = getMemoryColor(stat.memoryPercent, AppTheme.extended),
                                 )
                             }
                         }
@@ -461,7 +465,7 @@ fun MonitoringScreen(
                 // Detailed Stats Table
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -671,10 +675,10 @@ private fun SortChip(
 ) {
     val isActive = activeColumn == column
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = 6.dp.appCorner,
         color =
             if (isActive) {
-                AppColors.AccentBlue.copy(alpha = 0.2f)
+                AppTheme.extended.accent.copy(alpha = 0.2f)
             } else {
                 MaterialTheme.colorScheme.surface
             },
@@ -754,7 +758,7 @@ private fun ContainerBarRow(
                 Modifier
                     .fillMaxWidth()
                     .height(20.dp)
-                    .clip(RoundedCornerShape(Radius.sm))
+                    .clip(Radius.sm.appCorner)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             val fraction = (value / maxValue).coerceIn(0.0, 1.0).toFloat()
@@ -763,7 +767,7 @@ private fun ContainerBarRow(
                     Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(fraction)
-                        .clip(RoundedCornerShape(Radius.sm))
+                        .clip(Radius.sm.appCorner)
                         .background(barColor),
             )
         }
@@ -800,7 +804,7 @@ private fun StatsTableRow(
                             painterResource(Res.drawable.view_in_ar),
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = AppColors.Running,
+                            tint = AppTheme.extended.running,
                         )
                         Text(
                             text = stat.containerName,
@@ -819,7 +823,7 @@ private fun StatsTableRow(
                             text = "%.1f%%".format(stat.cpuPercent),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = getCpuColor(stat.cpuPercent),
+                            color = getCpuColor(stat.cpuPercent, AppTheme.extended),
                         )
                         Text(
                             text = "Mem",
@@ -830,7 +834,7 @@ private fun StatsTableRow(
                             text = "%.1f%%".format(stat.memoryPercent),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = getMemoryColor(stat.memoryPercent),
+                            color = getMemoryColor(stat.memoryPercent, AppTheme.extended),
                         )
                     }
                     // Row 2: disk R/W, net Rx/Tx
@@ -842,23 +846,23 @@ private fun StatsTableRow(
                         IoLabel(
                             "Disk R",
                             ContainerStats.formatBytesPerSecond(stat.diskReadBytesPerSec),
-                            AppColors.AccentBlue,
+                            AppTheme.extended.accent,
                         )
                         IoLabel(
                             "Disk W",
                             ContainerStats.formatBytesPerSecond(stat.diskWriteBytesPerSec),
-                            AppColors.Running,
+                            AppTheme.extended.running,
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         IoLabel(
                             "Net \u2193",
                             ContainerStats.formatBytesPerSecond(stat.networkRxBytesPerSec),
-                            AppColors.AccentBlueLight,
+                            AppTheme.extended.accentTertiary,
                         )
                         IoLabel(
                             "Net \u2191",
                             ContainerStats.formatBytesPerSecond(stat.networkTxBytesPerSec),
-                            AppColors.Warning,
+                            AppTheme.extended.warning,
                         )
                     }
                 }
@@ -872,7 +876,7 @@ private fun StatsTableRow(
                         painterResource(Res.drawable.view_in_ar),
                         contentDescription = null,
                         modifier = Modifier.size(12.dp),
-                        tint = AppColors.Running,
+                        tint = AppTheme.extended.running,
                     )
                     Text(
                         text = "${stat.containerName} \u00B7 ${stat.containerId.take(12)}",
@@ -886,7 +890,7 @@ private fun StatsTableRow(
                     text = "%.1f%%".format(stat.cpuPercent),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = getCpuColor(stat.cpuPercent),
+                    color = getCpuColor(stat.cpuPercent, AppTheme.extended),
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),
                 )
@@ -894,14 +898,14 @@ private fun StatsTableRow(
                     text = "%.1f%%".format(stat.memoryPercent),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = getMemoryColor(stat.memoryPercent),
+                    color = getMemoryColor(stat.memoryPercent, AppTheme.extended),
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),
                 )
                 Text(
                     text = ContainerStats.formatBytes(stat.memoryUsage),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(1.0f),
@@ -909,7 +913,7 @@ private fun StatsTableRow(
                 Text(
                     text = ContainerStats.formatBytesPerSecond(stat.diskReadBytesPerSec),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.weight(0.9f),
@@ -917,7 +921,7 @@ private fun StatsTableRow(
                 Text(
                     text = ContainerStats.formatBytesPerSecond(stat.diskWriteBytesPerSec),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.weight(0.9f),
@@ -925,7 +929,7 @@ private fun StatsTableRow(
                 Text(
                     text = ContainerStats.formatBytesPerSecond(stat.networkRxBytesPerSec),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.weight(0.9f),
@@ -933,7 +937,7 @@ private fun StatsTableRow(
                 Text(
                     text = ContainerStats.formatBytesPerSecond(stat.networkTxBytesPerSec),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     modifier = Modifier.weight(0.9f),
@@ -965,7 +969,7 @@ private fun IoLabel(
         Text(
             text = value,
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = appMonoFamily(),
             fontWeight = FontWeight.SemiBold,
             color = accent,
             maxLines = 1,
@@ -992,7 +996,7 @@ private fun UsageHistoryGraph(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(Radius.lg),
+        shape = Radius.lg.appCorner,
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -1036,7 +1040,7 @@ private fun UsageHistoryGraph(
                     Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .clip(RoundedCornerShape(Radius.md))
+                        .clip(Radius.md.appCorner)
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             ) {
                 // Y-axis labels
@@ -1089,9 +1093,7 @@ private fun UsageHistoryGraph(
                             color = barColor(value),
                             topLeft = Offset(x + gap, chartHeight - barHeight),
                             size = Size((barWidth - gap * 2).coerceAtLeast(1f), barHeight),
-                            cornerRadius =
-                                androidx.compose.ui.geometry
-                                    .CornerRadius(2f, 2f),
+                            cornerRadius = if (ThemeStyleState.isRetro) CornerRadius.Zero else CornerRadius(2f, 2f),
                         )
                     }
                 }
@@ -1151,7 +1153,7 @@ private fun IoHistoryGraph(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(Radius.lg),
+        shape = Radius.lg.appCorner,
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -1196,7 +1198,7 @@ private fun IoHistoryGraph(
                     Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .clip(RoundedCornerShape(Radius.md))
+                        .clip(Radius.md.appCorner)
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)),
             ) {
                 Box(modifier = Modifier.fillMaxSize().padding(start = 4.dp)) {
@@ -1248,9 +1250,7 @@ private fun IoHistoryGraph(
                             color = seriesAColor,
                             topLeft = Offset(x + gap, chartHeight - barHeight),
                             size = Size((seriesBarWidth - gap * 2).coerceAtLeast(1f), barHeight),
-                            cornerRadius =
-                                androidx.compose.ui.geometry
-                                    .CornerRadius(2f, 2f),
+                            cornerRadius = if (ThemeStyleState.isRetro) CornerRadius.Zero else CornerRadius(2f, 2f),
                         )
                     }
                     val startOffsetB = (maxHistorySize - seriesB.size) * slotWidth
@@ -1262,9 +1262,7 @@ private fun IoHistoryGraph(
                             color = seriesBColor,
                             topLeft = Offset(x + gap, chartHeight - barHeight),
                             size = Size((seriesBarWidth - gap * 2).coerceAtLeast(1f), barHeight),
-                            cornerRadius =
-                                androidx.compose.ui.geometry
-                                    .CornerRadius(2f, 2f),
+                            cornerRadius = if (ThemeStyleState.isRetro) CornerRadius.Zero else CornerRadius(2f, 2f),
                         )
                     }
                 }
@@ -1287,7 +1285,7 @@ private fun LegendChip(
             modifier =
                 Modifier
                     .size(8.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .clip(2.dp.appCorner)
                     .background(color),
         )
         Text(
@@ -1298,23 +1296,29 @@ private fun LegendChip(
         Text(
             text = value,
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = appMonoFamily(),
             fontWeight = FontWeight.SemiBold,
             color = color,
         )
     }
 }
 
-private fun getCpuColor(percent: Double): Color =
+private fun getCpuColor(
+    percent: Double,
+    ext: ExtendedColors,
+): Color =
     when {
-        percent < 25 -> AppColors.Running
-        percent < 60 -> AppColors.Warning
-        else -> AppColors.Stopped
+        percent < 25 -> ext.running
+        percent < 60 -> ext.warning
+        else -> ext.stopped
     }
 
-private fun getMemoryColor(percent: Double): Color =
+private fun getMemoryColor(
+    percent: Double,
+    ext: ExtendedColors,
+): Color =
     when {
-        percent < 50 -> AppColors.Running
-        percent < 80 -> AppColors.Warning
-        else -> AppColors.Stopped
+        percent < 50 -> ext.running
+        percent < 80 -> ext.warning
+        else -> ext.stopped
     }

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,7 +54,6 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -81,6 +79,8 @@ import com.containerdashboard.ui.screens.viewmodel.VolumeSortColumn
 import com.containerdashboard.ui.screens.viewmodel.VolumesScreenViewModel
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -581,7 +581,7 @@ private fun ColumnResizeHandle(onDrag: (Float) -> Unit) {
                 Modifier
                     .width(2.dp)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(1.dp))
+                    .clip(1.dp.appCorner)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
         )
     }
@@ -600,7 +600,7 @@ private fun VolumeSortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -724,7 +724,7 @@ private fun VolumeRow(
                     Text(
                         text = volume.mountpoint,
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = appMonoFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -765,7 +765,7 @@ private fun VolumeRow(
                 Text(
                     text = volume.mountpoint,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(mountpointWeight),
                     maxLines = 1,

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 
 /**
  * Shimmer-style placeholder rows shown while a list is loading for the first
@@ -86,7 +86,7 @@ fun SkeletonBar(
         modifier =
             modifier
                 .size(width = width, height = height)
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)),
     )
 }

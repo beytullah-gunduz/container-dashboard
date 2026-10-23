@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
@@ -75,6 +74,7 @@ import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_drop_down_filled
 import com.dockerdashboard.composeapp.generated.resources.auto_awesome
@@ -350,8 +350,8 @@ fun ContainersScreen(
                     val solo = order.size <= 1
                     val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShape
                     val trailingShape = ButtonGroupDefaults.connectedTrailingButtonShape
-                    val middleShape = RoundedCornerShape(6.dp)
-                    val soloShape = RoundedCornerShape(20.dp)
+                    val middleShape = 6.dp.appCorner
+                    val soloShape = 20.dp.appCorner
                     val shapeFor: (String) -> androidx.compose.ui.graphics.Shape = { name ->
                         when {
                             solo -> soloShape

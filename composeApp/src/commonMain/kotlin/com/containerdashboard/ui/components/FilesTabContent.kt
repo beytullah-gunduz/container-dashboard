@@ -34,7 +34,7 @@ import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.FileType
 import com.containerdashboard.ui.state.FileTreeNode
 import com.containerdashboard.ui.state.FilesPaneState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.monospaceMedium
 import com.containerdashboard.ui.util.formatBytes
@@ -148,7 +148,7 @@ private fun FileTree(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(32.dp),
-                    color = AppColors.AccentBlue,
+                    color = AppTheme.extended.accent,
                     strokeWidth = 3.dp,
                 )
             }
@@ -162,7 +162,7 @@ private fun FileTree(
             ) {
                 Text(
                     text = state.error,
-                    color = AppColors.Stopped,
+                    color = AppTheme.extended.stopped,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -270,7 +270,7 @@ private fun TreeRow(
                 Text(
                     text = node.error,
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.Stopped,
+                    color = AppTheme.extended.stopped,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -347,7 +347,7 @@ private fun FileViewer(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(32.dp),
-                        color = AppColors.AccentBlue,
+                        color = AppTheme.extended.accent,
                         strokeWidth = 3.dp,
                     )
                 }

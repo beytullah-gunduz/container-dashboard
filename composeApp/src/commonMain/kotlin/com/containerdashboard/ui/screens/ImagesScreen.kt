@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,7 +46,6 @@ import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -70,6 +68,8 @@ import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.formatBytes
 import com.containerdashboard.ui.util.hoverHighlight
@@ -448,8 +448,8 @@ private fun ImageSectionHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.md))
-                .hoverHighlight(shape = RoundedCornerShape(Radius.md))
+                .clip(Radius.md.appCorner)
+                .hoverHighlight(shape = Radius.md.appCorner)
                 .clickable(onClick = onToggle)
                 .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -467,7 +467,7 @@ private fun ImageSectionHeader(
             fontWeight = FontWeight.SemiBold,
         )
         Surface(
-            shape = RoundedCornerShape(Radius.lg),
+            shape = Radius.lg.appCorner,
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Text(
@@ -533,7 +533,7 @@ private fun SortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -659,7 +659,7 @@ private fun ImageRow(
                         Text(
                             text = image.shortId,
                             style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = appMonoFamily(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                         )
@@ -667,7 +667,7 @@ private fun ImageRow(
                     Text(
                         text = image.formattedSize,
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = appMonoFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
@@ -699,7 +699,7 @@ private fun ImageRow(
                 Text(
                     text = image.shortId,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
@@ -707,7 +707,7 @@ private fun ImageRow(
                 Text(
                     text = image.formattedSize,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),

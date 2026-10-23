@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
@@ -42,15 +42,19 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JComponent
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
+import kotlin.math.roundToInt
 
 private val logger = LoggerFactory.getLogger("com.containerdashboard.terminal.JediTermConsole")
 
 @Composable
 fun JediTermConsole(
     containerId: String,
+    // Kept for the consoleContent signature; the colours come from the theme.
     darkTheme: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val consoleForeground = AppTheme.extended.consoleForeground
+    val consoleBackground = AppTheme.extended.consoleBackground
     var connector by remember(containerId) { mutableStateOf<DockerExecTtyConnector?>(null) }
     var isConnecting by remember(containerId) { mutableStateOf(true) }
     var error by remember(containerId) { mutableStateOf<String?>(null) }
@@ -112,7 +116,7 @@ fun JediTermConsole(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(text = error!!, color = AppColors.Stopped)
+                Text(text = error!!, color = AppTheme.extended.stopped)
                 Button(onClick = { connect() }) { Text("Retry") }
             }
         }
@@ -134,7 +138,7 @@ fun JediTermConsole(
                         // and degrade to an inline message so a terminal failure stays contained
                         // to the Console tab.
                         try {
-                            createTerminalWidget(conn, darkTheme).also { widgetRef.set(it) }.component
+                            createTerminalWidget(conn, consoleForeground, consoleBackground).also { widgetRef.set(it) }.component
                         } catch (throwable: Throwable) {
                             logger.error("Failed to create terminal widget for container {}", containerId, throwable)
                             terminalErrorComponent(throwable)
@@ -163,7 +167,7 @@ fun JediTermConsole(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(32.dp),
-                            color = AppColors.AccentBlue,
+                            color = AppTheme.extended.accent,
                             strokeWidth = 3.dp,
                         )
                         Text(
@@ -179,23 +183,17 @@ fun JediTermConsole(
 
 internal fun createTerminalWidget(
     connector: TtyConnector,
-    darkTheme: Boolean,
+    foreground: Color,
+    background: Color,
 ): JediTermWidget {
     val settings =
         object : DefaultSettingsProvider() {
             @Suppress("OVERRIDE_DEPRECATION")
             override fun getDefaultStyle(): com.jediterm.terminal.TextStyle =
-                if (darkTheme) {
-                    com.jediterm.terminal.TextStyle(
-                        com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0xD4, 0xD4, 0xD4)),
-                        com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0x1A, 0x1A, 0x1A)),
-                    )
-                } else {
-                    com.jediterm.terminal.TextStyle(
-                        com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0x1A, 0x1A, 0x1A)),
-                        com.jediterm.terminal.TerminalColor(com.jediterm.core.Color(0xF5, 0xF5, 0xF5)),
-                    )
-                }
+                com.jediterm.terminal.TextStyle(
+                    com.jediterm.terminal.TerminalColor(foreground.toJediTermColor()),
+                    com.jediterm.terminal.TerminalColor(background.toJediTermColor()),
+                )
 
             @Suppress("DEPRECATION")
             override fun useAntialiasing(): Boolean = true
@@ -212,6 +210,9 @@ internal fun createTerminalWidget(
     widget.component.background = java.awt.Color.BLACK
     return widget
 }
+
+private fun Color.toJediTermColor(): com.jediterm.core.Color =
+    com.jediterm.core.Color((red * 255).roundToInt(), (green * 255).roundToInt(), (blue * 255).roundToInt())
 
 /**
  * Stops [widget]'s session, its executors (a single-thread scheduler and a cached pool per

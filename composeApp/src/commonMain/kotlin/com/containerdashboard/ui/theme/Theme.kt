@@ -57,6 +57,16 @@ data class ExtendedColors(
     val warningSurfaceLight: Color,
     val successSurface: Color,
     val infoSurface: Color,
+    val running: Color,
+    val stopped: Color,
+    val paused: Color,
+    val warning: Color,
+    val accent: Color,
+    val accentSecondary: Color,
+    val accentTertiary: Color,
+    val textMuted: Color,
+    val consoleForeground: Color,
+    val consoleBackground: Color,
 )
 
 private val DarkExtendedColors =
@@ -66,6 +76,16 @@ private val DarkExtendedColors =
         warningSurfaceLight = Color(0x1AFFF3E0),
         successSurface = Color(0xFF4CAF50),
         infoSurface = Color(0xFF2196F3),
+        running = AppColors.Running,
+        stopped = AppColors.Stopped,
+        paused = AppColors.Paused,
+        warning = AppColors.Warning,
+        accent = AppColors.AccentBlue,
+        accentSecondary = AppColors.AccentBlueDark,
+        accentTertiary = AppColors.AccentBlueLight,
+        textMuted = AppColors.TextSecondary,
+        consoleForeground = Color(0xFFD4D4D4),
+        consoleBackground = Color(0xFF1A1A1A),
     )
 
 private val LightExtendedColors =
@@ -75,6 +95,16 @@ private val LightExtendedColors =
         warningSurfaceLight = Color(0x14FFF3E0),
         successSurface = Color(0xFF388E3C),
         infoSurface = Color(0xFF1976D2),
+        running = AppColors.Running,
+        stopped = AppColors.Stopped,
+        paused = AppColors.Paused,
+        warning = AppColors.Warning,
+        accent = AppColors.AccentBlue,
+        accentSecondary = AppColors.AccentBlueDark,
+        accentTertiary = AppColors.AccentBlueLight,
+        textMuted = AppColors.TextSecondary,
+        consoleForeground = Color(0xFF1A1A1A),
+        consoleBackground = Color(0xFFF5F5F5),
     )
 
 val LocalAppColors = staticCompositionLocalOf<ExtendedColors> { DarkExtendedColors }
@@ -92,11 +122,15 @@ object AppTheme {
         get() = LocalAppColors.current
 }
 
+/** The app's monospace face: the platform monospace in Default (Retro's face comes in WS2). */
+@Composable
+fun appMonoFamily(): FontFamily = FontFamily.Monospace
+
 val Typography.monospaceMedium: TextStyle
-    get() = bodySmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+    @Composable get() = bodySmall.copy(fontFamily = appMonoFamily(), lineHeight = 18.sp)
 
 val Typography.monospaceSmall: TextStyle
-    get() = labelSmall.copy(fontFamily = FontFamily.Monospace, lineHeight = 16.sp)
+    @Composable get() = labelSmall.copy(fontFamily = appMonoFamily(), lineHeight = 16.sp)
 
 private val DarkColorScheme =
     darkColorScheme(

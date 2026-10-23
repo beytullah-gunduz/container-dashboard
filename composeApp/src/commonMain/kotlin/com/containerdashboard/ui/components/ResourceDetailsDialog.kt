@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -52,7 +51,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -71,6 +69,8 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.content_copy
@@ -234,7 +234,7 @@ fun ResourceDetailsDialog(
                             false
                         }
                     },
-            shape = RoundedCornerShape(Radius.lg),
+            shape = Radius.lg.appCorner,
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 4.dp,
             shadowElevation = 12.dp,
@@ -333,7 +333,7 @@ private fun DetailsHeader(
                     .size(36.dp)
                     .background(
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                        RoundedCornerShape(Radius.md),
+                        Radius.md.appCorner,
                     ),
             contentAlignment = Alignment.Center,
         ) {
@@ -707,7 +707,7 @@ private fun KeyValueRow(
             Text(
                 text = value.ifBlank { "-" },
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = if (monospace) FontFamily.Monospace else null,
+                fontFamily = if (monospace) appMonoFamily() else null,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -816,7 +816,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
                         Text(
                             text = envVar.key,
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = appMonoFamily(),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -824,7 +824,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
                         Text(
                             text = SECRET_MASK,
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = appMonoFamily(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
                         )
@@ -833,7 +833,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
                             Text(
                                 text = envVar.value,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = appMonoFamily(),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -927,7 +927,7 @@ private fun TwoColumnTable(
                         Text(
                             text = k,
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = if (monospace) FontFamily.Monospace else null,
+                            fontFamily = if (monospace) appMonoFamily() else null,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -935,7 +935,7 @@ private fun TwoColumnTable(
                         Text(
                             text = v,
                             style = MaterialTheme.typography.bodySmall,
-                            fontFamily = if (monospace) FontFamily.Monospace else null,
+                            fontFamily = if (monospace) appMonoFamily() else null,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -970,7 +970,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                            RoundedCornerShape(6.dp),
+                            6.dp.appCorner,
                         ).padding(horizontal = 10.dp, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -985,7 +985,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
                             Text(
                                 text = mount.source.ifBlank { "-" },
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = appMonoFamily(),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -998,7 +998,7 @@ private fun MountsTab(mounts: List<MountInfo>) {
                             Text(
                                 text = mount.destination,
                                 style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = appMonoFamily(),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -1091,7 +1091,7 @@ private fun TableCell(
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
+            fontFamily = if (monospace) appMonoFamily() else null,
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -1119,7 +1119,7 @@ private fun NetworksTab(networks: List<NetworkAttachment>) {
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                            RoundedCornerShape(Radius.md),
+                            Radius.md.appCorner,
                         ).padding(Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
@@ -1168,7 +1168,7 @@ private fun NetworkLine(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = appMonoFamily(),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -1195,7 +1195,7 @@ private fun Badge(
     Box(
         modifier =
             Modifier
-                .background(container, RoundedCornerShape(6.dp))
+                .background(container, 6.dp.appCorner)
                 .padding(horizontal = Spacing.sm, vertical = 2.dp),
     ) {
         Text(
@@ -1255,11 +1255,11 @@ internal fun RawJsonTab(json: String) {
                     .padding(bottom = Spacing.lg)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                        RoundedCornerShape(Radius.md),
+                        Radius.md.appCorner,
                     ).border(
                         0.5.dp,
                         MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(Radius.md),
+                        Radius.md.appCorner,
                     ),
         ) {
             SelectionContainer(
@@ -1273,7 +1273,7 @@ internal fun RawJsonTab(json: String) {
                 Text(
                     text = shown,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -1349,7 +1349,7 @@ private fun ImageLayersTab(layers: List<String>) {
                     Text(
                         text = digest,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = appMonoFamily(),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -1440,7 +1440,7 @@ private fun NetworkAttachedTab(attached: List<AttachedContainer>) {
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            RoundedCornerShape(Radius.sm),
+                            Radius.sm.appCorner,
                         ).padding(Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
@@ -1495,7 +1495,7 @@ private fun NetworkIpamTab(
                         .fillMaxWidth()
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            RoundedCornerShape(Radius.sm),
+                            Radius.sm.appCorner,
                         ).padding(Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {

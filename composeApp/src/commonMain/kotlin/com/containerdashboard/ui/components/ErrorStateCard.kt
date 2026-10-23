@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.error
 import com.dockerdashboard.composeapp.generated.resources.refresh
@@ -43,7 +43,7 @@ fun ErrorStateCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().padding(vertical = Spacing.sm),
-        shape = RoundedCornerShape(Radius.lg),
+        shape = Radius.lg.appCorner,
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),

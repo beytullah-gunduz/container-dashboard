@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,9 +40,10 @@ import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.DashboardScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.EngineConnectionState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.util.formatBytes
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
@@ -112,7 +112,7 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color =
                             if (connectionState == EngineConnectionState.CONNECTED) {
-                                AppColors.Running
+                                AppTheme.extended.running
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
@@ -161,7 +161,7 @@ fun DashboardScreen(
                     value = containers.size.toString(),
                     subtitle = "$runningContainers running",
                     icon = Res.drawable.view_in_ar,
-                    iconTint = AppColors.AccentBlue,
+                    iconTint = AppTheme.extended.accent,
                     isLoading = !hasLoaded,
                     onClick = { onNavigate(Screen.Containers) },
                     modifier = m,
@@ -173,7 +173,7 @@ fun DashboardScreen(
                     value = images.size.toString(),
                     subtitle = formatBytes(totalImageSize),
                     icon = Res.drawable.layers,
-                    iconTint = AppColors.Running,
+                    iconTint = AppTheme.extended.running,
                     isLoading = !imagesLoaded,
                     onClick = { onNavigate(Screen.Images) },
                     modifier = m,
@@ -185,7 +185,7 @@ fun DashboardScreen(
                     value = volumes.size.toString(),
                     subtitle = "${volumes.size} total",
                     icon = Res.drawable.storage,
-                    iconTint = AppColors.Warning,
+                    iconTint = AppTheme.extended.warning,
                     isLoading = !volumesLoaded,
                     onClick = { onNavigate(Screen.Volumes) },
                     modifier = m,
@@ -197,7 +197,7 @@ fun DashboardScreen(
                     value = networks.size.toString(),
                     subtitle = "${networks.count { it.driver == "bridge" }} bridge",
                     icon = Res.drawable.hub,
-                    iconTint = AppColors.AccentBlueDark,
+                    iconTint = AppTheme.extended.accentSecondary,
                     isLoading = !networksLoaded,
                     onClick = { onNavigate(Screen.Networks) },
                     modifier = m,
@@ -237,7 +237,7 @@ fun DashboardScreen(
             val containerStatusCard: @Composable (Modifier) -> Unit = { m ->
                 Card(
                     modifier = m,
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -278,21 +278,21 @@ fun DashboardScreen(
                                 MiniStatsCard(
                                     label = "Running",
                                     value = running.toString(),
-                                    valueColor = AppColors.Running,
+                                    valueColor = AppTheme.extended.running,
                                     emphasized = running > 0 && running == dominant,
                                     muted = running == 0,
                                 )
                                 MiniStatsCard(
                                     label = "Paused",
                                     value = paused.toString(),
-                                    valueColor = AppColors.Paused,
+                                    valueColor = AppTheme.extended.paused,
                                     emphasized = paused > 0 && paused == dominant,
                                     muted = paused == 0,
                                 )
                                 MiniStatsCard(
                                     label = "Stopped",
                                     value = stopped.toString(),
-                                    valueColor = AppColors.Stopped,
+                                    valueColor = AppTheme.extended.stopped,
                                     emphasized = stopped > 0 && stopped == dominant,
                                     muted = stopped == 0,
                                 )
@@ -304,7 +304,7 @@ fun DashboardScreen(
             val systemInfoCard: @Composable (Modifier) -> Unit = { m ->
                 Card(
                     modifier = m,
-                    shape = RoundedCornerShape(Radius.lg),
+                    shape = Radius.lg.appCorner,
                     colors =
                         CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -347,7 +347,7 @@ fun DashboardScreen(
             // Recent Activity
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(Radius.lg),
+                shape = Radius.lg.appCorner,
                 colors =
                     CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -518,7 +518,7 @@ private fun MaybeSkeletonStatsCard(
     }
 
     val alpha = rememberSkeletonAlpha()
-    val shape = RoundedCornerShape(Radius.lg)
+    val shape = Radius.lg.appCorner
     val colors =
         CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -546,7 +546,7 @@ private fun MaybeSkeletonStatsCard(
                 modifier =
                     Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(Radius.lg))
+                        .clip(Radius.lg.appCorner)
                         .background(iconTint.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center,
             ) {

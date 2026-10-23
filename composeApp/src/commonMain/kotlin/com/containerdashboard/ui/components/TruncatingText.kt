@@ -3,7 +3,6 @@ package com.containerdashboard.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 
 /**
  * Text that shows the full value in a tooltip *only when it visibly truncates*.
@@ -52,7 +52,7 @@ fun TruncatingText(
         tooltip = {
             if (truncated) {
                 Surface(
-                    shape = RoundedCornerShape(Radius.sm),
+                    shape = Radius.sm.appCorner,
                     tonalElevation = 4.dp,
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.surface,

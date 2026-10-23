@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +56,6 @@ import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
@@ -74,9 +72,11 @@ import com.containerdashboard.ui.components.StatusBadge
 import com.containerdashboard.ui.components.TruncatingText
 import com.containerdashboard.ui.components.toContainerStatus
 import com.containerdashboard.ui.screens.components.ContainerContextMenu
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -179,7 +179,7 @@ internal fun ComposeProjectHeader(
             )
             if (showComposeBadge) {
                 Surface(
-                    shape = RoundedCornerShape(Radius.xs),
+                    shape = Radius.xs.appCorner,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 ) {
                     Text(
@@ -191,7 +191,7 @@ internal fun ComposeProjectHeader(
                 }
             }
             Surface(
-                shape = RoundedCornerShape(10.dp),
+                shape = 10.dp.appCorner,
                 color = MaterialTheme.colorScheme.tertiaryContainer,
             ) {
                 Text(
@@ -247,7 +247,7 @@ internal fun ComposeProjectHeader(
                                 painterResource(Res.drawable.pause),
                                 contentDescription = "Pause all",
                                 modifier = Modifier.size(14.dp),
-                                tint = AppColors.Paused,
+                                tint = AppTheme.extended.paused,
                             )
                         }
                     }
@@ -258,7 +258,7 @@ internal fun ComposeProjectHeader(
                                 painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Unpause all",
                                 modifier = Modifier.size(14.dp),
-                                tint = AppColors.Running,
+                                tint = AppTheme.extended.running,
                             )
                         }
                     }
@@ -270,7 +270,7 @@ internal fun ComposeProjectHeader(
                                 painterResource(Res.drawable.stop),
                                 contentDescription = "Stop all",
                                 modifier = Modifier.size(14.dp),
-                                tint = AppColors.Stopped,
+                                tint = AppTheme.extended.stopped,
                             )
                         }
                     }
@@ -281,7 +281,7 @@ internal fun ComposeProjectHeader(
                                 painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Start all",
                                 modifier = Modifier.size(14.dp),
-                                tint = AppColors.Running,
+                                tint = AppTheme.extended.running,
                             )
                         }
                     }
@@ -334,7 +334,7 @@ internal fun ComposeProjectCard(
     onRemoveAll: (List<String>) -> Unit,
 ) {
     val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-    val shape = RoundedCornerShape(Radius.lg)
+    val shape = Radius.lg.appCorner
     val animatedPadding by animateDpAsState(
         targetValue = if (item.expanded) 6.dp else 0.dp,
         animationSpec = tween(durationMillis = 250),
@@ -536,7 +536,7 @@ internal fun SortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .clickable { onSortChange(column) }
                 .padding(vertical = Spacing.xs, horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -647,7 +647,7 @@ internal fun CompactContainerRow(
                 .background(
                     when {
                         isPendingDelete -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        isViewingLogs -> AppColors.AccentBlue.copy(alpha = 0.15f)
+                        isViewingLogs -> AppTheme.extended.accent.copy(alpha = 0.15f)
                         isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                         else -> MaterialTheme.colorScheme.surface
                     },
@@ -691,15 +691,15 @@ internal fun CompactContainerRow(
                     text = container.shortId,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                 )
             }
             container.ports.firstOrNull()?.displayString?.let { port ->
                 Text(
                     text = port,
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.AccentBlue,
-                    fontFamily = FontFamily.Monospace,
+                    color = AppTheme.extended.accent,
+                    fontFamily = appMonoFamily(),
                 )
             }
         }
@@ -750,7 +750,7 @@ internal fun CompactContainerRow(
                                 contentDescription = null,
                                 tint =
                                     if (isViewingLogs) {
-                                        AppColors.AccentBlue
+                                        AppTheme.extended.accent
                                     } else {
                                         MaterialTheme.colorScheme.onSurface
                                     },
@@ -776,7 +776,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStop()
                                 },
-                                leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppTheme.extended.stopped) },
                             )
                         }
 
@@ -787,7 +787,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onUnpause()
                                 },
-                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppTheme.extended.running) },
                             )
                         }
 
@@ -798,7 +798,7 @@ internal fun CompactContainerRow(
                                     showActionsMenu = false
                                     onStart()
                                 },
-                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
+                                leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppTheme.extended.running) },
                             )
                         }
                     }
@@ -1007,7 +1007,7 @@ internal fun ExpandedContainerRow(
                     .background(
                         when {
                             isPendingDelete -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                            isViewingLogs -> AppColors.AccentBlue.copy(alpha = 0.15f)
+                            isViewingLogs -> AppTheme.extended.accent.copy(alpha = 0.15f)
                             isChecked -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                             else -> MaterialTheme.colorScheme.surface
                         },
@@ -1062,7 +1062,7 @@ internal fun ExpandedContainerRow(
             Text(
                 text = container.ports.firstOrNull()?.displayString ?: "-",
                 style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = appMonoFamily(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.width(200.dp),
                 maxLines = 1,
@@ -1092,7 +1092,7 @@ internal fun ExpandedContainerRow(
                     Text(
                         text = "✓ ${successMessage!!}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = AppColors.Running,
+                        color = AppTheme.extended.running,
                     )
                 } else {
                     // Logs button (benign)
@@ -1106,7 +1106,7 @@ internal fun ExpandedContainerRow(
                             modifier = Modifier.size(14.dp),
                             tint =
                                 if (isViewingLogs) {
-                                    AppColors.AccentBlue
+                                    AppTheme.extended.accent
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
@@ -1144,7 +1144,7 @@ internal fun ExpandedContainerRow(
                                     painterResource(Res.drawable.play_arrow),
                                     contentDescription = "Resume ${container.displayName}",
                                     modifier = Modifier.size(14.dp),
-                                    tint = AppColors.Running,
+                                    tint = AppTheme.extended.running,
                                 )
                             }
                         }
@@ -1161,7 +1161,7 @@ internal fun ExpandedContainerRow(
                                     painterResource(Res.drawable.play_arrow),
                                     contentDescription = "Start ${container.displayName}",
                                     modifier = Modifier.size(14.dp),
-                                    tint = AppColors.Running,
+                                    tint = AppTheme.extended.running,
                                 )
                             }
                         }
@@ -1188,7 +1188,7 @@ internal fun ExpandedContainerRow(
                                 painterResource(Res.drawable.stop),
                                 contentDescription = "Stop ${container.displayName}",
                                 modifier = Modifier.size(14.dp),
-                                tint = AppColors.Stopped,
+                                tint = AppTheme.extended.stopped,
                             )
                         }
                     }

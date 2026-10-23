@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,10 +57,12 @@ import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.cleaning_services
 import com.dockerdashboard.composeapp.generated.resources.monitor_heart
@@ -574,11 +575,11 @@ internal fun EngineManagementSection(
                         }
 
                         is EngineActionStatus.Done -> {
-                            if (actionStatus.success) AppColors.Running else AppColors.Stopped
+                            if (actionStatus.success) AppTheme.extended.running else AppTheme.extended.stopped
                         }
 
                         else -> {
-                            if (colimaConfig != null) AppColors.Running else AppColors.Stopped
+                            if (colimaConfig != null) AppTheme.extended.running else AppTheme.extended.stopped
                         }
                     }
                 val statusText =
@@ -597,7 +598,7 @@ internal fun EngineManagementSection(
                     }
                 androidx.compose.material3.Surface(
                     modifier = Modifier.size(8.dp),
-                    shape = RoundedCornerShape(Radius.sm),
+                    shape = Radius.sm.appCorner,
                     color = statusColor,
                 ) {}
                 Text(
@@ -633,7 +634,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -654,7 +655,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -675,7 +676,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -703,7 +704,7 @@ internal fun EngineManagementSection(
         // Command output log
         if (commandOutput.isNotBlank()) {
             androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(Radius.md),
+                shape = Radius.md.appCorner,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -714,7 +715,7 @@ internal fun EngineManagementSection(
                 Text(
                     text = commandOutput.trimEnd(),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -817,7 +818,7 @@ private fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(Radius.lg),
+        shape = Radius.lg.appCorner,
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
@@ -984,7 +985,7 @@ private fun EngineHostField(
             label = { Text("Engine host") },
             placeholder = { Text(DockerHostConfig.fallbackUri) },
             singleLine = true,
-            shape = RoundedCornerShape(Radius.md),
+            shape = Radius.md.appCorner,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
         )
         ExposedDropdownMenu(

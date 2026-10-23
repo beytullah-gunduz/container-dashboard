@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.chevron_right_filled
@@ -36,8 +36,8 @@ fun SectionHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.md))
-                .hoverHighlight(shape = RoundedCornerShape(Radius.md))
+                .clip(Radius.md.appCorner)
+                .hoverHighlight(shape = Radius.md.appCorner)
                 .clickable(onClick = onToggle)
                 .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -55,7 +55,7 @@ fun SectionHeader(
             fontWeight = FontWeight.SemiBold,
         )
         Surface(
-            shape = RoundedCornerShape(Radius.lg),
+            shape = Radius.lg.appCorner,
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Text(

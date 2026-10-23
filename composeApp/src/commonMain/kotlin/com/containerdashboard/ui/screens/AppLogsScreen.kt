@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -38,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,9 +49,11 @@ import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.EmptyStateAction
 import com.containerdashboard.ui.components.SearchBar
 import com.containerdashboard.ui.screens.viewmodel.AppLogsScreenViewModel
-import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
+import com.containerdashboard.ui.theme.ExtendedColors
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.article
 import com.dockerdashboard.composeapp.generated.resources.delete_sweep
@@ -128,7 +128,7 @@ fun AppLogsScreen(
                             contentDescription = "Toggle auto-scroll",
                             tint =
                                 if (autoScroll) {
-                                    AppColors.AccentBlue
+                                    AppTheme.extended.accent
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
@@ -168,7 +168,7 @@ fun AppLogsScreen(
                 LevelFilterChip(
                     label = level.name,
                     selected = levelFilter == level,
-                    color = levelColor(level.name),
+                    color = levelColor(level.name, AppTheme.extended),
                 ) {
                     viewModel.setLevelFilter(level)
                 }
@@ -178,7 +178,7 @@ fun AppLogsScreen(
         // ── Log List ────────────────────────────────────────────
         Card(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            shape = RoundedCornerShape(12.dp),
+            shape = 12.dp.appCorner,
             colors =
                 CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -260,7 +260,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
+                .clip(6.dp.appCorner)
                 .background(bgColor)
                 .padding(horizontal = 10.dp, vertical = 6.dp)
                 // Per-row horizontal scroll is deliberate (each long line pans
@@ -275,7 +275,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
             text = formatTimestamp(entry.timestamp),
             style =
                 MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     fontSize = 11.sp,
                 ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -284,19 +284,19 @@ private fun LogEntryRow(entry: AppLogEntry) {
 
         // Level badge
         Surface(
-            shape = RoundedCornerShape(4.dp),
-            color = levelColor(entry.level).copy(alpha = 0.15f),
+            shape = 4.dp.appCorner,
+            color = levelColor(entry.level, AppTheme.extended).copy(alpha = 0.15f),
             modifier = Modifier.width(48.dp),
         ) {
             Text(
                 text = entry.level,
                 style =
                     MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = appMonoFamily(),
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.sp,
                     ),
-                color = levelColor(entry.level),
+                color = levelColor(entry.level, AppTheme.extended),
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                 maxLines = 1,
             )
@@ -307,10 +307,10 @@ private fun LogEntryRow(entry: AppLogEntry) {
             text = "[${entry.threadName}]",
             style =
                 MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     fontSize = 11.sp,
                 ),
-            color = AppColors.AccentBlue.copy(alpha = 0.7f),
+            color = AppTheme.extended.accent.copy(alpha = 0.7f),
             maxLines = 1,
         )
 
@@ -319,7 +319,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
             text = entry.shortLoggerName,
             style =
                 MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     fontSize = 11.sp,
                 ),
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -335,7 +335,7 @@ private fun LogEntryRow(entry: AppLogEntry) {
                 },
             style =
                 MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     fontSize = 12.sp,
                 ),
             color = MaterialTheme.colorScheme.onSurface,
@@ -377,14 +377,17 @@ private fun LevelFilterChip(
     )
 }
 
-private fun levelColor(level: String): Color =
+private fun levelColor(
+    level: String,
+    ext: ExtendedColors,
+): Color =
     when (level) {
-        "ERROR" -> AppColors.Stopped
-        "WARN" -> AppColors.Warning
-        "INFO" -> AppColors.Running
-        "DEBUG" -> AppColors.AccentBlue
-        "TRACE" -> AppColors.TextSecondary
-        else -> AppColors.TextSecondary
+        "ERROR" -> ext.stopped
+        "WARN" -> ext.warning
+        "INFO" -> ext.running
+        "DEBUG" -> ext.accent
+        "TRACE" -> ext.textMuted
+        else -> ext.textMuted
     }
 
 private val timestampFormatter =
