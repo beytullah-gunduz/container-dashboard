@@ -1,32 +1,24 @@
 package com.containerdashboard.ui.chrome
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -40,6 +32,9 @@ import com.dockerdashboard.composeapp.generated.resources.minimize_filled
 import org.jetbrains.compose.resources.painterResource
 
 private const val DOUBLE_CLICK_MS = 350L
+
+// Room the title bar leaves for macOS's own close, minimize and zoom buttons.
+private val MAC_TRAFFIC_LIGHTS_WIDTH = 78.dp
 
 enum class DesktopOs { MAC, WINDOWS, LINUX }
 
@@ -137,17 +132,10 @@ fun FrameWindowScope.rememberDesktopWindowChrome(
 
 @Composable
 actual fun WindowChromeLeading(modifier: Modifier) {
-    val chrome = LocalDesktopWindowChrome.current ?: return
-    if (currentDesktopOs == DesktopOs.MAC) {
-        TrafficLights(
-            modifier = modifier,
-            onClose = chrome.onClose,
-            onMinimize = chrome.onMinimize,
-            onZoom = chrome.onToggleMaximize,
-        )
-    } else {
-        Spacer(modifier.width(8.dp))
-    }
+    LocalDesktopWindowChrome.current ?: return
+    // On macOS the window keeps its own traffic lights (see TransparentTitleBarOnMac);
+    // the bar only leaves room for them.
+    Spacer(modifier.width(if (currentDesktopOs == DesktopOs.MAC) MAC_TRAFFIC_LIGHTS_WIDTH else 8.dp))
 }
 
 @Composable
@@ -172,54 +160,25 @@ actual fun TopBarDragArea(content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * Gives a macOS [window] a transparent title bar with the app's content drawn under it, so the
+ * window keeps the system's own traffic lights. Only those offer the ⌥-hover tiling menu (Move &
+ * Resize, Fill & Arrange) and native full screen: macOS never attaches them to buttons the app
+ * draws itself. A decorated window also zooms natively: for an undecorated one, AWT imitates
+ * maximize and restores the bounds it saved, on the display the window was maximized on, even
+ * after the user moved it to another one.
+ *
+ * The window must be created with `undecorated = false` on macOS. No-op elsewhere.
+ */
 @Composable
-private fun TrafficLights(
-    modifier: Modifier = Modifier,
-    onClose: () -> Unit,
-    onMinimize: () -> Unit,
-    onZoom: () -> Unit,
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Row(
-        modifier =
-            modifier
-                .padding(start = 12.dp, end = 8.dp)
-                .hoverable(interaction),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TrafficLight(color = Color(0xFFFF5F57), showGlyph = hovered, enabled = true, onClick = onClose)
-        TrafficLight(color = Color(0xFFFEBC2E), showGlyph = hovered, enabled = true, onClick = onMinimize)
-        TrafficLight(color = Color(0xFF28C840), showGlyph = hovered, enabled = true, onClick = onZoom)
-    }
-}
-
-@Composable
-private fun TrafficLight(
-    color: Color,
-    showGlyph: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val displayColor = if (enabled) color else color.copy(alpha = 0.3f)
-    Box(
-        modifier =
-            Modifier
-                .size(12.dp)
-                .clip(CircleShape)
-                .background(displayColor)
-                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (showGlyph && enabled) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(6.dp)
-                        .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-            )
-        }
+fun TransparentTitleBarOnMac(window: ComposeWindow) {
+    if (currentDesktopOs != DesktopOs.MAC) return
+    DisposableEffect(window) {
+        // CPlatformWindow client properties; applied when set after the window exists too.
+        window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
+        window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
+        window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
+        onDispose { }
     }
 }
 

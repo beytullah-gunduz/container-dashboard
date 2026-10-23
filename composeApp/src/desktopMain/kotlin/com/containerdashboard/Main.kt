@@ -46,6 +46,7 @@ import com.containerdashboard.logging.InMemoryAppender
 import com.containerdashboard.ui.chrome.DesktopOs
 import com.containerdashboard.ui.chrome.LocalDesktopWindowChrome
 import com.containerdashboard.ui.chrome.NativeMacApp
+import com.containerdashboard.ui.chrome.TransparentTitleBarOnMac
 import com.containerdashboard.ui.chrome.currentDesktopOs
 import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
@@ -335,13 +336,15 @@ fun main() {
             state = windowState,
             icon = appIcon,
             visible = isWindowVisible,
-            undecorated = true,
+            // macOS keeps its own title bar buttons, under a transparent title bar.
+            undecorated = currentDesktopOs != DesktopOs.MAC,
         ) {
             val desktopChrome =
                 rememberDesktopWindowChrome(
                     windowState = windowState,
                     onClose = { hideWindow() },
                 )
+            TransparentTitleBarOnMac(window)
             CompositionLocalProvider(LocalDesktopWindowChrome provides desktopChrome) {
                 App(
                     navigateToRoute = pendingRoute,
