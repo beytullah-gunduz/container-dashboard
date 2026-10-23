@@ -39,8 +39,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.PreferenceRepository
-import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.AppTheme
+import com.containerdashboard.ui.theme.appRoundShape
 import java.awt.Cursor
 
 enum class LogsPaneLayout {
@@ -268,8 +268,8 @@ private fun ResizableDivider(
 
     val dividerColor =
         when {
-            isDragging -> AppColors.AccentBlue
-            isHovered -> AppColors.AccentBlue.copy(alpha = 0.7f)
+            isDragging -> AppTheme.extended.accent
+            isHovered -> AppTheme.extended.accent.copy(alpha = 0.7f)
             else -> AppTheme.extended.dividerStrong
         }
 
@@ -332,7 +332,7 @@ private fun ResizableDivider(
                                     .size(4.dp)
                                     .background(
                                         dividerColor,
-                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                        shape = appRoundShape,
                                     ),
                         )
                     }
@@ -350,7 +350,7 @@ private fun ResizableDivider(
                                     .size(4.dp)
                                     .background(
                                         dividerColor,
-                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                        shape = appRoundShape,
                                     ),
                         )
                     }

@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -53,15 +51,20 @@ import com.containerdashboard.data.engine.ColimaConfig
 import com.containerdashboard.data.engine.EngineActionStatus
 import com.containerdashboard.data.engine.EngineType
 import com.containerdashboard.ui.components.AppBrandMark
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.screens.viewmodel.ActionState
 import com.containerdashboard.ui.screens.viewmodel.ConnectionTestState
 import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.screens.viewmodel.SettingsScreenViewModel
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyle
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.cleaning_services
 import com.dockerdashboard.composeapp.generated.resources.monitor_heart
@@ -84,6 +87,7 @@ fun SettingsScreen(
 
     val dockerHost by viewModel.engineHost().collectAsState(initial = DockerHostConfig.detectDockerHost())
     val themeMode by viewModel.themeMode().collectAsState(initial = ThemeMode.AUTO)
+    val themeStyle by viewModel.themeStyle().collectAsState(initial = ThemeStyle.DEFAULT)
     val monitoringAggregation by viewModel
         .monitoringAggregation()
         .collectAsState(initial = MonitoringAggregation.ENGINE)
@@ -168,7 +172,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         modifier = Modifier.padding(bottom = Spacing.sm),
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        BusyIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Text("Testing connection...", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -200,6 +204,7 @@ fun SettingsScreen(
             ) {
                 val isTesting = connectionTestResult is ConnectionTestState.Testing
                 OutlinedButton(
+                    shape = appRoundShape,
                     onClick = {
                         viewModel.dismissTestResult()
                         viewModel.testConnection(dockerHost)
@@ -208,7 +213,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     if (isTesting) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
                         )
@@ -219,6 +224,7 @@ fun SettingsScreen(
                     Text(if (isTesting) "Testing…" else "Test Connection")
                 }
                 Button(
+                    shape = appRoundShape,
                     onClick = { viewModel.saveAndReconnect(dockerHost) },
                     modifier = Modifier.weight(1f),
                 ) {
@@ -255,6 +261,7 @@ fun SettingsScreen(
                                 SegmentedButtonDefaults.itemShape(
                                     index = index,
                                     count = lineOptions.size,
+                                    baseShape = appRoundShape,
                                 ),
                             onClick = { viewModel.setLogsMaxLines(count) },
                             selected = logsMaxLines == count,
@@ -283,6 +290,12 @@ fun SettingsScreen(
             ThemeModeSelector(
                 selected = themeMode,
                 onSelect = { viewModel.setThemeMode(it) },
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.lg))
+
+            ThemeStyleSelector(
+                selected = themeStyle,
+                onSelect = { viewModel.setThemeStyle(it) },
             )
         }
 
@@ -339,6 +352,7 @@ fun SettingsScreen(
                                 SegmentedButtonDefaults.itemShape(
                                     index = index,
                                     count = refreshOptions.size,
+                                    baseShape = appRoundShape,
                                 ),
                             onClick = { viewModel.setTrayRefreshRateSeconds(seconds) },
                             selected = trayRefreshRate == seconds,
@@ -379,7 +393,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            BusyIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Text(state.message, style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -409,6 +423,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 OutlinedButton(
+                    shape = appRoundShape,
                     onClick = { confirmPrune = true },
                     enabled = actionState !is ActionState.InProgress,
                     colors =
@@ -423,6 +438,7 @@ fun SettingsScreen(
                 }
 
                 OutlinedButton(
+                    shape = appRoundShape,
                     onClick = { confirmStopAll = true },
                     enabled = actionState !is ActionState.InProgress,
                     colors =
@@ -574,11 +590,11 @@ internal fun EngineManagementSection(
                         }
 
                         is EngineActionStatus.Done -> {
-                            if (actionStatus.success) AppColors.Running else AppColors.Stopped
+                            if (actionStatus.success) AppTheme.extended.running else AppTheme.extended.stopped
                         }
 
                         else -> {
-                            if (colimaConfig != null) AppColors.Running else AppColors.Stopped
+                            if (colimaConfig != null) AppTheme.extended.running else AppTheme.extended.stopped
                         }
                     }
                 val statusText =
@@ -597,7 +613,7 @@ internal fun EngineManagementSection(
                     }
                 androidx.compose.material3.Surface(
                     modifier = Modifier.size(8.dp),
-                    shape = RoundedCornerShape(Radius.sm),
+                    shape = Radius.sm.appCorner,
                     color = statusColor,
                 ) {}
                 Text(
@@ -633,7 +649,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -654,7 +670,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -675,7 +691,7 @@ internal fun EngineManagementSection(
                             } else {
                                 null
                             },
-                        shape = RoundedCornerShape(Radius.md),
+                        shape = Radius.md.appCorner,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -703,7 +719,7 @@ internal fun EngineManagementSection(
         // Command output log
         if (commandOutput.isNotBlank()) {
             androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(Radius.md),
+                shape = Radius.md.appCorner,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -714,7 +730,7 @@ internal fun EngineManagementSection(
                 Text(
                     text = commandOutput.trimEnd(),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -737,6 +753,7 @@ internal fun EngineManagementSection(
             if (colimaConfig != null || !isColima) {
                 // Engine is running — show Stop
                 OutlinedButton(
+                    shape = appRoundShape,
                     onClick = {
                         // U1.11: `enabled` is presentation only — the desktop
                         // accessibility bridge fires onClick on disabled controls.
@@ -758,6 +775,7 @@ internal fun EngineManagementSection(
 
                 if (isColima) {
                     Button(
+                        shape = appRoundShape,
                         onClick = {
                             // U1.11: re-check — `enabled` does not gate the
                             // accessibility bridge, and an unchecked press here would
@@ -781,6 +799,7 @@ internal fun EngineManagementSection(
             } else {
                 // Engine is stopped — show Start
                 Button(
+                    shape = appRoundShape,
                     onClick = {
                         // U1.11: re-check — see the Stop button.
                         if (isBusy || (isColima && !quotasValid)) return@Button
@@ -795,7 +814,7 @@ internal fun EngineManagementSection(
                     modifier = Modifier.weight(1f),
                 ) {
                     if (isBusy) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
                         )
@@ -817,7 +836,7 @@ private fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(Radius.lg),
+        shape = Radius.lg.appCorner,
         colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Column(
@@ -878,6 +897,43 @@ private fun ThemeModeSelector(
 }
 
 @Composable
+private fun ThemeStyleSelector(
+    selected: ThemeStyle,
+    onSelect: (ThemeStyle) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Style",
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = "Default or Retro (pixel fonts, square corners)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg, alignment = Alignment.CenterHorizontally),
+        ) {
+            ThemePreviewCard(
+                label = "Default",
+                selected = selected == ThemeStyle.DEFAULT,
+                primaryColors = DarkPreviewColors,
+                onClick = { onSelect(ThemeStyle.DEFAULT) },
+            )
+            ThemePreviewCard(
+                label = "Retro",
+                selected = selected == ThemeStyle.RETRO,
+                primaryColors = RetroPreviewColors,
+                onClick = { onSelect(ThemeStyle.RETRO) },
+                squared = true,
+            )
+        }
+    }
+}
+
+@Composable
 private fun MonitoringAggregationSelector(
     selected: MonitoringAggregation,
     onSelect: (MonitoringAggregation) -> Unit,
@@ -911,6 +967,7 @@ private fun MonitoringAggregationSelector(
                         SegmentedButtonDefaults.itemShape(
                             index = index,
                             count = options.size,
+                            baseShape = appRoundShape,
                         ),
                     onClick = { onSelect(mode) },
                     selected = selected == mode,
@@ -984,7 +1041,7 @@ private fun EngineHostField(
             label = { Text("Engine host") },
             placeholder = { Text(DockerHostConfig.fallbackUri) },
             singleLine = true,
-            shape = RoundedCornerShape(Radius.md),
+            shape = Radius.md.appCorner,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
         )
         ExposedDropdownMenu(

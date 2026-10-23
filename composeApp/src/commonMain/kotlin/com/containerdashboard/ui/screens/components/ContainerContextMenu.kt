@@ -9,7 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
 import com.containerdashboard.data.models.Container
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.article
 import com.dockerdashboard.composeapp.generated.resources.article_filled
@@ -56,7 +56,7 @@ fun ContainerContextMenu(
                     contentDescription = null,
                     tint =
                         if (isViewingLogs) {
-                            AppColors.AccentBlue
+                            AppTheme.extended.accent
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         },
@@ -90,7 +90,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onStop()
                     },
-                    leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppColors.Stopped) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.stop), null, tint = AppTheme.extended.stopped) },
                 )
             }
 
@@ -101,7 +101,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onUnpause()
                     },
-                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppTheme.extended.running) },
                 )
             }
 
@@ -112,7 +112,7 @@ fun ContainerContextMenu(
                         onDismiss()
                         onStart()
                     },
-                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppColors.Running) },
+                    leadingIcon = { Icon(painterResource(Res.drawable.play_arrow), null, tint = AppTheme.extended.running) },
                 )
             }
         }

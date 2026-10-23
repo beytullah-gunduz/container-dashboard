@@ -19,6 +19,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appRoundShape
 
 @Composable
 fun KeyboardShortcutsOverlay(onDismiss: () -> Unit) {
@@ -60,7 +61,7 @@ fun KeyboardShortcutsOverlay(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss, shape = appRoundShape) { Text("Close") }
         },
     )
 }

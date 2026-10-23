@@ -1,5 +1,6 @@
 package com.containerdashboard
 
+import androidx.compose.ui.graphics.Color
 import com.containerdashboard.terminal.closeTerminalWidget
 import com.containerdashboard.terminal.createTerminalWidget
 import com.jediterm.core.util.TermSize
@@ -43,7 +44,7 @@ class TerminalWidgetCloseTest {
     @Test
     fun `closing the widget stops its executors`() {
         var widget: JediTermWidget? = null
-        SwingUtilities.invokeAndWait { widget = createTerminalWidget(stub, darkTheme = true) }
+        SwingUtilities.invokeAndWait { widget = createTerminalWidget(stub, Color(0xFFD4D4D4), Color(0xFF1A1A1A)) }
         val created = widget!!
         val executor = created.executorServiceManager.singleThreadScheduledExecutor
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.warning
 import org.jetbrains.compose.resources.painterResource
@@ -82,6 +83,7 @@ fun ConfirmActionDialog(
         },
         confirmButton = {
             Button(
+                shape = appRoundShape,
                 onClick = onConfirm,
                 colors =
                     if (destructive) {
@@ -94,7 +96,7 @@ fun ConfirmActionDialog(
             ) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shape = appRoundShape) { Text("Cancel") }
         },
     )
 }

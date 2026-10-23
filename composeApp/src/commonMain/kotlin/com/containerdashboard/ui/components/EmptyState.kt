@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -59,7 +60,7 @@ fun EmptyState(
         ) {
             Surface(
                 modifier = Modifier.size(IconHaloSize),
-                shape = RoundedCornerShape(Radius.lg),
+                shape = Radius.lg.appCorner,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -91,7 +92,7 @@ fun EmptyState(
 
             if (action != null) {
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                Button(onClick = action.onClick) {
+                Button(onClick = action.onClick, shape = appRoundShape) {
                     Text(action.label)
                 }
             }

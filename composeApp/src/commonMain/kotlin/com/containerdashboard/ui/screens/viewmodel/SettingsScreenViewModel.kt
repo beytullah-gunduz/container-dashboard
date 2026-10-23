@@ -13,6 +13,7 @@ import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.createDockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,6 +52,8 @@ class SettingsScreenViewModel(
 
     fun themeMode(): Flow<ThemeMode> = PreferenceRepository.themeMode()
 
+    fun themeStyle(): Flow<ThemeStyle> = PreferenceRepository.themeStyle()
+
     fun monitoringAggregation(): Flow<MonitoringAggregation> = PreferenceRepository.monitoringAggregation()
 
     fun showSystemContainers(): Flow<Boolean> = PreferenceRepository.showSystemContainers()
@@ -71,6 +74,10 @@ class SettingsScreenViewModel(
 
     fun setThemeMode(value: ThemeMode) {
         viewModelScope.launch { PreferenceRepository.setThemeMode(value) }
+    }
+
+    fun setThemeStyle(value: ThemeStyle) {
+        viewModelScope.launch { PreferenceRepository.setThemeStyle(value) }
     }
 
     fun setMonitoringAggregation(value: MonitoringAggregation) {
