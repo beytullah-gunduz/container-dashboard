@@ -52,6 +52,15 @@ data class WindowBounds(
     val maximized: Boolean,
 )
 
+/**
+ * The bounds to persist for [this] window state. While maximized, the window keeps the position
+ * and size it last had when it was not ([lastFloating]): saving the maximized rectangle made it
+ * the size a restore returns to after a relaunch, so maximize and restore both landed on the same
+ * rectangle and the window seemed not to respond.
+ */
+fun WindowBounds.forPersistence(lastFloating: WindowBounds?): WindowBounds =
+    if (maximized && lastFloating != null) lastFloating.copy(maximized = true) else this
+
 object PreferenceRepository {
     private val dataStore: DataStore<Preferences> by lazy { dataStorePreferencesInstance }
 

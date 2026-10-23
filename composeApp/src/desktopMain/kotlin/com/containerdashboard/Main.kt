@@ -41,6 +41,7 @@ import com.containerdashboard.BuildConfig
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.data.repository.WindowBounds
+import com.containerdashboard.data.repository.forPersistence
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.logging.InMemoryAppender
 import com.containerdashboard.ui.chrome.DesktopOs
@@ -236,6 +237,7 @@ fun main() {
 
         @OptIn(kotlinx.coroutines.FlowPreview::class)
         LaunchedEffect(windowState) {
+            var lastFloating = persistedBounds?.takeUnless { it.maximized }
             snapshotFlow {
                 val pos = windowState.position
                 val size = windowState.size
@@ -249,7 +251,8 @@ fun main() {
             }.debounce(300L).collect { bounds ->
                 // Skip spurious zero-size emissions during startup
                 if (bounds.width > 100 && bounds.height > 100) {
-                    PreferenceRepository.setWindowBounds(bounds)
+                    PreferenceRepository.setWindowBounds(bounds.forPersistence(lastFloating))
+                    if (!bounds.maximized) lastFloating = bounds
                 }
             }
         }
