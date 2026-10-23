@@ -144,7 +144,7 @@ internal fun frameStep(
  * The current step of a stepped Retro animation, `frameStep(frame time, stepMillis, steps)` from
  * the frame clock's absolute time, so every instance agrees. Read it in the draw phase where a
  * redraw is enough; a composition read recomposes once per step (equal writes are no-ops), never
- * per frame, which the Retro skeleton rows, live-data dot and cluster ring accept. Starts at 0, so
+ * per frame, which the Retro skeleton rows accept. Starts at 0, so
  * a newly composed instance shows step 0 for its first frame before it joins the shared phase. The
  * loop runs through withInfiniteAnimationFrameMillis, so UI tests with an auto-advancing clock keep
  * it at 0.

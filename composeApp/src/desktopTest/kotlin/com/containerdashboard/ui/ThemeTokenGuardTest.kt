@@ -299,7 +299,7 @@ internal object ThemeTokenScanner {
 
     private val patterns =
         listOf(
-            Pattern("RoundedCornerShape(", Regex("""RoundedCornerShape\(""")),
+            Pattern("RoundedCornerShape(", Regex("""RoundedCornerShape\s*\(""")),
             Pattern("CircleShape", Regex("""\bCircleShape\b""")),
             Pattern("AppColors.", Regex("""\bAppColors\.""")),
             Pattern("FontFamily.Monospace", Regex("""FontFamily\.Monospace""")),

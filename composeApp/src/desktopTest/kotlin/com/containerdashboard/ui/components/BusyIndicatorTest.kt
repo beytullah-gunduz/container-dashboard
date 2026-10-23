@@ -279,5 +279,8 @@ class BusyIndicatorTest {
         runSkikoComposeUiTest(size = Size(14f, 14f), density = Density(1f)) {
             val map = showSingle(ThemeStyle.DEFAULT, boxDp = 14)
             map.assertColor(1, 1, Backdrop)
+            // Something is drawn: the arc tints some pixels towards the ink (white has full green).
+            val tinted = (0 until 14).sumOf { x -> (0 until 14).count { y -> map[x, y].green < 0.9f } }
+            assertTrue(tinted > 0, "Default should draw Material's arc, but every pixel is backdrop")
         }
 }
