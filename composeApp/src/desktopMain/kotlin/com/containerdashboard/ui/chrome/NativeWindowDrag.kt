@@ -1,7 +1,9 @@
 package com.containerdashboard.ui.chrome
 
+import com.sun.jna.Function
 import com.sun.jna.Library
 import com.sun.jna.Native
+import com.sun.jna.NativeLibrary
 import com.sun.jna.Pointer
 import org.slf4j.LoggerFactory
 
@@ -9,9 +11,10 @@ import org.slf4j.LoggerFactory
  * Initiates a native macOS window drag by forwarding the current NSEvent to
  * `-[NSWindow performWindowDragWithEvent:]`.
  *
- * Why this exists: with `undecorated = true` the window has no OS title
- * bar, so drags go through Compose Desktop's `WindowDraggableArea`, which
- * handles them entirely in Kotlin — it reads AWT mouse deltas and calls
+ * Why this exists: the app draws its own title bar under macOS's transparent
+ * one (see [TransparentTitleBarOnMac]), so presses on it reach Compose rather
+ * than AppKit's title bar. Compose Desktop's `WindowDraggableArea` would then
+ * move the window entirely in Kotlin: it reads AWT mouse deltas and calls
  * `frame.setLocation(x, y)`. On macOS multi-monitor setups, AWT's screen
  * coordinate mapping disagrees with AppKit's unified coordinate space
  * whenever the cursor crosses into a secondary display, so the window gets
@@ -19,31 +22,18 @@ import org.slf4j.LoggerFactory
  * across. Delegating to `performWindowDragWithEvent:` hands the drag to
  * AppKit's window server and multi-monitor just works.
  *
- * The trick is `-[NSApplication currentEvent]`, which returns the NSEvent
- * currently being processed by AppKit. When Compose/Skiko hands a
- * mouse-press to our pointer-input handler on the EDT, we're still inside
- * AppKit's event dispatch for the originating NSEvent, so `currentEvent`
- * still points at it. We grab it and pass it to the drag API.
+ * Threads: Compose pointer input runs on the AWT event thread (the EDT), which
+ * is NOT the AppKit main thread: `+[NSThread isMainThread]` answers NO there.
+ * An earlier guard skipped the drag in that case, which left the title bar
+ * unable to move the window at all. [startDrag] calls
+ * `performWindowDragWithEvent:` from the EDT on purpose: it reads
+ * `[NSApp currentEvent]`, which only points at the mouse-down while AppKit is
+ * still dispatching it. An async hop to a later main run-loop turn would lose
+ * that event, and a synchronous hop would block the EDT on the main thread,
+ * which can deadlock. It fires only during a user drag, never at startup.
+ * Revisit if it ever hangs.
  *
- * ── JBR thread contract ────────────────────────────────────────────────────
- * `performWindowDragWithEvent:` is an AppKit method that must be called on
- * the AppKit main thread. This call is safe because the JetBrains Runtime
- * (JBR) dispatches Compose pointer-input callbacks synchronously during
- * AppKit's own event-processing loop: the AWT Event Dispatch Thread (EDT) in
- * JBR is bridged to AppKit event delivery, so when a mouse-press reaches
- * [startDrag] we are already executing inside AppKit's event handler — on
- * the AppKit main thread — and `NSApplication.currentEvent` still points at
- * the originating NSEvent. This is an implementation detail of JBR, not a
- * Swing/AWT guarantee; a future JBR change could decouple the two threads.
- * The [startDrag] guard below checks `[NSThread isMainThread]` at runtime
- * and logs a warning (without crashing) if that contract ever breaks, so
- * the failure surfaces loudly rather than as undefined AppKit behaviour.
- * See `NativeMacApp.performOnMain()` for the explicit main-thread marshaling
- * pattern used when we cannot rely on already being on the main thread.
- * ──────────────────────────────────────────────────────────────────────────
- *
- * No-op on non-macOS platforms (returns `false` so the caller falls back
- * to `WindowDraggableArea`).
+ * No-op on non-macOS platforms ([startDrag] returns `false`).
  */
 object NativeWindowDrag {
     private val logger = LoggerFactory.getLogger(NativeWindowDrag::class.java)
@@ -60,34 +50,6 @@ object NativeWindowDrag {
         fun objc_getClass(name: String): Pointer?
 
         fun sel_registerName(name: String): Pointer?
-
-        fun objc_msgSend(
-            receiver: Pointer,
-            selector: Pointer,
-        ): Pointer?
-
-        fun objc_msgSend(
-            receiver: Pointer,
-            selector: Pointer,
-            arg1: Pointer,
-        ): Pointer?
-    }
-
-    /**
-     * Separate JNA mapping whose [objc_msgSend] returns [Byte] so we can
-     * read the BOOL result of `+[NSThread isMainThread]` without conflicting
-     * with the [Pointer]-returning overloads in [ObjC].
-     */
-    @Suppress("ktlint:standard:function-naming")
-    private interface ObjCBool : Library {
-        fun objc_getClass(name: String): Pointer?
-
-        fun sel_registerName(name: String): Pointer?
-
-        fun objc_msgSend(
-            receiver: Pointer,
-            selector: Pointer,
-        ): Byte
     }
 
     private val objc: ObjC? by lazy {
@@ -97,74 +59,35 @@ object NativeWindowDrag {
             .getOrNull()
     }
 
-    /** Lazily resolved selector for `+[NSThread isMainThread]`. */
-    private val isMainThreadCheck: (() -> Boolean)? by lazy {
+    private val msgSend: Function? by lazy {
         if (!isMacOs) return@lazy null
-        runCatching {
-            val lib = Native.load("objc", ObjCBool::class.java)
-            val nsThreadClass = lib.objc_getClass("NSThread") ?: return@lazy null
-            val isMainSel = lib.sel_registerName("isMainThread") ?: return@lazy null
-            // Return a lambda capturing the resolved class/selector so we
-            // don't re-resolve on every drag.
-            val check: () -> Boolean = { lib.objc_msgSend(nsThreadClass, isMainSel) != 0.toByte() }
-            check
-        }.getOrNull()
+        runCatching { NativeLibrary.getInstance("objc").getFunction("objc_msgSend") }.getOrNull()
     }
 
-    private data class Bindings(
-        val sharedApp: Pointer,
-        val currentEventSel: Pointer,
-        val keyWindowSel: Pointer,
-        val performDragSel: Pointer,
-    )
+    private val nsApplication: Pointer? by lazy { objc?.objc_getClass("NSApplication") }
 
-    private val bindings: Bindings? by lazy {
-        val obj = objc ?: return@lazy null
-        try {
-            val nsAppClass = obj.objc_getClass("NSApplication") ?: return@lazy null
-            val sharedAppSel = obj.sel_registerName("sharedApplication") ?: return@lazy null
-            val sharedApp = obj.objc_msgSend(nsAppClass, sharedAppSel) ?: return@lazy null
-            val currentEventSel = obj.sel_registerName("currentEvent") ?: return@lazy null
-            val keyWindowSel = obj.sel_registerName("keyWindow") ?: return@lazy null
-            val performDragSel = obj.sel_registerName("performWindowDragWithEvent:") ?: return@lazy null
-            Bindings(
-                sharedApp = sharedApp,
-                currentEventSel = currentEventSel,
-                keyWindowSel = keyWindowSel,
-                performDragSel = performDragSel,
-            )
-        } catch (t: Throwable) {
-            logger.warn("failed to resolve AppKit bindings: {}", t.message)
-            null
-        }
-    }
-
+    /**
+     * Hands the title-bar drag to AppKit's `-[NSWindow performWindowDragWithEvent:]`
+     * so the window server drives it. Returns true if AppKit took over.
+     * Runs on the EDT on purpose (see the class KDoc).
+     */
     fun startDrag(): Boolean {
-        val obj = objc ?: return false
-        val b = bindings ?: return false
+        val o = objc ?: return false
+        val send = msgSend ?: return false
+        val nsApp = nsApplication ?: return false
+        return runCatching {
+            val sharedSel = o.sel_registerName("sharedApplication") ?: return@runCatching false
+            val currentEventSel = o.sel_registerName("currentEvent") ?: return@runCatching false
+            val keyWindowSel = o.sel_registerName("keyWindow") ?: return@runCatching false
+            val performDragSel = o.sel_registerName("performWindowDragWithEvent:") ?: return@runCatching false
 
-        // Cheap main-thread guard — see the JBR thread contract in the class
-        // KDoc above. In normal operation this check always passes; a warning
-        // here means a JBR version has decoupled the EDT from the AppKit main
-        // thread and the performWindowDragWithEvent: call is no longer safe.
-        val onMain = isMainThreadCheck?.invoke() ?: true
-        if (!onMain) {
-            logger.warn(
-                "startDrag() called off the AppKit main thread — skipping " +
-                    "performWindowDragWithEvent: to avoid undefined AppKit behaviour. " +
-                    "The JBR EDT/AppKit main-thread contract may have changed.",
-            )
-            return false
-        }
+            val sharedApp = send.invokePointer(arrayOf(nsApp, sharedSel)) ?: return@runCatching false
+            val currentEvent = send.invokePointer(arrayOf(sharedApp, currentEventSel)) ?: return@runCatching false
+            val keyWindow = send.invokePointer(arrayOf(sharedApp, keyWindowSel)) ?: return@runCatching false
 
-        return try {
-            val currentEvent = obj.objc_msgSend(b.sharedApp, b.currentEventSel) ?: return false
-            val keyWindow = obj.objc_msgSend(b.sharedApp, b.keyWindowSel) ?: return false
-            obj.objc_msgSend(keyWindow, b.performDragSel, currentEvent)
+            send.invokeVoid(arrayOf(keyWindow, performDragSel, currentEvent))
             true
-        } catch (t: Throwable) {
-            logger.warn("performWindowDragWithEvent: threw: {}", t.message)
-            false
-        }
+        }.onFailure { logger.warn("performWindowDragWithEvent: threw: {}", it.message) }
+            .getOrDefault(false)
     }
 }
