@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.AppColors
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.check
 import org.jetbrains.compose.resources.painterResource
@@ -69,10 +70,22 @@ internal val LightPreviewColors =
         text = Color(0xFF1A1A1A),
     )
 
+internal val RetroPreviewColors =
+    ThemePreviewColors(
+        chrome = Color(0xFF1E2240),
+        sidebar = Color(0xFF0A0B1A),
+        background = Color(0xFF12142B),
+        surface = Color(0xFF272C50),
+        accent = Color(0xFF7FD8EA),
+        text = Color(0xFFE3E6F5),
+    )
+
 /**
  * A clickable theme thumbnail: a miniature app mockup framed by a selection
  * ring, with a radio-style indicator + [label] below. Pass [secondaryColors]
  * to render a split dark|light preview for the "Auto" (follow-system) mode.
+ * [squared] draws the mockup with square corners, for previewing the Retro style whatever the
+ * current one is; the selection indicator below the mockup follows the current style.
  */
 @Composable
 internal fun ThemePreviewCard(
@@ -82,7 +95,10 @@ internal fun ThemePreviewCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     secondaryColors: ThemePreviewColors? = null,
+    squared: Boolean = false,
 ) {
+    // The mockup previews the previewed style, not the current one, so its shapes stay literal.
+    val frameShape = RoundedCornerShape(if (squared) 0.dp else Radius.lg)
     val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     val borderWidth = if (selected) 2.dp else 1.dp
 
@@ -91,16 +107,16 @@ internal fun ThemePreviewCard(
             modifier =
                 Modifier
                     .size(width = 160.dp, height = 110.dp)
-                    .clip(RoundedCornerShape(Radius.lg))
-                    .border(borderWidth, borderColor, RoundedCornerShape(Radius.lg))
+                    .clip(frameShape)
+                    .border(borderWidth, borderColor, frameShape)
                     .clickable(onClick = onClick),
         ) {
             if (secondaryColors == null) {
-                ThemeMockup(primaryColors, modifier = Modifier.fillMaxSize())
+                ThemeMockup(primaryColors, squared = squared, modifier = Modifier.fillMaxSize())
             } else {
                 Row(modifier = Modifier.fillMaxSize()) {
-                    ThemeMockup(primaryColors, modifier = Modifier.weight(1f).fillMaxHeight())
-                    ThemeMockup(secondaryColors, modifier = Modifier.weight(1f).fillMaxHeight())
+                    ThemeMockup(primaryColors, squared = squared, modifier = Modifier.weight(1f).fillMaxHeight())
+                    ThemeMockup(secondaryColors, squared = squared, modifier = Modifier.weight(1f).fillMaxHeight())
                 }
             }
         }
@@ -116,7 +132,7 @@ internal fun ThemePreviewCard(
                     modifier =
                         Modifier
                             .size(18.dp)
-                            .clip(CircleShape)
+                            .clip(appRoundShape)
                             .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -132,8 +148,8 @@ internal fun ThemePreviewCard(
                     modifier =
                         Modifier
                             .size(18.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                            .clip(appRoundShape)
+                            .border(1.5.dp, MaterialTheme.colorScheme.outline, appRoundShape),
                 )
             }
             Text(
@@ -156,7 +172,11 @@ internal fun ThemePreviewCard(
 private fun ThemeMockup(
     colors: ThemePreviewColors,
     modifier: Modifier = Modifier,
+    squared: Boolean = false,
 ) {
+    val dotShape = if (squared) RoundedCornerShape(0.dp) else CircleShape
+    val thinBarShape = RoundedCornerShape(if (squared) 0.dp else 3.dp)
+    val wideBarShape = RoundedCornerShape(if (squared) 0.dp else 4.dp)
     Column(modifier = modifier.background(colors.background)) {
         // Window chrome strip with macOS traffic lights.
         Row(
@@ -174,7 +194,7 @@ private fun ThemeMockup(
                     modifier =
                         Modifier
                             .size(4.dp)
-                            .clip(CircleShape)
+                            .clip(dotShape)
                             .background(colors.text.copy(alpha = 0.25f)),
                 )
             }
@@ -197,7 +217,7 @@ private fun ThemeMockup(
                         Modifier
                             .fillMaxWidth(0.7f)
                             .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
+                            .clip(thinBarShape)
                             .background(colors.accent),
                 )
                 // Nav items — the first reads as selected.
@@ -207,7 +227,7 @@ private fun ThemeMockup(
                             Modifier
                                 .fillMaxWidth()
                                 .height(5.dp)
-                                .clip(RoundedCornerShape(3.dp))
+                                .clip(thinBarShape)
                                 .background(
                                     if (i == 0) {
                                         colors.accent.copy(alpha = 0.45f)
@@ -235,7 +255,7 @@ private fun ThemeMockup(
                         Modifier
                             .fillMaxWidth(0.5f)
                             .height(7.dp)
-                            .clip(RoundedCornerShape(3.dp))
+                            .clip(thinBarShape)
                             .background(colors.text.copy(alpha = 0.30f)),
                 )
                 // Stat cards.
@@ -249,7 +269,7 @@ private fun ThemeMockup(
                                 Modifier
                                     .weight(1f)
                                     .height(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(wideBarShape)
                                     .background(colors.surface),
                         )
                     }
@@ -261,7 +281,7 @@ private fun ThemeMockup(
                             Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
+                                .clip(thinBarShape)
                                 .background(colors.text.copy(alpha = 0.10f)),
                     )
                 }

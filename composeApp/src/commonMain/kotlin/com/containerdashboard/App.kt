@@ -78,6 +78,7 @@ import com.containerdashboard.ui.state.paneDeleteConfirmation
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.util.isMacHost
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_back_filled
@@ -105,6 +106,10 @@ fun App(
             ThemeMode.DARK -> true
             ThemeMode.LIGHT -> false
         }
+    val themeStyle by viewModel.themeStyle.collectAsState()
+    // Sync the global the token helpers read; the theme root below reads the same global, so each
+    // frame is self-consistent.
+    LaunchedEffect(themeStyle) { ThemeStyleState.style = themeStyle }
     val logsPaneLayout by viewModel.logsPaneLayout.collectAsState()
     val engineName by viewModel.engineName.collectAsState()
 
@@ -117,7 +122,7 @@ fun App(
 
     val navigator = rememberThreePaneScaffoldNavigator()
 
-    ContainerDashboardTheme(darkTheme = darkTheme) {
+    ContainerDashboardTheme(darkTheme = darkTheme, style = ThemeStyleState.style) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,

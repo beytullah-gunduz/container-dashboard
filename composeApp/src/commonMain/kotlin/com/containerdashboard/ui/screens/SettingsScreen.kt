@@ -61,6 +61,7 @@ import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyle
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -85,6 +86,7 @@ fun SettingsScreen(
 
     val dockerHost by viewModel.engineHost().collectAsState(initial = DockerHostConfig.detectDockerHost())
     val themeMode by viewModel.themeMode().collectAsState(initial = ThemeMode.AUTO)
+    val themeStyle by viewModel.themeStyle().collectAsState(initial = ThemeStyle.DEFAULT)
     val monitoringAggregation by viewModel
         .monitoringAggregation()
         .collectAsState(initial = MonitoringAggregation.ENGINE)
@@ -284,6 +286,12 @@ fun SettingsScreen(
             ThemeModeSelector(
                 selected = themeMode,
                 onSelect = { viewModel.setThemeMode(it) },
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.lg))
+
+            ThemeStyleSelector(
+                selected = themeStyle,
+                onSelect = { viewModel.setThemeStyle(it) },
             )
         }
 
@@ -873,6 +881,43 @@ private fun ThemeModeSelector(
                 primaryColors = DarkPreviewColors,
                 secondaryColors = LightPreviewColors,
                 onClick = { onSelect(ThemeMode.AUTO) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeStyleSelector(
+    selected: ThemeStyle,
+    onSelect: (ThemeStyle) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Style",
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = "Default or Retro (pixel fonts, square corners)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg, alignment = Alignment.CenterHorizontally),
+        ) {
+            ThemePreviewCard(
+                label = "Default",
+                selected = selected == ThemeStyle.DEFAULT,
+                primaryColors = DarkPreviewColors,
+                onClick = { onSelect(ThemeStyle.DEFAULT) },
+            )
+            ThemePreviewCard(
+                label = "Retro",
+                selected = selected == ThemeStyle.RETRO,
+                primaryColors = RetroPreviewColors,
+                onClick = { onSelect(ThemeStyle.RETRO) },
+                squared = true,
             )
         }
     }
