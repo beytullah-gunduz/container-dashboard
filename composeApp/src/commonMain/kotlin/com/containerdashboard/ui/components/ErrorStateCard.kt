@@ -25,6 +25,7 @@ import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.error
 import com.dockerdashboard.composeapp.generated.resources.refresh
@@ -87,6 +88,7 @@ fun ErrorStateCard(
             Spacer(modifier = Modifier.height(Spacing.xs))
 
             Button(
+                shape = appRoundShape,
                 onClick = onRetry,
                 colors =
                     ButtonDefaults.buttonColors(

@@ -54,6 +54,7 @@ import com.containerdashboard.ui.theme.ExtendedColors
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.article
 import com.dockerdashboard.composeapp.generated.resources.delete_sweep
@@ -115,7 +116,7 @@ fun AppLogsScreen(
                 AppTooltip(
                     label = if (autoScroll) "Auto-scroll: on" else "Auto-scroll: off",
                 ) {
-                    IconButton(onClick = { viewModel.toggleAutoScroll() }) {
+                    IconButton(onClick = { viewModel.toggleAutoScroll() }, shape = appRoundShape) {
                         Icon(
                             painter =
                                 painterResource(
@@ -137,7 +138,7 @@ fun AppLogsScreen(
                 }
 
                 // Clear logs
-                OutlinedButton(onClick = { viewModel.clearLogs() }) {
+                OutlinedButton(onClick = { viewModel.clearLogs() }, shape = appRoundShape) {
                     Icon(
                         painterResource(Res.drawable.delete_sweep),
                         null,

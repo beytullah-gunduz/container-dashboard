@@ -31,7 +31,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -60,6 +59,7 @@ import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.components.AppTooltip
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DeleteAllContainersDialog
 import com.containerdashboard.ui.components.DeletingAllContainersDialog
@@ -74,7 +74,9 @@ import com.containerdashboard.ui.screens.viewmodel.ContainerFilter
 import com.containerdashboard.ui.screens.viewmodel.ContainersScreenViewModel
 import com.containerdashboard.ui.shortcuts.LocalSearchFocusRequester
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_drop_down_filled
 import com.dockerdashboard.composeapp.generated.resources.auto_awesome
@@ -348,8 +350,8 @@ fun ContainersScreen(
                             if (showDelSel) add("delSel")
                         }
                     val solo = order.size <= 1
-                    val leadingShape = ButtonGroupDefaults.connectedLeadingButtonShape
-                    val trailingShape = ButtonGroupDefaults.connectedTrailingButtonShape
+                    val leadingShape = if (ThemeStyleState.isRetro) 0.dp.appCorner else ButtonGroupDefaults.connectedLeadingButtonShape
+                    val trailingShape = if (ThemeStyleState.isRetro) 0.dp.appCorner else ButtonGroupDefaults.connectedTrailingButtonShape
                     val middleShape = 6.dp.appCorner
                     val soloShape = 20.dp.appCorner
                     val shapeFor: (String) -> androidx.compose.ui.graphics.Shape = { name ->
@@ -393,7 +395,7 @@ fun ContainersScreen(
                                 label = "ClearButtonCompactToggle",
                             ) { compact ->
                                 if (compact) {
-                                    IconButton(onClick = { viewModel.clearSelection() }) {
+                                    IconButton(onClick = { viewModel.clearSelection() }, shape = appRoundShape) {
                                         Icon(
                                             painterResource(Res.drawable.remove_done),
                                             contentDescription = "Clear selection",
@@ -438,6 +440,7 @@ fun ContainersScreen(
                                 if (compact) {
                                     AppTooltip(label = "Stop $runningSelectedCount selected") {
                                         IconButton(
+                                            shape = appRoundShape,
                                             onClick = {
                                                 // U1.11: enabled is presentation only — re-check.
                                                 if (isStoppingSelected) return@IconButton
@@ -450,7 +453,7 @@ fun ContainersScreen(
                                             enabled = !isStoppingSelected,
                                         ) {
                                             if (isStoppingSelected) {
-                                                CircularProgressIndicator(
+                                                BusyIndicator(
                                                     modifier = Modifier.size(18.dp),
                                                     strokeWidth = 2.dp,
                                                 )
@@ -481,7 +484,7 @@ fun ContainersScreen(
                                             ),
                                     ) {
                                         if (isStoppingSelected) {
-                                            CircularProgressIndicator(
+                                            BusyIndicator(
                                                 modifier = Modifier.size(18.dp),
                                                 strokeWidth = 2.dp,
                                                 color = MaterialTheme.colorScheme.onError,
@@ -521,6 +524,7 @@ fun ContainersScreen(
                                 if (compact) {
                                     AppTooltip(label = "Delete ${selectedContainerIds.size} selected") {
                                         IconButton(
+                                            shape = appRoundShape,
                                             onClick = {
                                                 if (isDeletingSelected) return@IconButton
                                                 askConfirm(
@@ -531,7 +535,7 @@ fun ContainersScreen(
                                             enabled = !isDeletingSelected,
                                         ) {
                                             if (isDeletingSelected) {
-                                                CircularProgressIndicator(
+                                                BusyIndicator(
                                                     modifier = Modifier.size(18.dp),
                                                     strokeWidth = 2.dp,
                                                 )
@@ -561,7 +565,7 @@ fun ContainersScreen(
                                             ),
                                     ) {
                                         if (isDeletingSelected) {
-                                            CircularProgressIndicator(
+                                            BusyIndicator(
                                                 modifier = Modifier.size(18.dp),
                                                 strokeWidth = 2.dp,
                                                 color = MaterialTheme.colorScheme.onError,
@@ -603,6 +607,7 @@ fun ContainersScreen(
                             }
                         AppTooltip(label = "Log panel layout") {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = { showLayoutMenu = true },
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -691,7 +696,7 @@ fun ContainersScreen(
                     Box {
                         var showMoreMenu by remember { mutableStateOf(false) }
                         AppTooltip(label = "More actions") {
-                            IconButton(onClick = { showMoreMenu = true }) {
+                            IconButton(onClick = { showMoreMenu = true }, shape = appRoundShape) {
                                 Icon(
                                     painterResource(Res.drawable.more_vert),
                                     contentDescription = "More actions",
@@ -754,7 +759,7 @@ fun ContainersScreen(
                         Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(onClick = { viewModel.clearError() }) {
+                        IconButton(onClick = { viewModel.clearError() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null)
                         }
                     }

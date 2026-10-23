@@ -44,6 +44,7 @@ import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.util.formatBytes
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
@@ -144,7 +145,7 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.weight(1f),
                         )
-                        IconButton(onClick = { viewModel.clearError() }) {
+                        IconButton(onClick = { viewModel.clearError() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null)
                         }
                     }

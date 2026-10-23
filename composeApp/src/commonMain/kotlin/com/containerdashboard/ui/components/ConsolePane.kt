@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -123,7 +122,7 @@ fun ContainerExtraPane(
                         modifier = Modifier.size(32.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.primary,
@@ -142,7 +141,7 @@ fun ContainerExtraPane(
                         modifier = Modifier.size(32.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
                             color =
@@ -192,7 +191,7 @@ fun ContainerExtraPane(
                 Spacer(modifier = Modifier.width(Spacing.md))
 
                 AppTooltip(label = "Close logs pane", shortcut = "Esc") {
-                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp), shape = appRoundShape) {
                         Icon(
                             painterResource(Res.drawable.close),
                             contentDescription = "Close",
@@ -338,6 +337,7 @@ internal fun PaneActionButton(
 ) {
     AppTooltip(label = contentDescription) {
         IconButton(
+            shape = appRoundShape,
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier.size(32.dp),

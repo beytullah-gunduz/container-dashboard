@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,8 +68,10 @@ import com.containerdashboard.data.repository.DockerRepository
 import com.containerdashboard.di.AppModule
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.content_copy
@@ -237,11 +238,11 @@ fun ResourceDetailsDialog(
             shape = Radius.lg.appCorner,
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 4.dp,
-            shadowElevation = 12.dp,
+            shadowElevation = if (ThemeStyleState.isRetro) 0.dp else 12.dp,
             border =
                 BorderStroke(
                     1.dp,
-                    MaterialTheme.colorScheme.outlineVariant,
+                    if (ThemeStyleState.isRetro) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
                 ),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -358,7 +359,7 @@ private fun DetailsHeader(
                 maxLines = 1,
             )
         }
-        IconButton(onClick = onClose) {
+        IconButton(onClick = onClose, shape = appRoundShape) {
             Icon(
                 painter = painterResource(Res.drawable.close),
                 contentDescription = "Close",
@@ -374,7 +375,7 @@ private fun LoadingState() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator(
+        BusyIndicator(
             color = MaterialTheme.colorScheme.primary,
             strokeWidth = 3.dp,
             modifier = Modifier.size(36.dp),
@@ -407,7 +408,7 @@ private fun ErrorState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(Spacing.lg))
-        Button(onClick = onRetry) {
+        Button(onClick = onRetry, shape = appRoundShape) {
             Text("Retry")
         }
     }
@@ -723,7 +724,7 @@ private fun CopyIconButton(
     tooltip: String,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(20.dp)) {
+    IconButton(onClick = onClick, modifier = Modifier.size(20.dp), shape = appRoundShape) {
         Icon(
             painter = painterResource(Res.drawable.content_copy),
             contentDescription = tooltip,
@@ -840,6 +841,7 @@ private fun EnvironmentTab(env: List<EnvVar>) {
                     }
                     if (secret) {
                         IconButton(
+                            shape = appRoundShape,
                             onClick = { revealed[index] = !isRevealed },
                             modifier = Modifier.size(20.dp),
                         ) {
@@ -1226,6 +1228,7 @@ internal fun RawJsonTab(json: String) {
         ) {
             if (hasSecrets) {
                 IconButton(
+                    shape = appRoundShape,
                     onClick = { revealSecrets = !revealSecrets },
                     modifier = Modifier.size(20.dp),
                 ) {

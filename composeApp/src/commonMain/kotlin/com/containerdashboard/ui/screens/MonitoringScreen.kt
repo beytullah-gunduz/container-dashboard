@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.ContainerStats
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.CircularSlider
 import com.containerdashboard.ui.components.EmptyState
 import com.containerdashboard.ui.components.SearchBar
@@ -66,6 +66,7 @@ import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_downward_filled
 import com.dockerdashboard.composeapp.generated.resources.arrow_upward_filled
@@ -319,7 +320,7 @@ fun MonitoringScreen(
                         Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(onClick = { viewModel.clearError() }) {
+                        IconButton(onClick = { viewModel.clearError() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null)
                         }
                     }
@@ -344,7 +345,7 @@ fun MonitoringScreen(
                             title = "Collecting data…",
                             body = "Waiting for the first stats snapshot from the container engine.",
                         )
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier =
                                 Modifier
                                     .padding(bottom = Spacing.xl)

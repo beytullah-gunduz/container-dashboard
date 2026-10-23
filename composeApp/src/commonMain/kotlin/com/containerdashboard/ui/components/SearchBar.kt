@@ -27,6 +27,7 @@ import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.search
@@ -100,6 +101,7 @@ fun SearchBar(
             if (query.isNotEmpty()) {
                 AppTooltip(label = "Clear search") {
                     IconButton(
+                        shape = appRoundShape,
                         onClick = { onQueryChange("") },
                         modifier = Modifier.size(clearButtonSize),
                     ) {

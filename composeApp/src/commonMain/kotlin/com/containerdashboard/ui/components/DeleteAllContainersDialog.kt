@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.screens.typedCountMatches
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.warning
 import org.jetbrains.compose.resources.painterResource
@@ -96,6 +97,7 @@ fun DeleteAllContainersDialog(
         },
         confirmButton = {
             Button(
+                shape = appRoundShape,
                 // Guard the handler, not just the button: Compose Desktop's
                 // accessibility bridge performs the press action on disabled
                 // controls (observed with AXPress on 1.12.0), so `enabled` alone
@@ -110,7 +112,7 @@ fun DeleteAllContainersDialog(
             ) { Text("Delete") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shape = appRoundShape) { Text("Cancel") }
         },
     )
 }

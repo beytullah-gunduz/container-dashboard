@@ -16,9 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.retroCaps
+import com.containerdashboard.ui.theme.retroChrome
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.chevron_right_filled
@@ -50,9 +54,9 @@ fun SectionHeader(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            text = title.retroCaps(),
+            style = MaterialTheme.typography.titleSmall.retroChrome(10.sp),
+            fontWeight = if (ThemeStyleState.isRetro) FontWeight.Normal else FontWeight.SemiBold,
         )
         Surface(
             shape = Radius.lg.appCorner,

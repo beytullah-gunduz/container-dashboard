@@ -25,26 +25,52 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
+
+/** Milliseconds each Retro skeleton row stays bright before the next one lights. */
+private const val SKELETON_STEP_MILLIS = 180L
+
+/** Retro skeleton: the row the stepping scan is on is bright (0.8), the others dim (0.4). */
+internal fun skeletonRowAlpha(
+    step: Int,
+    row: Int,
+    rowCount: Int,
+): Float = if (rowCount > 0 && row == step.mod(rowCount)) 0.8f else 0.4f
 
 /**
  * Shimmer-style placeholder rows shown while a list is loading for the first
  * time. Each row has a name stripe and a subtitle stripe so the skeleton
- * roughly mirrors the shape of the real row it replaces.
+ * roughly mirrors the shape of the real row it replaces. In Retro one row at a
+ * time is bright, stepping down every [SKELETON_STEP_MILLIS] and wrapping,
+ * instead of the smooth shared pulse.
  */
 @Composable
 fun ListRowSkeleton(
     rowCount: Int = 6,
     modifier: Modifier = Modifier,
 ) {
-    val alpha = rememberSkeletonAlpha()
+    if (ThemeStyleState.isRetro) {
+        val step = rememberFrameStep(SKELETON_STEP_MILLIS, rowCount.coerceAtLeast(1))
+        SkeletonRowsLayout(rowCount, modifier) { row -> skeletonRowAlpha(step.intValue, row, rowCount) }
+    } else {
+        val alpha = rememberSkeletonAlpha()
+        SkeletonRowsLayout(rowCount, modifier) { alpha }
+    }
+}
 
+@Composable
+private fun SkeletonRowsLayout(
+    rowCount: Int,
+    modifier: Modifier,
+    alphaOf: (row: Int) -> Float,
+) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        repeat(rowCount) {
-            SkeletonRow(alpha = alpha)
+        repeat(rowCount) { row ->
+            SkeletonRow(alpha = alphaOf(row))
         }
     }
 }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -27,8 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.DesktopDockerRepository
 import com.containerdashboard.di.AppModule
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.theme.AppTheme
+import com.containerdashboard.ui.theme.appRoundShape
 import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.JediTermWidget
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
@@ -117,7 +118,7 @@ fun JediTermConsole(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(text = error!!, color = AppTheme.extended.stopped)
-                Button(onClick = { connect() }) { Text("Retry") }
+                Button(onClick = { connect() }, shape = appRoundShape) { Text("Retry") }
             }
         }
     } else {
@@ -165,7 +166,7 @@ fun JediTermConsole(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(32.dp),
                             color = AppTheme.extended.accent,
                             strokeWidth = 3.dp,

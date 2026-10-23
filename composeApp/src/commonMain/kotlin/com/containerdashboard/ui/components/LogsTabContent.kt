@@ -26,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -94,7 +93,7 @@ internal fun LogsTabContent(
         when {
             state.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
+                    BusyIndicator(
                         modifier = Modifier.size(32.dp),
                         color = AppTheme.extended.accent,
                         strokeWidth = 3.dp,
@@ -114,7 +113,7 @@ internal fun LogsTabContent(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(Spacing.md))
-                    Button(onClick = onRefresh) { Text("Retry") }
+                    Button(onClick = onRefresh, shape = appRoundShape) { Text("Retry") }
                 }
             }
 
@@ -296,6 +295,7 @@ internal fun LogsTabContent(
                             Spacer(modifier = Modifier.width(Spacing.xs))
                             AppTooltip(label = "Clear filter") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = { LogsFilterState.filterText.value = "" },
                                     modifier = Modifier.size(18.dp),
                                 ) {
@@ -376,6 +376,7 @@ internal fun LogsTabContent(
                             )
                             AppTooltip(label = if (wordWrap) "Disable word wrap" else "Enable word wrap") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = {
                                         scope.launch { PreferenceRepository.setLogsWordWrap(!wordWrap) }
                                     },
@@ -396,6 +397,7 @@ internal fun LogsTabContent(
                             }
                             AppTooltip(label = "Scroll to bottom") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = {
                                         scope.launch {
                                             val lastIndex = listState.layoutInfo.totalItemsCount - 1

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +46,7 @@ import com.containerdashboard.ui.chrome.WindowChromeLeading
 import com.containerdashboard.ui.chrome.WindowChromeTrailing
 import com.containerdashboard.ui.chrome.windowChromeBarHeight
 import com.containerdashboard.ui.components.AppSnackbarHost
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.ContainerExtraPane
 import com.containerdashboard.ui.components.ErrorSnackbarBridges
@@ -79,6 +79,7 @@ import com.containerdashboard.ui.theme.ContainerDashboardTheme
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.ThemeMode
 import com.containerdashboard.ui.theme.ThemeStyleState
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.util.isMacHost
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_back_filled
@@ -142,6 +143,7 @@ fun App(
                         if (currentRoute == Screen.Settings.route) {
                             Column(modifier = Modifier.weight(1f).fillMaxSize()) {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = { viewModel.navigate(Screen.Dashboard.route) },
                                     modifier = Modifier.padding(Spacing.sm),
                                 ) {
@@ -165,7 +167,7 @@ fun App(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                                     ) {
-                                        CircularProgressIndicator(
+                                        BusyIndicator(
                                             modifier = Modifier.size(32.dp),
                                             strokeWidth = 3.dp,
                                         )
@@ -201,11 +203,12 @@ fun App(
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
-                                        CircularProgressIndicator(
+                                        BusyIndicator(
                                             modifier = Modifier.size(24.dp),
                                             strokeWidth = 2.dp,
                                         )
                                         OutlinedButton(
+                                            shape = appRoundShape,
                                             onClick = { viewModel.navigate(Screen.Settings.route) },
                                         ) {
                                             Icon(

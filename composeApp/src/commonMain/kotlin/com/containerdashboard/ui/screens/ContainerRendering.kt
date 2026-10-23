@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -60,10 +59,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.containerdashboard.data.models.Container
 import com.containerdashboard.data.models.ContainerStats
 import com.containerdashboard.data.repository.ContainerColumnWidths
 import com.containerdashboard.ui.components.AppTooltip
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
@@ -75,8 +76,11 @@ import com.containerdashboard.ui.screens.components.ContainerContextMenu
 import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
+import com.containerdashboard.ui.theme.retroChrome
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -229,6 +233,7 @@ internal fun ComposeProjectHeader(
             ) {
                 AppTooltip(label = "View group logs") {
                     IconButton(
+                        shape = appRoundShape,
                         onClick = onViewGroupLogs,
                         modifier = Modifier.size(24.dp),
                     ) {
@@ -242,7 +247,7 @@ internal fun ComposeProjectHeader(
                 }
                 if (hasRunning) {
                     AppTooltip(label = "Pause all") {
-                        IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp)) {
+                        IconButton(onClick = onPauseAll, modifier = Modifier.size(24.dp), shape = appRoundShape) {
                             Icon(
                                 painterResource(Res.drawable.pause),
                                 contentDescription = "Pause all",
@@ -253,7 +258,7 @@ internal fun ComposeProjectHeader(
                     }
                 } else if (hasPaused) {
                     AppTooltip(label = "Unpause all") {
-                        IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp)) {
+                        IconButton(onClick = onUnpauseAll, modifier = Modifier.size(24.dp), shape = appRoundShape) {
                             Icon(
                                 painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Unpause all",
@@ -265,7 +270,7 @@ internal fun ComposeProjectHeader(
                 }
                 if (hasRunning) {
                     AppTooltip(label = "Stop all") {
-                        IconButton(onClick = { showStopAllConfirm = true }, modifier = Modifier.size(24.dp)) {
+                        IconButton(onClick = { showStopAllConfirm = true }, modifier = Modifier.size(24.dp), shape = appRoundShape) {
                             Icon(
                                 painterResource(Res.drawable.stop),
                                 contentDescription = "Stop all",
@@ -276,7 +281,7 @@ internal fun ComposeProjectHeader(
                     }
                 } else {
                     AppTooltip(label = "Start all") {
-                        IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp)) {
+                        IconButton(onClick = onStartAll, modifier = Modifier.size(24.dp), shape = appRoundShape) {
                             Icon(
                                 painterResource(Res.drawable.play_arrow),
                                 contentDescription = "Start all",
@@ -289,7 +294,7 @@ internal fun ComposeProjectHeader(
                 // Destructive separator before Delete all
                 Spacer(modifier = Modifier.width(4.dp))
                 AppTooltip(label = "Delete all") {
-                    IconButton(onClick = { showRemoveAllConfirm = true }, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = { showRemoveAllConfirm = true }, modifier = Modifier.size(24.dp), shape = appRoundShape) {
                         Icon(
                             painterResource(Res.drawable.delete),
                             contentDescription = "Delete all containers in $projectName",
@@ -544,10 +549,10 @@ internal fun SortableHeaderCell(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.retroChrome(8.sp),
             color =
                 if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = if (ThemeStyleState.isRetro) FontWeight.Normal else FontWeight.SemiBold,
         )
         if (isActive) {
             Icon(
@@ -711,7 +716,7 @@ internal fun CompactContainerRow(
         // Actions Menu
         Box {
             if (isPendingDelete || isActionInProgress) {
-                CircularProgressIndicator(
+                BusyIndicator(
                     modifier = Modifier.size(16.dp),
                     strokeWidth = 2.dp,
                     color =
@@ -723,6 +728,7 @@ internal fun CompactContainerRow(
                 )
             } else {
                 IconButton(
+                    shape = appRoundShape,
                     onClick = { showActionsMenu = true },
                     modifier = Modifier.size(24.dp),
                 ) {
@@ -1077,7 +1083,7 @@ internal fun ExpandedContainerRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (isPendingDelete || isActionInProgress) {
-                    CircularProgressIndicator(
+                    BusyIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
                         color =
@@ -1097,6 +1103,7 @@ internal fun ExpandedContainerRow(
                 } else {
                     // Logs button (benign)
                     IconButton(
+                        shape = appRoundShape,
                         onClick = onViewLogs,
                         modifier = Modifier.size(24.dp),
                     ) {
@@ -1117,6 +1124,7 @@ internal fun ExpandedContainerRow(
                     when {
                         container.isRunning -> {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = {
                                     onPause()
                                     successMessage = "Paused"
@@ -1134,6 +1142,7 @@ internal fun ExpandedContainerRow(
 
                         container.isPaused -> {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = {
                                     onUnpause()
                                     successMessage = "Resumed"
@@ -1151,6 +1160,7 @@ internal fun ExpandedContainerRow(
 
                         else -> {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = {
                                     onStart()
                                     successMessage = "Started"
@@ -1178,6 +1188,7 @@ internal fun ExpandedContainerRow(
                     // Destructive: Stop (only when running)
                     if (container.isRunning) {
                         IconButton(
+                            shape = appRoundShape,
                             onClick = {
                                 onStop()
                                 successMessage = "Stopped"
@@ -1195,6 +1206,7 @@ internal fun ExpandedContainerRow(
 
                     // Destructive: Delete (confirm handled upstream via askConfirm)
                     IconButton(
+                        shape = appRoundShape,
                         onClick = onRemove,
                         modifier = Modifier.size(24.dp),
                     ) {

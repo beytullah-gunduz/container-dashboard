@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -91,7 +92,7 @@ fun EmptyState(
 
             if (action != null) {
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                Button(onClick = action.onClick) {
+                Button(onClick = action.onClick, shape = appRoundShape) {
                     Text(action.label)
                 }
             }

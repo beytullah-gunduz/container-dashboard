@@ -36,6 +36,7 @@ import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appCorners
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.util.isMacHost
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.info
@@ -106,6 +107,7 @@ fun Sidebar(
                         val paletteHint = if (isMacHost) "⌘K" else "Ctrl K"
                         AppTooltip(label = "Command palette ($paletteHint)") {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = onOpenPalette,
                                 modifier = Modifier.size(28.dp),
                             ) {
@@ -129,6 +131,7 @@ fun Sidebar(
                     if (onShowShortcuts != null) {
                         AppTooltip(label = "Keyboard shortcuts (?)") {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = onShowShortcuts,
                                 modifier = Modifier.size(28.dp),
                             ) {

@@ -13,6 +13,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.add
 import org.jetbrains.compose.resources.painterResource
@@ -73,12 +74,13 @@ fun CreateResourceDialog(
         text = content,
         confirmButton = {
             Button(
+                shape = appRoundShape,
                 onClick = onConfirm,
                 enabled = confirmEnabled,
             ) { Text(confirmLabel) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss, shape = appRoundShape) { Text("Cancel") }
         },
     )
 }

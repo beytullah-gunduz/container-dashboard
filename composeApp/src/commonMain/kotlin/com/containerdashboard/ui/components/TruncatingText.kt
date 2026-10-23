@@ -1,5 +1,6 @@
 package com.containerdashboard.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 
 /**
@@ -54,7 +56,8 @@ fun TruncatingText(
                 Surface(
                     shape = Radius.sm.appCorner,
                     tonalElevation = 4.dp,
-                    shadowElevation = 4.dp,
+                    shadowElevation = if (ThemeStyleState.isRetro) 0.dp else 4.dp,
+                    border = if (ThemeStyleState.isRetro) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     Text(

@@ -21,7 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,9 +49,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerNetwork
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.CreateResourceDialog
@@ -69,8 +70,11 @@ import com.containerdashboard.ui.screens.viewmodel.NetworksScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
+import com.containerdashboard.ui.theme.retroChrome
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.hoverHighlight
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -238,6 +242,7 @@ fun NetworksScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     if (checkedNetworkIds.isNotEmpty()) {
                         Button(
+                            shape = appRoundShape,
                             onClick = {
                                 // U1.11: enabled is presentation only — re-check.
                                 if (isDeletingSelected) return@Button
@@ -250,7 +255,7 @@ fun NetworksScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
                             if (isDeletingSelected) {
-                                CircularProgressIndicator(
+                                BusyIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onError,
@@ -261,13 +266,13 @@ fun NetworksScreen(
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedNetworkIds.size} selected")
                         }
-                        OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                        OutlinedButton(onClick = { viewModel.clearChecked() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
                         }
                     }
-                    Button(onClick = { viewModel.setShowCreateDialog(true) }) {
+                    Button(onClick = { viewModel.setShowCreateDialog(true) }, shape = appRoundShape) {
                         Icon(painterResource(Res.drawable.add), null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(Spacing.sm))
                         Text("Create network")
@@ -294,7 +299,7 @@ fun NetworksScreen(
                         Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(onClick = { viewModel.clearError() }) {
+                        IconButton(onClick = { viewModel.clearError() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null)
                         }
                     }
@@ -555,9 +560,9 @@ private fun NetworkSortableHeaderCell(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.retroChrome(8.sp),
             color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = if (ThemeStyleState.isRetro) FontWeight.Normal else FontWeight.SemiBold,
         )
         if (isActive) {
             Icon(
@@ -816,6 +821,7 @@ private fun NetworkRow(
 
             // Actions
             IconButton(
+                shape = appRoundShape,
                 // U1.11: `enabled` does not gate the accessibility bridge.
                 onClick = { if (!isSystem) onRemove() },
                 modifier = Modifier.size(24.dp),

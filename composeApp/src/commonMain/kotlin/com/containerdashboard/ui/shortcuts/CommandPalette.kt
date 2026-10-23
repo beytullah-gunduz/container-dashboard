@@ -1,5 +1,6 @@
 package com.containerdashboard.ui.shortcuts
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,6 +47,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
 import com.containerdashboard.ui.theme.appCorner
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.search
@@ -185,7 +187,8 @@ fun CommandPalette(
                 shape = Radius.lg.appCorner,
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
+                shadowElevation = if (ThemeStyleState.isRetro) 0.dp else 12.dp,
+                border = if (ThemeStyleState.isRetro) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
             ) {
                 Column {
                     // Search input row

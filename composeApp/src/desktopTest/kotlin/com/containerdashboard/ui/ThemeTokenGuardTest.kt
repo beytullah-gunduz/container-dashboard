@@ -12,6 +12,12 @@ import kotlin.test.fail
  * come from the tokens (`N.dp.appCorner`, `appCorners(...)`, `appRoundShape`, `appStrokeCap`,
  * `AppTheme.extended.*`, `appMonoFamily()`), which follow the active style.
  *
+ * Three more rules keep Material's round defaults out of Retro. Spinners go through
+ * `BusyIndicator` (only its Default delegate may call `CircularProgressIndicator`). Every M3 button
+ * call passes `shape =` and every `SegmentedButtonDefaults.itemShape` passes `baseShape =`, because
+ * Material resolves its default `CornerFull` shape to a circle that `MaterialTheme.shapes` never
+ * reaches. The `ButtonDefaults`/`IconButtonDefaults` shape accessors are banned for the same reason.
+ *
  * `Theme.kt` and `DesignTokens.kt` are the token homes. `ThemePreviewCard.kt` draws mockups of the
  * themes with literal shapes and colours on purpose, so the thumbnails stay truthful.
  *
@@ -125,6 +131,118 @@ class ThemeTokenGuardTest {
         assertEquals(emptyList(), hits(source))
     }
 
+    @Test
+    fun `raw circular spinners fire except in BusyIndicator`() {
+        assertEquals(
+            listOf(1 to "CircularProgressIndicator("),
+            hits("CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)"),
+        )
+        assertEquals(listOf(1 to "CircularProgressIndicator("), hits("androidx.compose.material3.CircularProgressIndicator()"))
+        assertEquals(emptyList(), hits("BusyIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)"))
+        assertEquals(emptyList(), hits("// CircularProgressIndicator( in a comment"))
+        assertEquals(emptyList(), hits("import androidx.compose.material3.CircularProgressIndicator"))
+        val delegate = "CircularProgressIndicator(modifier, color, strokeWidth, strokeCap = appStrokeCap)"
+        assertEquals(emptyList(), ThemeTokenScanner.scan(BUSY_INDICATOR, delegate))
+        assertEquals(1, ThemeTokenScanner.scan("com/containerdashboard/ui/screens/Other.kt", delegate).size)
+        // The exemption is for that one pattern only: BusyIndicator.kt is still scanned for the rest.
+        assertEquals(1, ThemeTokenScanner.scan(BUSY_INDICATOR, "val a = CircleShape").size)
+    }
+
+    @Test
+    fun `buttons need a shape at the top level of the call`() {
+        assertEquals(listOf(1 to "button-shape"), hits("TextButton(onClick = {}) { Text(\"x\") }"))
+        assertEquals(emptyList(), hits("TextButton(onClick = {}, shape = appRoundShape) { Text(\"x\") }"))
+        assertEquals(
+            emptyList(),
+            hits(src("IconButton(", " onClick = {},", " shape = appRoundShape,", ") {}")),
+        )
+        // A shape nested in another call or lambda is not the button's own.
+        assertEquals(listOf(1 to "button-shape"), hits("Button(onClick = {}, modifier = Modifier.foo(shape = x)) {}"))
+        assertEquals(listOf(1 to "button-shape"), hits("Button(onClick = { val shape = 1 }) {}"))
+    }
+
+    @Test
+    fun `lookalike names declarations and defaults are not buttons`() {
+        assertEquals(emptyList(), hits("fun SettingsButton(onClick: () -> Unit) {"))
+        assertEquals(emptyList(), hits("SettingsButton(onClick = {})"))
+        assertEquals(emptyList(), hits("private fun TextButton(x: Int) = Unit"))
+    }
+
+    @Test
+    fun `a paren inside a string does not unbalance the call`() {
+        assertEquals(listOf(1 to "button-shape"), hits("TextButton(onClick = { println(\")\") }) {}"))
+    }
+
+    @Test
+    fun `a fully qualified button call fires`() {
+        assertEquals(listOf(1 to "button-shape"), hits("androidx.compose.material3.TextButton(onClick = {}) {}"))
+    }
+
+    @Test
+    fun `every button family needs a shape`() {
+        val names =
+            listOf(
+                "Button",
+                "OutlinedButton",
+                "TextButton",
+                "ElevatedButton",
+                "FilledTonalButton",
+                "IconButton",
+                "FilledIconButton",
+                "FilledTonalIconButton",
+                "OutlinedIconButton",
+                "IconToggleButton",
+                "FilledIconToggleButton",
+                "FilledTonalIconToggleButton",
+                "OutlinedIconToggleButton",
+            )
+        names.forEach { name ->
+            assertEquals(listOf(1 to "button-shape"), hits("$name(onClick = {}) {}"), name)
+            assertEquals(emptyList(), hits("$name(onClick = {}, shape = appRoundShape) {}"), name)
+        }
+    }
+
+    @Test
+    fun `Material's default button shapes fire`() {
+        assertEquals(listOf(1 to "m3-default-shape"), hits("val s = IconButtonDefaults.standardShape"))
+        assertEquals(
+            listOf(1 to "m3-default-shape"),
+            hits("TextButton(onClick = {}, shape = ButtonDefaults.textShape) {}"),
+        )
+        assertEquals(emptyList(), hits("val p = ButtonDefaults.ContentPadding"))
+        assertEquals(emptyList(), hits("val c = ButtonDefaults.outlinedButtonColors()"))
+    }
+
+    @Test
+    fun `segmented items need a base shape`() {
+        assertEquals(
+            listOf(1 to "segmented-base-shape"),
+            hits(src("shape = SegmentedButtonDefaults.itemShape(", "  index = 0,", "  count = 2,", "),")),
+        )
+        assertEquals(
+            emptyList(),
+            hits("shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2, baseShape = appRoundShape),"),
+        )
+    }
+
+    @Test
+    fun `an unterminated call reports and does not throw`() {
+        assertEquals(listOf(1 to "button-shape"), hits("Button("))
+    }
+
+    @Test
+    fun `violations come back sorted by line`() {
+        val source =
+            src(
+                "TextButton(onClick = {}) {}",
+                "val a = CircleShape",
+                "val b = AppColors.Running",
+            )
+        val lines = ThemeTokenScanner.scan("A.kt", source).map { it.line }
+        assertEquals(lines.sorted(), lines)
+        assertEquals(listOf(1, 2, 3), lines)
+    }
+
     private fun hits(source: String): List<Pair<Int, String>> = ThemeTokenScanner.scan("Sample.kt", source).map { it.line to it.pattern }
 
     private fun src(vararg lines: String): String = lines.joinToString("\n")
@@ -142,11 +260,13 @@ class ThemeTokenGuardTest {
                 "com/containerdashboard/ui/theme/DesignTokens.kt",
                 "com/containerdashboard/ui/screens/ThemePreviewCard.kt",
             )
+        const val BUSY_INDICATOR = "com/containerdashboard/ui/components/BusyIndicator.kt"
         const val TQ = "\"\"\""
         const val HEADER =
             "Hardcoded shapes, colours or monospace bypass the theme style. " +
                 "Use the tokens from ui/theme (appCorner, appCorners, appRoundShape, appStrokeCap, " +
-                "AppTheme.extended, appMonoFamily)."
+                "AppTheme.extended, appMonoFamily). Spinners use BusyIndicator, and every M3 button " +
+                "passes shape = appRoundShape (segmented items: baseShape = appRoundShape)."
     }
 }
 
@@ -165,7 +285,17 @@ internal object ThemeTokenScanner {
     private class Pattern(
         val label: String,
         val regex: Regex,
+        val exemptFiles: Set<String> = emptySet(),
     )
+
+    /** A call to [call] whose own argument list (nested calls and lambdas excluded) must name [arg]. */
+    private class CallRule(
+        val label: String,
+        val call: Regex,
+        arg: String,
+    ) {
+        val argRegex = Regex("""\b$arg\s*=(?!=)""")
+    }
 
     private val patterns =
         listOf(
@@ -173,7 +303,29 @@ internal object ThemeTokenScanner {
             Pattern("CircleShape", Regex("""\bCircleShape\b""")),
             Pattern("AppColors.", Regex("""\bAppColors\.""")),
             Pattern("FontFamily.Monospace", Regex("""FontFamily\.Monospace""")),
+            Pattern(
+                "CircularProgressIndicator(",
+                Regex("""(?<!\w)CircularProgressIndicator\s*\("""),
+                exemptFiles = setOf("com/containerdashboard/ui/components/BusyIndicator.kt"),
+            ),
+            Pattern("m3-default-shape", Regex("""\b(ButtonDefaults|IconButtonDefaults)\.\w*[sS]hapes?\b""")),
         )
+
+    private val callRules =
+        listOf(
+            CallRule(
+                "button-shape",
+                Regex(
+                    """(?<!\w)(Button|OutlinedButton|TextButton|ElevatedButton|FilledTonalButton|""" +
+                        """IconButton|FilledIconButton|FilledTonalIconButton|OutlinedIconButton|""" +
+                        """IconToggleButton|FilledIconToggleButton|FilledTonalIconToggleButton|OutlinedIconToggleButton)\s*\(""",
+                ),
+                "shape",
+            ),
+            CallRule("segmented-base-shape", Regex("""\bSegmentedButtonDefaults\.itemShape\s*\("""), "baseShape"),
+        )
+
+    private val funBefore = Regex("""\bfun\s+$""")
 
     private enum class State { CODE, STRING, RAW, CHAR, LINE_COMMENT, BLOCK_COMMENT }
 
@@ -193,9 +345,24 @@ internal object ThemeTokenScanner {
 
         val violations = mutableListOf<Violation>()
         for (pattern in patterns) {
+            if (file in pattern.exemptFiles) continue
             for (match in pattern.regex.findAll(masked)) {
                 val line = lineOf(match.range.first)
                 if (!skipped[line - 1]) violations += Violation(file, line, pattern.label)
+            }
+        }
+        for (rule in callRules) {
+            for (match in rule.call.findAll(masked)) {
+                val line = lineOf(match.range.first)
+                if (skipped[line - 1]) continue
+                // A declaration (`fun TextButton(`) is not a call.
+                if (funBefore.containsMatchIn(masked.substring(lineStarts[line - 1], match.range.first))) continue
+                val open = match.range.last
+                val close = closeParen(masked, open)
+                val arguments = topLevel(if (close < 0) masked.substring(open + 1) else masked.substring(open + 1, close))
+                if (close < 0 || !rule.argRegex.containsMatchIn(arguments)) {
+                    violations += Violation(file, line, rule.label)
+                }
             }
         }
         return violations.sortedBy { it.line }
@@ -328,5 +495,40 @@ internal object ThemeTokenScanner {
         val starts = mutableListOf(0)
         text.forEachIndexed { index, c -> if (c == '\n') starts += index + 1 }
         return starts.toIntArray()
+    }
+
+    /** Index of the `)` matching the `(` at [open], or -1 when the call never closes. */
+    private fun closeParen(
+        masked: String,
+        open: Int,
+    ): Int {
+        var depth = 0
+        for (index in open until masked.length) {
+            when (masked[index]) {
+                '(' -> {
+                    depth++
+                }
+
+                ')' -> {
+                    depth--
+                    if (depth == 0) return index
+                }
+            }
+        }
+        return -1
+    }
+
+    /** [arguments] with everything nested inside `()`, `{}` and `[]` deleted. */
+    private fun topLevel(arguments: String): String {
+        val text = StringBuilder()
+        var depth = 0
+        for (c in arguments) {
+            when (c) {
+                '(', '{', '[' -> depth++
+                ')', '}', ']' -> if (depth > 0) depth--
+                else -> if (depth == 0) text.append(c)
+            }
+        }
+        return text.toString()
     }
 }
