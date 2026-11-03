@@ -23,12 +23,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -48,15 +45,17 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.data.repository.PreferenceRepository
 import com.containerdashboard.ui.state.LogsFilterState
 import com.containerdashboard.ui.state.LogsPaneState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.theme.monospaceMedium
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.arrow_drop_down_filled
@@ -94,9 +93,9 @@ internal fun LogsTabContent(
         when {
             state.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
+                    BusyIndicator(
                         modifier = Modifier.size(32.dp),
-                        color = AppColors.AccentBlue,
+                        color = AppTheme.extended.accent,
                         strokeWidth = 3.dp,
                     )
                 }
@@ -110,11 +109,11 @@ internal fun LogsTabContent(
                 ) {
                     Text(
                         text = state.error,
-                        color = AppColors.Stopped,
+                        color = AppTheme.extended.stopped,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(Spacing.md))
-                    Button(onClick = onRefresh) { Text("Retry") }
+                    Button(onClick = onRefresh, shape = appRoundShape) { Text("Retry") }
                 }
             }
 
@@ -176,7 +175,7 @@ internal fun LogsTabContent(
                                 .border(
                                     width = 1.dp,
                                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(6.dp),
+                                    shape = 6.dp.appCorner,
                                 ).padding(horizontal = Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -276,7 +275,7 @@ internal fun LogsTabContent(
                             singleLine = true,
                             textStyle =
                                 MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = appMonoFamily(),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 ),
                             decorationBox = { innerTextField ->
@@ -296,6 +295,7 @@ internal fun LogsTabContent(
                             Spacer(modifier = Modifier.width(Spacing.xs))
                             AppTooltip(label = "Clear filter") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = { LogsFilterState.filterText.value = "" },
                                     modifier = Modifier.size(18.dp),
                                 ) {
@@ -376,6 +376,7 @@ internal fun LogsTabContent(
                             )
                             AppTooltip(label = if (wordWrap) "Disable word wrap" else "Enable word wrap") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = {
                                         scope.launch { PreferenceRepository.setLogsWordWrap(!wordWrap) }
                                     },
@@ -396,6 +397,7 @@ internal fun LogsTabContent(
                             }
                             AppTooltip(label = "Scroll to bottom") {
                                 IconButton(
+                                    shape = appRoundShape,
                                     onClick = {
                                         scope.launch {
                                             val lastIndex = listState.layoutInfo.totalItemsCount - 1
@@ -425,12 +427,12 @@ internal fun LogsTabContent(
                                     modifier =
                                         Modifier
                                             .size(6.dp)
-                                            .background(AppColors.Running, CircleShape),
+                                            .background(AppTheme.extended.running, appRoundShape),
                                 )
                                 Text(
                                     text = "Live",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = AppColors.Running,
+                                    color = AppTheme.extended.running,
                                 )
                             }
                         } else {

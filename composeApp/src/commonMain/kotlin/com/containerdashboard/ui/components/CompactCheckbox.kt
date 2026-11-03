@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
+import com.containerdashboard.ui.theme.appCorner
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.check
 import org.jetbrains.compose.resources.painterResource
@@ -49,12 +49,12 @@ internal fun CompactCheckbox(
         modifier =
             Modifier
                 .size(14.dp)
-                .clip(RoundedCornerShape(Radius.xs))
+                .clip(Radius.xs.appCorner)
                 .background(fillColor)
                 .border(
                     width = 1.2.dp,
                     color = if (checked && enabled) MaterialTheme.colorScheme.primary else outlineColor,
-                    shape = RoundedCornerShape(Radius.xs),
+                    shape = Radius.xs.appCorner,
                 ).clickable(enabled = enabled) { if (enabled) onCheckedChange(!checked) },
         contentAlignment = Alignment.Center,
     ) {

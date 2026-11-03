@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,9 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.screens.viewmodel.EngineConnectionState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appCorners
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.util.isMacHost
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.info
@@ -105,6 +107,7 @@ fun Sidebar(
                         val paletteHint = if (isMacHost) "⌘K" else "Ctrl K"
                         AppTooltip(label = "Command palette ($paletteHint)") {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = onOpenPalette,
                                 modifier = Modifier.size(28.dp),
                             ) {
@@ -128,6 +131,7 @@ fun Sidebar(
                     if (onShowShortcuts != null) {
                         AppTooltip(label = "Keyboard shortcuts (?)") {
                             IconButton(
+                                shape = appRoundShape,
                                 onClick = onShowShortcuts,
                                 modifier = Modifier.size(28.dp),
                             ) {
@@ -182,7 +186,7 @@ private fun SidebarItem(
     )
 
     val stripColor by animateColorAsState(
-        targetValue = if (isSelected) AppColors.AccentBlue else Color.Transparent,
+        targetValue = if (isSelected) AppTheme.extended.accent else Color.Transparent,
     )
 
     Row(
@@ -201,7 +205,7 @@ private fun SidebarItem(
                 Modifier
                     .weight(1f)
                     .clip(
-                        RoundedCornerShape(
+                        appCorners(
                             topStart = Radius.md,
                             bottomStart = Radius.md,
                             topEnd = 0.dp,
@@ -237,15 +241,15 @@ private fun ConnectionStatus(
 ) {
     val (dotColor, label) =
         when (connectionState) {
-            EngineConnectionState.CONNECTED -> AppColors.Running to "Connected"
-            EngineConnectionState.CHECKING -> AppColors.Warning to "Connecting…"
-            EngineConnectionState.UNAVAILABLE -> AppColors.Stopped to "Disconnected"
+            EngineConnectionState.CONNECTED -> AppTheme.extended.running to "Connected"
+            EngineConnectionState.CHECKING -> AppTheme.extended.warning to "Connecting…"
+            EngineConnectionState.UNAVAILABLE -> AppTheme.extended.stopped to "Disconnected"
         }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.md))
+                .clip(Radius.md.appCorner)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 .padding(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
@@ -253,7 +257,7 @@ private fun ConnectionStatus(
     ) {
         Surface(
             modifier = Modifier.size(8.dp),
-            shape = RoundedCornerShape(Radius.sm),
+            shape = Radius.sm.appCorner,
             color = dotColor,
         ) {}
 

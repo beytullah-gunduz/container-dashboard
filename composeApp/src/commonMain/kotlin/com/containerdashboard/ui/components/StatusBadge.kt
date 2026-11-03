@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,9 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 
 enum class ContainerStatus {
     RUNNING,
@@ -50,18 +50,18 @@ fun StatusBadge(
 ) {
     val (backgroundColor, textColor) =
         when (status) {
-            ContainerStatus.RUNNING -> AppColors.Running.copy(alpha = 0.15f) to AppColors.Running
-            ContainerStatus.PAUSED -> AppColors.Paused.copy(alpha = 0.15f) to AppColors.Paused
-            ContainerStatus.STOPPED, ContainerStatus.EXITED -> AppColors.Stopped.copy(alpha = 0.15f) to AppColors.Stopped
-            ContainerStatus.CREATED -> AppColors.AccentBlue.copy(alpha = 0.15f) to AppColors.AccentBlue
-            ContainerStatus.RESTARTING -> AppColors.Warning.copy(alpha = 0.15f) to AppColors.Warning
-            ContainerStatus.REMOVING, ContainerStatus.DEAD -> AppColors.Stopped.copy(alpha = 0.15f) to AppColors.Stopped
+            ContainerStatus.RUNNING -> AppTheme.extended.running.copy(alpha = 0.15f) to AppTheme.extended.running
+            ContainerStatus.PAUSED -> AppTheme.extended.paused.copy(alpha = 0.15f) to AppTheme.extended.paused
+            ContainerStatus.STOPPED, ContainerStatus.EXITED -> AppTheme.extended.stopped.copy(alpha = 0.15f) to AppTheme.extended.stopped
+            ContainerStatus.CREATED -> AppTheme.extended.accent.copy(alpha = 0.15f) to AppTheme.extended.accent
+            ContainerStatus.RESTARTING -> AppTheme.extended.warning.copy(alpha = 0.15f) to AppTheme.extended.warning
+            ContainerStatus.REMOVING, ContainerStatus.DEAD -> AppTheme.extended.stopped.copy(alpha = 0.15f) to AppTheme.extended.stopped
         }
 
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .background(backgroundColor)
                 .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
@@ -69,7 +69,7 @@ fun StatusBadge(
     ) {
         Surface(
             modifier = Modifier.size(6.dp),
-            shape = RoundedCornerShape(Radius.xs),
+            shape = Radius.xs.appCorner,
             color = textColor,
         ) {}
 
@@ -85,13 +85,13 @@ fun StatusBadge(
 @Composable
 fun StatusDot(
     isActive: Boolean,
-    activeColor: Color = AppColors.Running,
-    inactiveColor: Color = AppColors.Stopped,
+    activeColor: Color = AppTheme.extended.running,
+    inactiveColor: Color = AppTheme.extended.stopped,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier.size(8.dp),
-        shape = RoundedCornerShape(Radius.sm),
+        shape = Radius.sm.appCorner,
         color = if (isActive) activeColor else inactiveColor,
     ) {}
 }

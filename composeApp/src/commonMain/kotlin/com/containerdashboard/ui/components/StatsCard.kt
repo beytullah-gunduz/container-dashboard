@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
@@ -38,7 +38,7 @@ fun StatsCard(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(Radius.lg)
+    val shape = Radius.lg.appCorner
     val colors =
         CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -79,7 +79,7 @@ fun StatsCard(
 
             Surface(
                 modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(Radius.lg),
+                shape = Radius.lg.appCorner,
                 color = iconTint.copy(alpha = 0.1f),
             ) {
                 Box(contentAlignment = Alignment.Center) {

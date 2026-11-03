@@ -23,6 +23,7 @@ class PreferenceFlowsTest {
     fun `every preference flow is built once`() {
         assertSame(PreferenceRepository.engineHost(), PreferenceRepository.engineHost(), "engineHost")
         assertSame(PreferenceRepository.themeMode(), PreferenceRepository.themeMode(), "themeMode")
+        assertSame(PreferenceRepository.themeStyle(), PreferenceRepository.themeStyle(), "themeStyle")
         assertSame(
             PreferenceRepository.monitoringAggregation(),
             PreferenceRepository.monitoringAggregation(),

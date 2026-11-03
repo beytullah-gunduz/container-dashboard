@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,9 +35,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.state.ConsoleSessionRegistry
 import com.containerdashboard.ui.state.LogsPaneState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.article
 import com.dockerdashboard.composeapp.generated.resources.close
@@ -103,7 +102,7 @@ fun ContainerExtraPane(
                     if (logsState.isGroupMode) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Surface(
-                            shape = RoundedCornerShape(Radius.xs),
+                            shape = Radius.xs.appCorner,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         ) {
                             Text(
@@ -123,7 +122,7 @@ fun ContainerExtraPane(
                         modifier = Modifier.size(32.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
                             color = MaterialTheme.colorScheme.primary,
@@ -142,12 +141,12 @@ fun ContainerExtraPane(
                         modifier = Modifier.size(32.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(
+                        BusyIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
                             color =
                                 if (container?.isPaused == true) {
-                                    AppColors.Running
+                                    AppTheme.extended.running
                                 } else {
                                     MaterialTheme.colorScheme.primary
                                 },
@@ -157,7 +156,7 @@ fun ContainerExtraPane(
                     PaneActionButton(
                         icon = Res.drawable.play_arrow,
                         contentDescription = "Resume container",
-                        tint = AppColors.Running,
+                        tint = AppTheme.extended.running,
                         enabled = true,
                         onClick = onUnpauseContainer,
                     )
@@ -192,7 +191,7 @@ fun ContainerExtraPane(
                 Spacer(modifier = Modifier.width(Spacing.md))
 
                 AppTooltip(label = "Close logs pane", shortcut = "Esc") {
-                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = onClose, modifier = Modifier.size(32.dp), shape = appRoundShape) {
                         Icon(
                             painterResource(Res.drawable.close),
                             contentDescription = "Close",
@@ -280,8 +279,8 @@ fun ContainerExtraPane(
                                                     .size(7.dp)
                                                     .align(Alignment.TopEnd)
                                                     .offset(x = 3.dp, y = (-2).dp)
-                                                    .clip(CircleShape)
-                                                    .background(AppColors.Running),
+                                                    .clip(appRoundShape)
+                                                    .background(AppTheme.extended.running),
                                         )
                                     }
                                 }
@@ -338,6 +337,7 @@ internal fun PaneActionButton(
 ) {
     AppTooltip(label = contentDescription) {
         IconButton(
+            shape = appRoundShape,
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier.size(32.dp),

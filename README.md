@@ -201,3 +201,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/)
 - Icons from [Material Icons](https://fonts.google.com/icons)
+- Departure Mono © 2022–2024 Helena Zhang, SIL OFL 1.1 ([license](composeApp/src/commonMain/composeResources/font/departure-mono-OFL.txt))
+- Sixtyfour © 2021 The Sixtyfour Project Authors, SIL OFL 1.1 ([license](composeApp/src/commonMain/composeResources/font/sixtyfour-OFL.txt))

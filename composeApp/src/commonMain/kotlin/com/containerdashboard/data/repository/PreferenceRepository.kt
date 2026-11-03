@@ -11,6 +11,7 @@ import com.containerdashboard.data.DockerHostConfig
 import com.containerdashboard.data.datastore.dataStorePreferencesInstance
 import com.containerdashboard.ui.screens.viewmodel.MonitoringAggregation
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,6 +72,7 @@ object PreferenceRepository {
     private val SHOW_SYSTEM_CONTAINERS by lazy { booleanPreferencesKey("show_system_containers") }
     private val DARK_THEME by lazy { booleanPreferencesKey("dark_theme") }
     private val THEME_MODE by lazy { stringPreferencesKey("theme_mode") }
+    private val THEME_STYLE by lazy { stringPreferencesKey("theme_style") }
     private val MONITORING_AGGREGATION by lazy { stringPreferencesKey("monitoring_aggregation") }
     private val CONFIRM_BEFORE_DELETE by lazy { booleanPreferencesKey("confirm_before_delete") }
     private val LOGS_PANE_LAYOUT by lazy { stringPreferencesKey("logs_pane_layout") }
@@ -171,6 +173,18 @@ object PreferenceRepository {
 
     suspend fun setThemeMode(value: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = value.name }
+    }
+
+    private val themeStyleFlow: Flow<ThemeStyle> by lazy {
+        dataStore.data.map { prefs ->
+            ThemeStyle.entries.firstOrNull { it.name == prefs[THEME_STYLE] } ?: ThemeStyle.DEFAULT
+        }
+    }
+
+    fun themeStyle(): Flow<ThemeStyle> = themeStyleFlow
+
+    suspend fun setThemeStyle(value: ThemeStyle) {
+        dataStore.edit { it[THEME_STYLE] = value.name }
     }
 
     private val monitoringAggregationFlow: Flow<MonitoringAggregation> by lazy {

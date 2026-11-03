@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.containerdashboard.ui.theme.IconSize
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close
 import com.dockerdashboard.composeapp.generated.resources.search
@@ -51,7 +52,7 @@ fun SearchBar(
 
     Surface(
         modifier = modifier.height(height),
-        shape = RoundedCornerShape(if (compact) 6.dp else Radius.md),
+        shape = (if (compact) 6.dp else Radius.md).appCorner,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
         Row(
@@ -100,6 +101,7 @@ fun SearchBar(
             if (query.isNotEmpty()) {
                 AppTooltip(label = "Clear search") {
                     IconButton(
+                        shape = appRoundShape,
                         onClick = { onQueryChange("") },
                         modifier = Modifier.size(clearButtonSize),
                     ) {

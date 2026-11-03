@@ -341,6 +341,11 @@ compose.desktop {
 
         buildTypes.release.proguard {
             configurationFiles.from(project.file("proguard-rules.pro"))
+            // Shrinking only. ProGuard's optimizer emitted a method with inconsistent stack map
+            // frames (SettingsScreenKt.EngineManagementSection), so the release build failed at
+            // startup with a VerifyError that `./gradlew run` never shows. No single optimization
+            // family could be disabled to avoid it.
+            optimize.set(false)
             // See the `proguard` entry in gradle/libs.versions.toml for why this is pinned.
             version.set(libs.versions.proguard)
         }

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
+import com.containerdashboard.ui.theme.appRoundShape
 import com.dockerdashboard.composeapp.generated.resources.Res
 import com.dockerdashboard.composeapp.generated.resources.close_filled
 import com.dockerdashboard.composeapp.generated.resources.minimize_filled
@@ -235,6 +236,7 @@ private fun TitleBarButton(
     content: @Composable () -> Unit,
 ) {
     IconButton(
+        shape = appRoundShape,
         onClick = onClick,
         modifier = Modifier.size(width = 40.dp, height = 32.dp),
         colors =

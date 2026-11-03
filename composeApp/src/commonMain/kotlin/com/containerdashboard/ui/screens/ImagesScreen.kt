@@ -19,12 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,13 +45,14 @@ import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.containerdashboard.data.models.DockerImage
 import com.containerdashboard.data.repository.PreferenceRepository
+import com.containerdashboard.ui.components.BusyIndicator
 import com.containerdashboard.ui.components.CompactCheckbox
 import com.containerdashboard.ui.components.ConfirmActionDialog
 import com.containerdashboard.ui.components.DetailsTarget
@@ -70,6 +69,11 @@ import com.containerdashboard.ui.screens.viewmodel.ImagesScreenViewModel
 import com.containerdashboard.ui.screens.viewmodel.SortDirection
 import com.containerdashboard.ui.theme.Radius
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.ThemeStyleState
+import com.containerdashboard.ui.theme.appCorner
+import com.containerdashboard.ui.theme.appMonoFamily
+import com.containerdashboard.ui.theme.appRoundShape
+import com.containerdashboard.ui.theme.retroChrome
 import com.containerdashboard.ui.util.copyToClipboard
 import com.containerdashboard.ui.util.formatBytes
 import com.containerdashboard.ui.util.hoverHighlight
@@ -206,6 +210,7 @@ fun ImagesScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     if (checkedImageIds.isNotEmpty()) {
                         Button(
+                            shape = appRoundShape,
                             onClick = {
                                 // U1.11: enabled is presentation only — re-check.
                                 if (isDeletingSelected) return@Button
@@ -218,7 +223,7 @@ fun ImagesScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         ) {
                             if (isDeletingSelected) {
-                                CircularProgressIndicator(
+                                BusyIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onError,
@@ -229,7 +234,7 @@ fun ImagesScreen(
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Delete ${checkedImageIds.size} selected")
                         }
-                        OutlinedButton(onClick = { viewModel.clearChecked() }) {
+                        OutlinedButton(onClick = { viewModel.clearChecked() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text("Clear")
@@ -257,7 +262,7 @@ fun ImagesScreen(
                         Icon(painterResource(Res.drawable.error), null, tint = MaterialTheme.colorScheme.error)
                         Text(errorMessage, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
-                        IconButton(onClick = { viewModel.clearError() }) {
+                        IconButton(onClick = { viewModel.clearError() }, shape = appRoundShape) {
                             Icon(painterResource(Res.drawable.close), null)
                         }
                     }
@@ -448,8 +453,8 @@ private fun ImageSectionHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Radius.md))
-                .hoverHighlight(shape = RoundedCornerShape(Radius.md))
+                .clip(Radius.md.appCorner)
+                .hoverHighlight(shape = Radius.md.appCorner)
                 .clickable(onClick = onToggle)
                 .padding(horizontal = Spacing.sm, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -467,7 +472,7 @@ private fun ImageSectionHeader(
             fontWeight = FontWeight.SemiBold,
         )
         Surface(
-            shape = RoundedCornerShape(Radius.lg),
+            shape = Radius.lg.appCorner,
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {
             Text(
@@ -533,7 +538,7 @@ private fun SortableHeaderCell(
     Row(
         modifier =
             modifier
-                .clip(RoundedCornerShape(Radius.sm))
+                .clip(Radius.sm.appCorner)
                 .clickable { onSort(column) }
                 .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -541,9 +546,9 @@ private fun SortableHeaderCell(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.retroChrome(8.sp),
             color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = if (ThemeStyleState.isRetro) FontWeight.Normal else FontWeight.SemiBold,
         )
         if (isActive) {
             Icon(
@@ -659,7 +664,7 @@ private fun ImageRow(
                         Text(
                             text = image.shortId,
                             style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = appMonoFamily(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 1,
                         )
@@ -667,7 +672,7 @@ private fun ImageRow(
                     Text(
                         text = image.formattedSize,
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = appMonoFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
@@ -699,7 +704,7 @@ private fun ImageRow(
                 Text(
                     text = image.shortId,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
@@ -707,13 +712,14 @@ private fun ImageRow(
                 Text(
                     text = image.formattedSize,
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = appMonoFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.weight(0.7f),
                 )
             }
             IconButton(
+                shape = appRoundShape,
                 onClick = onRemove,
                 modifier = Modifier.size(24.dp),
             ) {

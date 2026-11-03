@@ -52,6 +52,7 @@ import com.containerdashboard.ui.chrome.currentDesktopOs
 import com.containerdashboard.ui.chrome.rememberDesktopWindowChrome
 import com.containerdashboard.ui.navigation.Screen
 import com.containerdashboard.ui.theme.ContainerDashboardTheme
+import com.containerdashboard.ui.theme.ThemeStyleState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
@@ -370,7 +371,7 @@ fun main() {
                 resizable = false,
                 icon = appIcon,
             ) {
-                ContainerDashboardTheme(darkTheme = true) {
+                ContainerDashboardTheme(darkTheme = true, style = ThemeStyleState.style) {
                     Surface {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(24.dp),

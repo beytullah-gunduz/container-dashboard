@@ -17,6 +17,7 @@ import com.containerdashboard.ui.state.FileTreeNode
 import com.containerdashboard.ui.state.FilesPaneState
 import com.containerdashboard.ui.state.LogsPaneState
 import com.containerdashboard.ui.theme.ThemeMode
+import com.containerdashboard.ui.theme.ThemeStyle
 import com.containerdashboard.ui.util.formatBytes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -122,6 +123,11 @@ class AppViewModel(
         PreferenceRepository
             .themeMode()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.AUTO)
+
+    val themeStyle: StateFlow<ThemeStyle> =
+        PreferenceRepository
+            .themeStyle()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeStyle.DEFAULT)
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()

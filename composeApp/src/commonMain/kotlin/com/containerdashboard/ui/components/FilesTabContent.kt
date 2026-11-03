@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,8 +33,9 @@ import com.containerdashboard.data.models.ContainerFileEntry
 import com.containerdashboard.data.models.FileType
 import com.containerdashboard.ui.state.FileTreeNode
 import com.containerdashboard.ui.state.FilesPaneState
-import com.containerdashboard.ui.theme.AppColors
+import com.containerdashboard.ui.theme.AppTheme
 import com.containerdashboard.ui.theme.Spacing
+import com.containerdashboard.ui.theme.appRoundShape
 import com.containerdashboard.ui.theme.monospaceMedium
 import com.containerdashboard.ui.util.formatBytes
 import com.dockerdashboard.composeapp.generated.resources.Res
@@ -118,7 +118,7 @@ private fun FilesHeader(
         Spacer(modifier = Modifier.weight(1f))
         if (isLoading) {
             Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
+                BusyIndicator(
                     modifier = Modifier.size(14.dp),
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.primary,
@@ -146,9 +146,9 @@ private fun FileTree(
     when {
         state.isLoading && state.nodes.isEmpty() -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(
+                BusyIndicator(
                     modifier = Modifier.size(32.dp),
-                    color = AppColors.AccentBlue,
+                    color = AppTheme.extended.accent,
                     strokeWidth = 3.dp,
                 )
             }
@@ -162,12 +162,12 @@ private fun FileTree(
             ) {
                 Text(
                     text = state.error,
-                    color = AppColors.Stopped,
+                    color = AppTheme.extended.stopped,
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
-                Button(onClick = onRefresh) { Text("Retry") }
+                Button(onClick = onRefresh, shape = appRoundShape) { Text("Retry") }
             }
         }
 
@@ -222,7 +222,7 @@ private fun TreeRow(
         Box(modifier = Modifier.size(18.dp), contentAlignment = Alignment.Center) {
             when {
                 node.isLoading -> {
-                    CircularProgressIndicator(
+                    BusyIndicator(
                         modifier = Modifier.size(12.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
@@ -270,7 +270,7 @@ private fun TreeRow(
                 Text(
                     text = node.error,
                     style = MaterialTheme.typography.labelSmall,
-                    color = AppColors.Stopped,
+                    color = AppTheme.extended.stopped,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -345,9 +345,9 @@ private fun FileViewer(
         when {
             state.isFileLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
+                    BusyIndicator(
                         modifier = Modifier.size(32.dp),
-                        color = AppColors.AccentBlue,
+                        color = AppTheme.extended.accent,
                         strokeWidth = 3.dp,
                     )
                 }
