@@ -32,7 +32,38 @@ defaults:
     shell: bash
 
 jobs:
+  # Release gate: never ship a tagged installer — and, through the Homebrew
+  # tap, a `brew upgrade` — with bad formatting or red tests. Runs once on
+  # Linux, the same checks as .github/workflows/build.yml, before any
+  # installer is built.
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e  # v6.1.0
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Verify formatting
+        run: ./gradlew spotlessCheck
+
+      - name: Run tests
+        run: ./gradlew :composeApp:desktopTest
+
   build:
+    needs: verify
     strategy:
       fail-fast: true
       matrix:
@@ -130,3 +161,93 @@ jobs:
           files: artifacts/**
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # Points the Homebrew cask in beytullah-gunduz/homebrew-tap at this release so
+  # `brew upgrade` picks it up. Runs after the release exists, so a failure here
+  # never takes the release down with it. One-time setup (deploy key, secret) is
+  # in packaging/homebrew/README.md.
+  homebrew:
+    needs: release
+    # Pre-releases stay out of the tap.
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    # Only reads this repository's release; writes go through the deploy key.
+    permissions:
+      contents: read
+    # Two tags released close together must not race on the tap's branch.
+    # This group only spans this repository; the tap is also written by other
+    # projects' release jobs, which the push retry below absorbs.
+    concurrency:
+      group: homebrew-tap
+      cancel-in-progress: false
+
+    steps:
+      - name: Require the tap deploy key
+        env:
+          HAS_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY != '' }}
+        run: |
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "::error::HOMEBREW_TAP_DEPLOY_KEY is not set, so the tap still points at the previous release. See packaging/homebrew/README.md."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          sparse-checkout: packaging/homebrew
+
+      - name: Check out the tap
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          repository: beytullah-gunduz/homebrew-tap
+          # A deploy key with write access to the tap only — no token that can
+          # reach any other repository.
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: tap
+
+      - name: Update the cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+
+          # The checksum the build job published next to the DMG.
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --pattern "ContainerDashboard-$version.dmg.sha256" --dir sha
+          sha256="$(cut -d' ' -f1 "sha/ContainerDashboard-$version.dmg.sha256")"
+
+          cask=tap/Casks/container-dashboard.rb
+          # Re-tagging an older version must not roll the tap back.
+          if [ -f "$cask" ]; then
+            current="$(sed -nE 's/^  version "([^"]+)"$/\1/p' "$cask")"
+            newest="$(printf '%s\n%s\n' "$current" "$version" | sort -V | tail -n1)"
+            if [ -n "$current" ] && [ "$newest" != "$version" ]; then
+              echo "::notice::The tap already has $current, newer than $version. Left unchanged."
+              exit 0
+            fi
+          fi
+
+          mkdir -p tap/Casks
+          packaging/homebrew/render-cask.sh "$version" "$sha256" > "$cask"
+          ruby -c "$cask"
+
+          cd tap
+          if [ -z "$(git status --porcelain -- Casks)" ]; then
+            echo "The tap already points at $version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/container-dashboard.rb
+          git commit -m "chore(container-dashboard): update to $version"
+          # Another project's release may have pushed its own cask meanwhile.
+          # Each project only touches its own file, so a rebase never conflicts.
+          for _ in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            git pull --rebase
+          done
+          echo "::error::Could not push to the tap after 3 attempts."
+          exit 1

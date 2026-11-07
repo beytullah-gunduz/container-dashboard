@@ -67,6 +67,20 @@ composeApp/
 
 ## Getting Started
 
+### Install
+
+Download the installer for your system from the [latest release](https://github.com/beytullah-gunduz/container-dashboard/releases/latest): macOS (Apple Silicon `.dmg`), Windows (`.msi`) or Linux (amd64 `.deb`).
+
+On an Apple Silicon Mac you can install it with [Homebrew](https://brew.sh) instead, and `brew upgrade` then keeps it up to date:
+
+```bash
+brew install --cask beytullah-gunduz/tap/container-dashboard
+```
+
+Keep the `beytullah-gunduz/tap/` prefix: Homebrew trusts a third-party cask only when you name it in full. If you installed the DMG before, delete `/Applications/ContainerDashboard.app` first, because Homebrew won't replace it. Your settings are kept.
+
+The app isn't notarized, so macOS blocks its first launch, and again after each Homebrew upgrade. Open it once, then click **Open Anyway** in System Settings → Privacy & Security.
+
 ### Prerequisites
 
 - JDK 17 or higher
@@ -190,6 +204,7 @@ This triggers `.github/workflows/release.yml`, which:
 2. Builds `.dmg`, `.deb`, and `.msi` installers in parallel on macOS, Linux, and Windows runners
 3. Generates SHA256 checksums alongside each installer
 4. Creates a GitHub Release with auto-generated notes and attaches every artifact
+5. Points the Homebrew cask in [beytullah-gunduz/homebrew-tap](https://github.com/beytullah-gunduz/homebrew-tap) at the new release (stable tags only, see [packaging/homebrew/README.md](packaging/homebrew/README.md))
 
 Tags containing a `-` (e.g. `v1.0.0-beta.1`) are automatically published as pre-releases.
 
